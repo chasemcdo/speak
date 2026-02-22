@@ -7,6 +7,12 @@ struct SpeakApp: App {
     @AppStorage("onboardingComplete") private var onboardingComplete = false
     @Environment(\.openWindow) private var openWindow
 
+    init() {
+        UserDefaults.standard.register(defaults: [
+            "autoPaste": true
+        ])
+    }
+
     var body: some Scene {
         MenuBarExtra("Speak", systemImage: appState.isRecording ? "mic.fill" : "mic") {
             MenuBarView()

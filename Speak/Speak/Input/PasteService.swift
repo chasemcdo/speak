@@ -20,9 +20,15 @@ enum PasteService {
         // 3. Activate the target app so it receives the keystroke
         if let app {
             app.activate()
-            // Brief pause to let the app come to front
-            try? await Task.sleep(for: .milliseconds(150))
+            // Wait for the app to actually become frontmost
+            for _ in 0..<10 {
+                try? await Task.sleep(for: .milliseconds(50))
+                if app.isActive { break }
+            }
         }
+
+        // Small extra delay to ensure the app's text field is ready
+        try? await Task.sleep(for: .milliseconds(100))
 
         // 4. Simulate Cmd+V
         simulatePaste()
