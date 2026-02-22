@@ -23,6 +23,7 @@ let package = Package(
                 .linkedFramework("AppKit"),
                 .linkedFramework("CoreGraphics"),
                 .linkedFramework("ServiceManagement"),
+                .linkedFramework("FoundationModels"),
             ]
         )
     ]

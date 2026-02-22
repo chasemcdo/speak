@@ -1,15 +1,18 @@
 import AppKit
 import Observation
 
-/// Orchestrates the full dictation flow: hotkey → overlay → transcribe → paste.
+/// Orchestrates the full dictation flow: hotkey → overlay → transcribe → post-process → paste.
 @MainActor
 @Observable
 final class AppCoordinator {
     private let transcriptionEngine = TranscriptionEngine()
     private let overlayManager = OverlayManager()
     private let hotkeyManager = HotkeyManager()
+    private let textProcessor = TextProcessor()
+    private let contextReader = ContextReader()
 
     private var previousApp: NSRunningApplication?
+    private var capturedContext: String?
     private var appState: AppState?
 
     /// Set up the coordinator with the shared app state. Call once at app launch.
@@ -43,6 +46,13 @@ final class AppCoordinator {
                 await self?.confirm()
             }
         }
+
+        // Prewarm the LLM if the user has it enabled
+        if UserDefaults.standard.bool(forKey: "llmRewrite") {
+            Task {
+                await LLMRewriter.prewarm()
+            }
+        }
     }
 
     /// Toggle dictation on/off.
@@ -63,6 +73,9 @@ final class AppCoordinator {
         // Remember which app had focus
         previousApp = NSWorkspace.shared.frontmostApplication
 
+        // Capture context from the focused text field before we steal focus
+        capturedContext = contextReader.readContext(from: previousApp)
+
         // Reset state
         appState.reset()
 
@@ -79,6 +92,13 @@ final class AppCoordinator {
             appState.error = error.localizedDescription
             appState.isRecording = false
         }
+
+        // Prewarm LLM in parallel with recording if enabled
+        if UserDefaults.standard.bool(forKey: "llmRewrite") {
+            Task {
+                await LLMRewriter.prewarm()
+            }
+        }
     }
 
     /// Confirm and paste the transcribed text.
@@ -89,7 +109,28 @@ final class AppCoordinator {
         await transcriptionEngine.stopSession()
         appState.isRecording = false
 
-        let text = appState.displayText
+        var text = appState.displayText
+
+        // Run post-processing pipeline if we have text
+        if !text.isEmpty {
+            // Build the filter pipeline based on user preferences
+            configureFilters()
+
+            if !textProcessor.filters.isEmpty {
+                appState.isPostProcessing = true
+
+                let locale = UserDefaults.standard.string(forKey: "locale")
+                    .flatMap { Locale(identifier: $0) } ?? Locale.current
+
+                let context = ProcessingContext(
+                    surroundingText: capturedContext,
+                    locale: locale
+                )
+
+                text = await textProcessor.process(text, context: context)
+                appState.isPostProcessing = false
+            }
+        }
 
         // Hide overlay
         overlayManager.hide()
@@ -109,6 +150,7 @@ final class AppCoordinator {
         }
 
         previousApp = nil
+        capturedContext = nil
     }
 
     /// Cancel the current dictation session.
@@ -122,5 +164,27 @@ final class AppCoordinator {
         // Re-activate the previous app
         previousApp?.activate()
         previousApp = nil
+        capturedContext = nil
+    }
+
+    // MARK: - Private
+
+    /// Configure the text processing filters based on current user preferences.
+    private func configureFilters() {
+        textProcessor.removeAllFilters()
+
+        let defaults = UserDefaults.standard
+
+        if defaults.bool(forKey: "removeFillerWords") {
+            textProcessor.addFilter(FillerWordFilter())
+        }
+
+        if defaults.bool(forKey: "autoFormat") {
+            textProcessor.addFilter(FormattingFilter())
+        }
+
+        if defaults.bool(forKey: "llmRewrite") {
+            textProcessor.addFilter(LLMRewriter())
+        }
     }
 }

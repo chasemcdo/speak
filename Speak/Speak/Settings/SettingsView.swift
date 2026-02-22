@@ -1,14 +1,22 @@
 import SwiftUI
 import Speech
 import ServiceManagement
+import FoundationModels
 
 struct SettingsView: View {
     @Environment(AppState.self) private var appState
     @AppStorage("locale") private var localeIdentifier = Locale.current.identifier
     @AppStorage("autoPaste") private var autoPaste = true
     @AppStorage("launchAtLogin") private var launchAtLogin = false
+    @AppStorage("removeFillerWords") private var removeFillerWords = true
+    @AppStorage("autoFormat") private var autoFormat = true
+    @AppStorage("llmRewrite") private var llmRewrite = false
 
     @State private var supportedLocales: [Locale] = []
+
+    private var llmAvailable: Bool {
+        SystemLanguageModel.default.availability == .available
+    }
 
     var body: some View {
         Form {
@@ -26,6 +34,24 @@ struct SettingsView: View {
 
                 Toggle("Auto-paste into active app", isOn: $autoPaste)
                     .help("When enabled, text is automatically pasted into the focused app. When disabled, text is copied to the clipboard.")
+            }
+
+            Section("Post-Processing") {
+                Toggle("Remove filler words", isOn: $removeFillerWords)
+                    .help("Strip filler words like 'um', 'uh', 'like', 'you know' from transcribed text.")
+
+                Toggle("Auto-format text", isOn: $autoFormat)
+                    .help("Auto-capitalize sentences and clean up punctuation.")
+
+                Toggle("AI-powered cleanup", isOn: $llmRewrite)
+                    .help("Use Apple Intelligence to rewrite transcribed text for clarity and grammar.")
+                    .disabled(!llmAvailable)
+
+                if !llmAvailable {
+                    Text("AI cleanup requires Apple Intelligence to be enabled in System Settings.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Section("Hotkey") {
@@ -65,7 +91,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 420, height: 380)
+        .frame(width: 420, height: 440)
         .task {
             await loadSupportedLocales()
         }
