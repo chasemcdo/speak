@@ -1,6 +1,7 @@
 @preconcurrency import AVFoundation
 import Speech
 
+@MainActor
 @Observable
 final class TranscriptionEngine {
     private let audioCapture = AudioCaptureManager()
@@ -64,7 +65,7 @@ final class TranscriptionEngine {
         try await analyzer.start(inputSequence: inputSequence)
 
         // 8. Consume results
-        resultsTask = Task { @MainActor in
+        resultsTask = Task {
             do {
                 for try await result in transcriber.results {
                     let text = String(result.text.characters)
