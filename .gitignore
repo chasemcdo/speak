@@ -1,0 +1,12 @@
+# Xcode user-specific files
+xcuserdata/
+*.xcworkspace/
+!*.xcodeproj/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# macOS
+.DS_Store
