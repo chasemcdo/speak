@@ -1,332 +1,431 @@
-# Phase 1 Implementation Plan — Core Transcription Layer
+# Phase 2 Implementation Plan — Post-Processing Pipeline
 
 ## Goal
 
-Build a working macOS menu bar app that lets a user press a hotkey, dictate via microphone, see live transcription in a floating overlay, and paste the result into whatever app they were using. No post-processing, no commands, no LLM — just the core loop.
+Add a post-processing layer between transcription and paste that cleans up, formats, and optionally rewrites dictated text. Start with fast, deterministic transforms (filler removal, formatting) and graduate to Apple's on-device FoundationModels framework for intelligent rewriting. All processing stays on-device.
 
-## Project structure
+## What we're building on
+
+Phase 1 is complete. The core loop works: fn → overlay → live transcription → paste. The insertion point is `AppCoordinator.confirm()` (line 92), where `let text = appState.displayText` is retrieved before being passed to `PasteService.paste()`. Phase 2 slots a processing pipeline between these two calls.
+
+## New project structure
 
 ```
-Speak/
-├── Speak.xcodeproj
-├── Speak/
-│   ├── SpeakApp.swift              # @main, MenuBarExtra, app lifecycle
-│   ├── Info.plist                   # Permission descriptions
-│   ├── Assets.xcassets              # App icon (microphone glyph)
-│   │
-│   ├── Audio/
-│   │   └── AudioCaptureManager.swift   # AVAudioEngine, mic permission, buffer streaming
-│   │
-│   ├── Transcription/
-│   │   ├── TranscriptionEngine.swift   # SpeechAnalyzer + SpeechTranscriber wrapper
-│   │   └── ModelManager.swift          # AssetInventory locale/model checks + download
-│   │
-│   ├── Overlay/
-│   │   ├── OverlayPanel.swift          # NSPanel subclass (non-activating, floating)
-│   │   └── OverlayView.swift           # SwiftUI view for live transcription display
-│   │
-│   ├── Input/
-│   │   ├── HotkeyManager.swift         # Global hotkey registration + handling
-│   │   └── PasteService.swift          # NSPasteboard write + CGEvent Cmd+V simulation
-│   │
-│   ├── Settings/
-│   │   └── SettingsView.swift          # Language picker, hotkey config, auto-paste toggle
-│   │
-│   └── Models/
-│       └── AppState.swift              # @Observable shared state (recording, text, errors)
+Speak/Speak/
+├── ... (existing files unchanged)
 │
-├── README.md
-├── ARCHITECTURE.md
-├── ROADMAP.md
-└── docs/
-    └── APPLE_SPEECH_API.md
+├── PostProcessing/
+│   ├── TextProcessor.swift          # Pipeline coordinator — chains transforms
+│   ├── FillerWordFilter.swift       # Regex-based filler removal
+│   ├── FormattingFilter.swift       # Capitalization, punctuation, paragraphs
+│   ├── LLMRewriter.swift            # FoundationModels integration
+│   └── ContextReader.swift          # Reads surrounding text via Accessibility API
 ```
 
 ## Implementation steps
 
 Steps are ordered by dependency — each builds on the previous.
 
-### Step 1: Xcode project scaffold
+### Step 1: Post-processing pipeline architecture
 
-Create the Xcode project and establish the menu bar app shell.
+Create the pluggable pipeline that all transforms plug into.
 
-**Files:** `SpeakApp.swift`, `Info.plist`, `Assets.xcassets`
-
-**What to build:**
-- New Xcode project: macOS App, SwiftUI lifecycle, deployment target macOS 26
-- `SpeakApp.swift`: Use `MenuBarExtra` with a system microphone icon (`systemName: "mic.fill"`)
-- Menu contents: "Quit Speak" button, "Settings..." placeholder
-- `Info.plist` entries:
-  - `NSMicrophoneUsageDescription`: "Speak needs microphone access to transcribe your voice."
-  - `NSSpeechRecognitionUsageDescription`: "Speak uses on-device speech recognition to transcribe your voice."
-- Set `LSUIElement = true` so the app has no dock icon (menu bar only)
-- Add a placeholder app icon to `Assets.xcassets`
-
-**Verify:** App launches, appears in the menu bar, Quit works.
-
-### Step 2: Shared app state
-
-Create the observable state model that all components share.
-
-**Files:** `AppState.swift`
+**Files:** `PostProcessing/TextProcessor.swift`
 
 **What to build:**
+
 ```swift
+/// A single text transformation step.
+protocol TextFilter: Sendable {
+    func apply(to text: String, context: ProcessingContext) async throws -> String
+}
+
+/// Context passed to each filter (surrounding text, user preferences, etc.)
+struct ProcessingContext: Sendable {
+    var surroundingText: String?
+    var locale: Locale
+}
+
+/// Chains filters together and runs them in sequence.
+@MainActor
 @Observable
-final class AppState {
-    var isRecording = false
-    var finalizedText = ""        // Locked-in transcription segments
-    var volatileText = ""         // In-progress segment (may change)
-    var error: String?            // User-facing error message
+final class TextProcessor {
+    var isProcessing = false
 
-    var displayText: String {
-        finalizedText + volatileText
-    }
+    private var filters: [TextFilter] = []
 
-    func reset() {
-        isRecording = false
-        finalizedText = ""
-        volatileText = ""
-        error = nil
-    }
-}
-```
+    func addFilter(_ filter: TextFilter) { filters.append(filter) }
+    func removeAll() { filters.removeAll() }
 
-Inject into the SwiftUI environment from `SpeakApp.swift` via `@State private var appState = AppState()`.
+    func process(_ text: String, context: ProcessingContext) async throws -> String {
+        isProcessing = true
+        defer { isProcessing = false }
 
-### Step 3: Audio capture
-
-Implement microphone capture that produces an async stream of audio buffers.
-
-**Files:** `AudioCaptureManager.swift`
-
-**What to build:**
-- Class `AudioCaptureManager` with `AVAudioEngine`
-- `requestPermission() async -> Bool` — request mic access
-- `startCapture() -> AsyncStream<AVAudioPCMBuffer>` — install tap on `inputNode`, yield buffers
-- `stopCapture()` — remove tap, stop engine
-- Handle format negotiation: query `SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith:)` for the target format, use `AVAudioConverter` if the input node's native format doesn't match
-- Buffer size: 4096 frames (good balance of latency vs overhead, matches Swift Scribe's approach)
-
-**Key considerations:**
-- `AVAudioEngine.inputNode.outputFormat(forBus: 0)` gives the hardware's native format
-- The converter must be created once and reused (not per-buffer)
-- The `AsyncStream` continuation should use `.bufferingPolicy(.bufferingNewest(10))` to avoid unbounded growth if the consumer is slow
-
-**Verify:** Can start/stop audio capture without crashes, buffers flow through the stream.
-
-### Step 4: Transcription engine
-
-Wrap SpeechAnalyzer to consume audio buffers and produce transcription results.
-
-**Files:** `TranscriptionEngine.swift`, `ModelManager.swift`
-
-**`ModelManager`:**
-- `ensureModelAvailable(for locale: Locale) async throws` — check `SpeechTranscriber.supportedLocales`, check `SpeechTranscriber.installedLocales`, download via `AssetInventory` if needed
-- Surface download progress if possible for UI feedback
-
-**`TranscriptionEngine`:**
-- Takes a reference to `AppState` and `AudioCaptureManager`
-- `startSession() async throws`:
-  1. Ensure model is available via `ModelManager`
-  2. Create `SpeechTranscriber` with locale, `.volatileResults` reporting, `.audioTimeRange` attributes
-  3. Create `SpeechAnalyzer(modules: [transcriber])`
-  4. Start audio capture, get the `AsyncStream<AVAudioPCMBuffer>`
-  5. Create `AsyncStream<AnalyzerInput>` — map each PCM buffer through the converter, yield as `AnalyzerInput`
-  6. Call `analyzer.start(inputSequence:)`
-  7. Spawn a `Task` to iterate `transcriber.results`:
-     - If `result.isFinal`: append `String(result.text.characters)` to `appState.finalizedText`, clear `appState.volatileText`
-     - If not final (volatile): set `appState.volatileText = String(result.text.characters)`
-- `stopSession() async`:
-  1. Stop audio capture (finish the continuation)
-  2. Call `analyzer.finalizeAndFinishThroughEndOfInput()`
-  3. Wait for remaining results to flush
-  4. Set `appState.isRecording = false`
-
-**Open question — SpeechTranscriber vs DictationTranscriber:**
-`DictationTranscriber` adds punctuation and sentence structure automatically, which is probably what users want for general dictation. `SpeechTranscriber` gives raw words. We should start with `DictationTranscriber` for better out-of-the-box prose quality, but make it easy to swap (both conform to the same module pattern). If `DictationTranscriber` has issues (latency, availability), fall back to `SpeechTranscriber`.
-
-**Verify:** Can start a session, speak, see `appState.finalizedText` and `volatileText` update correctly in the debugger or a test view.
-
-### Step 5: Floating overlay
-
-Build the non-activating floating panel that shows live transcription.
-
-**Files:** `OverlayPanel.swift`, `OverlayView.swift`
-
-**`OverlayPanel` (NSPanel subclass):**
-```swift
-class OverlayPanel: NSPanel {
-    init() {
-        super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 120),
-            styleMask: [.nonactivatingPanel, .fullSizeContentView, .borderless],
-            backing: .buffered,
-            defer: false
-        )
-        level = .floating
-        isOpaque = false
-        backgroundColor = .clear
-        hasShadow = true
-        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        isMovableByWindowBackground = true
-    }
-}
-```
-
-Key behaviors:
-- `.nonactivatingPanel` — does NOT steal focus from the app the user is typing in
-- `.floating` level — stays above other windows
-- Borderless with a custom SwiftUI view for the content
-- Position: center horizontally on screen, near bottom (above the dock) — simple and predictable. Future improvement could position near the cursor.
-
-**`OverlayView` (SwiftUI):**
-- Rounded rectangle card with slight blur/transparency (`.ultraThinMaterial`)
-- Left side: pulsing red dot when recording
-- Main area: text display
-  - `appState.finalizedText` in primary color, normal weight
-  - `appState.volatileText` in secondary color, lighter weight (visually distinct as "in progress")
-- If `appState.displayText` is empty, show placeholder: "Listening..."
-- Fixed max width (~400pt), height grows with content up to a max (~200pt), then scrolls
-- Subtle corner radius, no title bar, no close button
-
-**Verify:** Panel appears/disappears without stealing focus, text updates live, looks clean.
-
-### Step 6: Global hotkey + orchestration
-
-Wire the hotkey to toggle the full dictation flow.
-
-**Files:** `HotkeyManager.swift`, updates to `SpeakApp.swift`
-
-**`HotkeyManager`:**
-- Register a global hotkey (default `⌥ Space`) using `NSEvent.addGlobalMonitorForEvents(matching: .keyDown)`
-- Also register `NSEvent.addLocalMonitorForEvents` so the hotkey works when Speak itself is focused
-- On hotkey press, call a provided closure (the toggle action)
-- Store the hotkey combo in `UserDefaults` so it can be changed later
-
-**Orchestration (in `SpeakApp.swift` or a dedicated `AppCoordinator`):**
-
-Toggle flow:
-1. **First press (start):**
-   - Record which app is frontmost via `NSWorkspace.shared.frontmostApplication`
-   - Set `appState.isRecording = true`, reset text
-   - Show the overlay panel
-   - Start the transcription session
-2. **Second press (confirm):**
-   - Stop the transcription session
-   - Get `appState.displayText`
-   - Hide the overlay panel
-   - Paste into the previously focused app (Step 7)
-   - Reset state
-3. **Escape (cancel):**
-   - Stop the transcription session
-   - Hide the overlay panel
-   - Reset state, discard text
-
-Register for Escape key in the overlay panel's key handling.
-
-**Verify:** Hotkey toggles the full flow. First press starts recording + shows overlay. Second press stops + hides. Escape cancels.
-
-### Step 7: Paste service
-
-Insert the transcribed text into the previously focused app.
-
-**Files:** `PasteService.swift`
-
-**What to build:**
-```swift
-struct PasteService {
-    static func paste(_ text: String, into app: NSRunningApplication?) {
-        // 1. Save current pasteboard
-        let pasteboard = NSPasteboard.general
-        let previousContents = pasteboard.pasteboardItems?.compactMap { /* save */ }
-
-        // 2. Write transcription to pasteboard
-        pasteboard.clearContents()
-        pasteboard.setString(text, forType: .string)
-
-        // 3. Activate the target app
-        app?.activate()
-
-        // 4. Brief delay for app activation
-        // Then simulate Cmd+V
-        let source = CGEventSource(stateID: .hidEventState)
-        let keyDown = CGEvent(keyboardEventType: .keyDown, virtualKey: 0x09, keyIsDown: true) // 'v'
-        let keyUp = CGEvent(keyboardEventType: .keyUp, virtualKey: 0x09, keyIsDown: false)
-        keyDown?.flags = .maskCommand
-        keyUp?.flags = .maskCommand
-        keyDown?.post(tap: .cghidEventTap)
-        keyUp?.post(tap: .cghidEventTap)
-
-        // 5. After a delay, restore original pasteboard
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            // restore previousContents
+        var result = text
+        for filter in filters {
+            result = try await filter.apply(to: result, context: context)
         }
+        return result
+    }
+}
+```
+
+**Wire into AppCoordinator.confirm():**
+
+The current flow:
+```swift
+let text = appState.displayText
+```
+
+Becomes:
+```swift
+var text = appState.displayText
+if !text.isEmpty {
+    let context = ProcessingContext(
+        surroundingText: nil,  // Step 5 adds this
+        locale: /* current locale */
+    )
+    text = try await textProcessor.process(text, context: context)
+}
+```
+
+**AppState additions:**
+- `var isPostProcessing = false` — shown in overlay while processing
+
+**Verify:** Pipeline runs with no filters (identity transform), text still pastes correctly.
+
+### Step 2: Filler word removal
+
+Strip common filler words and verbal tics. Pure regex — no LLM needed, runs in microseconds.
+
+**Files:** `PostProcessing/FillerWordFilter.swift`
+
+**What to build:**
+
+```swift
+struct FillerWordFilter: TextFilter {
+    /// Default English fillers. User can customize via UserDefaults.
+    static let defaultFillers = [
+        "um", "uh", "uh huh", "uhh", "umm",
+        "er", "ah", "hmm",
+        "like",           // only when standalone filler, not "I like pizza"
+        "you know",
+        "I mean",
+        "sort of",
+        "kind of",
+        "basically",
+        "actually",       // when sentence-initial filler
+        "right",          // when used as verbal tic, not affirmation
+        "so yeah",
+    ]
+
+    func apply(to text: String, context: ProcessingContext) async throws -> String {
+        // Build regex patterns that match fillers at word boundaries
+        // Handle edge cases: don't strip "like" from "I like pizza"
+        // Clean up resulting double spaces
     }
 }
 ```
 
 **Key considerations:**
-- Need a small delay (~100ms) between `app?.activate()` and the Cmd+V keystroke to ensure the target app is actually frontmost
-- Restoring the pasteboard should happen after another delay (~500ms) to ensure the paste completes
-- This requires Accessibility permission — the app should check `AXIsProcessTrusted()` on launch and guide the user to grant it if not
+- Word-boundary matching (`\b`) to avoid stripping substrings
+- "like" is tricky — only strip when it appears as a standalone filler (e.g. "I was, like, going"), not as a verb. Start conservative: only strip clearly-standalone patterns like ", like," and "like, " at sentence starts. Can improve with LLM in Step 4.
+- Normalize whitespace after removal (collapse double spaces, trim)
+- Make the filler list user-configurable via UserDefaults with a default set
 
-**Verify:** After dictation, text appears in the previously focused text field (test with TextEdit, Notes, a browser input, Slack).
+**Settings additions:**
+- Toggle: "Remove filler words" (`@AppStorage("removeFillerWords")`, default: true)
+- Future: editable filler word list
 
-### Step 8: Settings view
+**Verify:** "Um, I was, like, thinking we should, you know, go to the store" → "I was thinking we should go to the store"
 
-Basic settings window.
+### Step 3: Basic formatting
 
-**Files:** `SettingsView.swift`, updates to `SpeakApp.swift`
+Auto-capitalize, smart punctuation, and paragraph detection from pauses.
 
-**What to build:**
-- SwiftUI `Settings` scene (macOS native settings window)
-- Language picker: dropdown populated from `SpeechTranscriber.supportedLocales`, stored in `@AppStorage("locale")`
-- Auto-paste toggle: `@AppStorage("autoPaste")` — when off, text is just copied to clipboard on confirm, not pasted
-- Launch at login: use `SMAppService.mainApp` to register/unregister
-- Hotkey display (read-only for v0.1, custom binding is a future enhancement)
-
-**Verify:** Settings persist across app restarts, language change affects transcription.
-
-### Step 9: Permission onboarding
-
-Guide users through granting required permissions on first launch.
-
-**Updates to:** `SpeakApp.swift`, possibly a new `OnboardingView.swift`
+**Files:** `PostProcessing/FormattingFilter.swift`
 
 **What to build:**
-- On first launch, check:
-  1. Microphone: `AVCaptureDevice.authorizationStatus(for: .audio)`
-  2. Accessibility: `AXIsProcessTrusted()`
-  3. Speech: `SFSpeechRecognizer.authorizationStatus()`
-- If any are missing, show a simple window explaining what's needed and why
-- Provide buttons that open the relevant System Settings panes
-- Store `@AppStorage("onboardingComplete")` to skip on subsequent launches
 
-**Verify:** Fresh install walks through permissions correctly. App works after all are granted.
+```swift
+struct FormattingFilter: TextFilter {
+    func apply(to text: String, context: ProcessingContext) async throws -> String {
+        var result = text
+
+        // 1. Auto-capitalize after sentence-ending punctuation
+        result = capitalizeSentenceStarts(result)
+
+        // 2. Smart punctuation
+        //    - Straight quotes → curly quotes
+        //    - Double hyphens → em dashes
+        //    - Three dots → ellipsis character
+
+        // 3. Trim trailing whitespace/incomplete fragments
+
+        return result
+    }
+}
+```
+
+**Key considerations:**
+- SpeechTranscriber already handles basic capitalization and punctuation in many cases — this filter catches what it misses and normalizes inconsistencies
+- Keep transforms idempotent (running twice shouldn't change the result)
+- Respect locale for quote style (e.g. „German" vs "English")
+
+**Settings additions:**
+- Toggle: "Auto-format text" (`@AppStorage("autoFormat")`, default: true)
+
+**Verify:** "hello world. this is a test" → "Hello world. This is a test"
+
+### Step 4: Local LLM integration via FoundationModels
+
+Use Apple's on-device ~3B parameter model for intelligent text cleanup: better filler removal, grammar correction, conciseness, and style adaptation.
+
+**Files:** `PostProcessing/LLMRewriter.swift`
+
+**What to build:**
+
+```swift
+import FoundationModels
+
+/// Uses Apple's on-device LLM to rewrite/clean transcribed text.
+struct LLMRewriter: TextFilter {
+    func apply(to text: String, context: ProcessingContext) async throws -> String {
+        // Check model availability
+        let model = SystemLanguageModel.default
+        guard model.availability == .available else {
+            return text  // Graceful fallback: skip LLM, return text as-is
+        }
+
+        let session = LanguageModelSession {
+            """
+            You are a text cleanup assistant for a dictation app. Your job is to take
+            raw transcribed speech and clean it up for written communication.
+
+            Rules:
+            - Remove filler words (um, uh, like, you know, etc.)
+            - Fix grammar and punctuation
+            - Keep the meaning and tone identical to the original
+            - Do NOT add information, opinions, or change the intent
+            - Do NOT make the text more formal unless the context suggests it
+            - Return ONLY the cleaned text, no commentary
+            """
+        }
+
+        // If we have surrounding text context, include it
+        var prompt = "Clean up this transcribed speech:\n\n\(text)"
+        if let surrounding = context.surroundingText, !surrounding.isEmpty {
+            prompt = """
+            The user is writing in this context:
+            ---
+            \(surrounding)
+            ---
+
+            Clean up this transcribed speech to match the style above:
+            \(text)
+            """
+        }
+
+        let response = try await session.respond(to: prompt)
+        let cleaned = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Sanity check: if the LLM returned something drastically different
+        // in length, fall back to the original (hallucination guard)
+        let ratio = Double(cleaned.count) / Double(text.count)
+        if ratio < 0.3 || ratio > 2.0 {
+            return text
+        }
+
+        return cleaned
+    }
+}
+```
+
+**Key technical details:**
+- **FoundationModels** requires macOS 26, Apple Silicon (M1+), Apple Intelligence enabled
+- ~3B parameter model, runs on-device, ~30 tokens/sec on iPhone 15 Pro (faster on Mac)
+- 4096 token context window (combined input + output) — sufficient for dictation segments
+- Text refinement is explicitly one of the model's core strengths
+- WWDC25 SpeechAnalyzer session directly demonstrates using FoundationModels to post-process transcription output
+- `LanguageModelSession.prewarm()` can be called when the user starts recording to reduce first-response latency
+
+**Performance target:** < 500ms for typical dictation segments (1-3 sentences). The on-device model at 30+ tok/s should handle this easily for short text.
+
+**Availability handling:**
+- Check `SystemLanguageModel.default.availability` before every call
+- If `.unavailable(.appleIntelligenceNotEnabled)` → show a hint in settings
+- If `.unavailable(.deviceNotEligible)` → hide the toggle entirely
+- If `.unavailable(.modelNotReady)` → skip silently, use regex filters only
+
+**Settings additions:**
+- Toggle: "AI-powered cleanup" (`@AppStorage("llmRewrite")`, default: false — opt-in initially)
+- Show availability status and guidance if unavailable
+
+**Package.swift addition:**
+```swift
+.linkedFramework("FoundationModels")
+```
+
+**Verify:** "um I was thinking that we should like go to the meeting at like 3 pm and uh discuss the project" → "I was thinking we should go to the meeting at 3 PM and discuss the project"
+
+### Step 5: Context awareness via Accessibility API
+
+Read surrounding text from the focused text field to give the LLM style context.
+
+**Files:** `PostProcessing/ContextReader.swift`
+
+**What to build:**
+
+```swift
+import AppKit
+
+/// Reads text from the currently focused text field via the Accessibility API.
+@MainActor
+final class ContextReader {
+    /// Get the text surrounding the cursor in the focused text field.
+    /// Returns nil if inaccessible (app doesn't expose AX, no text field focused, etc.)
+    func readContext(from app: NSRunningApplication?) -> String? {
+        guard let app, let pid = Optional(app.processIdentifier) else { return nil }
+
+        let appElement = AXUIElementCreateApplication(pid)
+
+        // Get the focused UI element
+        var focusedElement: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(appElement, kAXFocusedUIElementAttribute as CFString, &focusedElement) == .success,
+              let element = focusedElement else {
+            return nil
+        }
+
+        let axElement = element as! AXUIElement
+
+        // Read the text value
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(axElement, kAXValueAttribute as CFString, &value) == .success,
+              let text = value as? String else {
+            return nil
+        }
+
+        // Trim to last ~500 characters for context (keep within LLM token budget)
+        let maxContext = 500
+        if text.count > maxContext {
+            return String(text.suffix(maxContext))
+        }
+
+        return text
+    }
+}
+```
+
+**Wire into AppCoordinator:**
+- Call `contextReader.readContext(from: previousApp)` before starting transcription (while the previous app still has a focused text field)
+- Pass the context through `ProcessingContext.surroundingText` to the LLM filter
+
+**Key considerations:**
+- Accessibility permission is already required for paste (CGEvent posting)
+- Not all apps expose their text fields via AX — fail gracefully (return nil)
+- Keep context short (~500 chars) to stay well within the 4096 token budget
+- Read context at the *start* of dictation (before overlay appears), not at the end
+
+**Verify:** When dictating in a Slack message that starts with "Hey team, quick update on the Q4 numbers:", the LLM uses that context to match the informal tone.
+
+### Step 6: Settings UI for post-processing
+
+Add a "Post-Processing" section to SettingsView.
+
+**Files:** Update `Settings/SettingsView.swift`
+
+**What to build:**
+
+```swift
+Section("Post-Processing") {
+    Toggle("Remove filler words", isOn: $removeFillerWords)
+        .help("Strip 'um', 'uh', 'like', 'you know', etc.")
+
+    Toggle("Auto-format text", isOn: $autoFormat)
+        .help("Auto-capitalize and clean up punctuation.")
+
+    Toggle("AI-powered cleanup", isOn: $llmRewrite)
+        .help("Use Apple Intelligence to rewrite transcribed text for clarity.")
+        .disabled(!llmAvailable)
+
+    if !llmAvailable {
+        Text("Requires Apple Intelligence to be enabled in System Settings.")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+    }
+}
+```
+
+**Verify:** Toggles persist, enabling/disabling each filter changes output.
+
+### Step 7: Overlay updates
+
+Show post-processing state in the overlay after recording stops.
+
+**Files:** Update `Overlay/OverlayView.swift`, `Models/AppState.swift`
+
+**What to build:**
+- When recording stops and post-processing begins, briefly show a "Formatting..." indicator in the overlay instead of immediately hiding it
+- If LLM rewriting is enabled, show a subtle progress state (< 500ms, so it's brief)
+- The overlay hides after processing completes
+
+**AppState additions:**
+```swift
+var isPostProcessing = false
+```
+
+**AppCoordinator changes:**
+- Set `appState.isPostProcessing = true` before running the pipeline
+- Set `appState.isPostProcessing = false` after
+- Only hide overlay after processing finishes
+
+**Verify:** Brief "Formatting..." appears after confirming dictation when LLM is enabled.
+
+### Step 8: Prewarm and performance optimization
+
+Ensure the LLM is ready by the time the user finishes dictating.
+
+**What to build:**
+- Call `LanguageModelSession.prewarm()` when the app launches or when the user starts recording
+- Measure end-to-end latency from confirm → paste, ensure < 500ms for regex-only, < 1s for LLM
+- If LLM takes too long (> 2s timeout), fall back to regex-only result and paste immediately
+
+**Verify:** Confirm-to-paste latency feels instant with regex filters, barely noticeable with LLM.
+
+## Filter execution order
+
+When all filters are enabled, they run in this order:
+
+1. **FillerWordFilter** — fast regex pass, strips obvious fillers
+2. **FormattingFilter** — capitalizes, fixes punctuation
+3. **LLMRewriter** — intelligent rewrite (if enabled and available)
+
+The LLM runs last because it can handle anything the regex filters miss, and feeding it already-cleaned text produces better results. If the LLM is disabled, steps 1-2 alone still provide significant value.
 
 ## What's explicitly NOT in this plan
 
-- Post-processing (filler removal, formatting, rewriting) — Phase 2
 - Voice commands ("delete that", "new paragraph") — Phase 3
-- Context awareness (reading surrounding text) — Phase 2
-- Custom dictionary — Phase 3
+- Custom dictionary / vocabulary — Phase 3
 - Multi-language hot-switching — Phase 3
-- iOS/iPadOS support — non-goal
+- Training custom FoundationModels adapters — future optimization
+- Cloud/server-side processing — non-goal (everything stays on-device)
 
 ## Open decisions
 
-1. **SpeechTranscriber vs DictationTranscriber** — Start with `DictationTranscriber` for better punctuation/formatting, but keep the code flexible to swap. Need to test both on actual hardware.
+1. **Filler word "like" handling** — Regex can catch obvious patterns (", like,") but will miss some. The LLM handles this well. Start conservative with regex, let LLM catch the rest. Monitor false positives.
 
-2. **Overlay positioning** — Start with fixed bottom-center. Moving to cursor-relative positioning is a polish item but adds complexity (need to track cursor position across apps).
+2. **LLM opt-in vs opt-out** — Start as opt-in (off by default) since it adds latency and requires Apple Intelligence. Flip to opt-out once we're confident in quality and speed.
 
-3. **Hotkey mechanism** — `NSEvent.addGlobalMonitorForEvents` is simplest but has limitations (doesn't fire if another app has a conflicting hotkey). `Carbon RegisterEventHotKey` is more robust but older API. Start with `NSEvent`, switch if needed.
+3. **Context window management** — With 4096 tokens, we need to budget: ~500 tokens for system prompt, ~500 for surrounding context, leaving ~3000 for the actual transcription. For very long dictation, may need to process in chunks or skip context.
 
-4. **Pasteboard restoration** — Saving/restoring the full pasteboard (which can contain images, files, rich text) is non-trivial. For v0.1, we could skip restoration and just overwrite. Users of clipboard managers won't mind. Decide based on testing.
+4. **Overlay behavior during processing** — Should we hide the overlay immediately (feels faster) or keep it until processing finishes (shows the cleaned result)? Start with keeping it visible for feedback; can change based on user preference.
 
 ## Reference
 
+- [FoundationModels documentation](https://developer.apple.com/documentation/FoundationModels)
+- [WWDC25: Meet the Foundation Models framework](https://developer.apple.com/videos/play/wwdc2025/286/)
+- [WWDC25: Deep dive into Foundation Models](https://developer.apple.com/videos/play/wwdc2025/301/)
+- [WWDC25: Bring advanced speech-to-text with SpeechAnalyzer](https://developer.apple.com/videos/play/wwdc2025/277/) — shows FoundationModels post-processing transcription output
+- [Apple ML Research: Foundation Models 2025 Updates](https://machinelearning.apple.com/research/apple-foundation-models-2025-updates)
 - [ARCHITECTURE.md](ARCHITECTURE.md) — component design and data flow
 - [ROADMAP.md](ROADMAP.md) — milestone checklist
-- [docs/APPLE_SPEECH_API.md](docs/APPLE_SPEECH_API.md) — SpeechAnalyzer API reference
-- [Swift Scribe](https://github.com/FluidInference/swift-scribe) — reference implementation for SpeechAnalyzer + AVAudioEngine wiring
