@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 
 /// Manages the lifecycle of the floating overlay panel.
+@MainActor
 @Observable
 final class OverlayManager {
     private var panel: OverlayPanel?

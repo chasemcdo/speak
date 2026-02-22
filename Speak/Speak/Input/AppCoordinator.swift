@@ -2,6 +2,7 @@ import AppKit
 import Observation
 
 /// Orchestrates the full dictation flow: hotkey → overlay → transcribe → paste.
+@MainActor
 @Observable
 final class AppCoordinator {
     private let transcriptionEngine = TranscriptionEngine()
@@ -45,7 +46,6 @@ final class AppCoordinator {
     }
 
     /// Toggle dictation on/off.
-    @MainActor
     func toggle() async {
         guard let appState else { return }
 
@@ -57,7 +57,6 @@ final class AppCoordinator {
     }
 
     /// Start a dictation session.
-    @MainActor
     func start() async {
         guard let appState, !appState.isRecording else { return }
 
@@ -83,7 +82,6 @@ final class AppCoordinator {
     }
 
     /// Confirm and paste the transcribed text.
-    @MainActor
     func confirm() async {
         guard let appState, appState.isRecording else { return }
 
@@ -114,7 +112,6 @@ final class AppCoordinator {
     }
 
     /// Cancel the current dictation session.
-    @MainActor
     func cancel() async {
         guard let appState, appState.isRecording else { return }
 
