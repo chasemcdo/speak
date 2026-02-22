@@ -37,14 +37,9 @@ struct OverlayView: View {
     }
 
     private var transcriptionText: some View {
-        Group {
-            Text(appState.finalizedText)
-                .foregroundStyle(.primary) +
-            Text(appState.volatileText)
-                .foregroundStyle(.secondary)
-        }
-        .font(.body)
-        .lineLimit(8)
+        Text("\(Text(appState.finalizedText).foregroundStyle(.primary))\(Text(appState.volatileText).foregroundStyle(.secondary))")
+            .font(.body)
+            .lineLimit(8)
     }
 }
 

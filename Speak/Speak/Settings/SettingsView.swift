@@ -1,4 +1,5 @@
 import SwiftUI
+import Speech
 import ServiceManagement
 
 struct SettingsView: View {
