@@ -1,4 +1,4 @@
-import AVFoundation
+@preconcurrency import AVFoundation
 import Speech
 
 @Observable
@@ -55,7 +55,7 @@ final class TranscriptionEngine {
         // Feed audio buffers into the analyzer input stream
         Task {
             for await buffer in audioStream {
-                inputContinuation.yield(.audioBuffer(buffer))
+                inputContinuation.yield(AnalyzerInput(buffer: buffer))
             }
             inputContinuation.finish()
         }

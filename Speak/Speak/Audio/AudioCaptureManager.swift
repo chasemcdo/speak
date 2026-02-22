@@ -1,7 +1,7 @@
-import AVFoundation
+@preconcurrency import AVFoundation
 import Speech
 
-final class AudioCaptureManager {
+final class AudioCaptureManager: @unchecked Sendable {
     private let audioEngine = AVAudioEngine()
     private var continuation: AsyncStream<AVAudioPCMBuffer>.Continuation?
     private var converter: AVAudioConverter?
@@ -32,7 +32,7 @@ final class AudioCaptureManager {
     func prepareFormat(compatibleWith module: SpeechTranscriber) async throws {
         let inputFormat = audioEngine.inputNode.outputFormat(forBus: 0)
         let bestFormat = try await SpeechAnalyzer.bestAvailableAudioFormat(
-            compatibleWith: module
+            compatibleWith: [module]
         )
 
         if inputFormat.sampleRate != bestFormat.sampleRate ||
@@ -102,15 +102,16 @@ final class AudioCaptureManager {
             return nil
         }
 
-        var gotData = false
+        // Use a box to avoid capturing a mutable var in a @Sendable closure
+        let state = ConversionState(buffer: buffer)
         let inputBlock: AVAudioConverterInputBlock = { _, outStatus in
-            if gotData {
+            if state.didProvideData {
                 outStatus.pointee = .noDataNow
                 return nil
             }
-            gotData = true
+            state.didProvideData = true
             outStatus.pointee = .haveData
-            return buffer
+            return state.buffer
         }
 
         var error: NSError?
@@ -120,6 +121,16 @@ final class AudioCaptureManager {
             return nil
         }
         return outputBuffer
+    }
+}
+
+// Reference type to safely pass mutable state into @Sendable converter closure
+private final class ConversionState: @unchecked Sendable {
+    let buffer: AVAudioPCMBuffer
+    var didProvideData = false
+
+    init(buffer: AVAudioPCMBuffer) {
+        self.buffer = buffer
     }
 }
 
