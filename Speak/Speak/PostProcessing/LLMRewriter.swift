@@ -75,12 +75,8 @@ struct LLMRewriter: TextFilter {
     /// Prewarm the model to reduce first-response latency.
     static func prewarm() async {
         guard isAvailable else { return }
-        do {
-            let session = LanguageModelSession()
-            try await session.prewarm()
-        } catch {
-            // Prewarm is best-effort
-        }
+        let session = LanguageModelSession()
+        session.prewarm()
     }
 }
 
