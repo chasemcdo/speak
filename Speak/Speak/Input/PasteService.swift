@@ -64,7 +64,8 @@ enum PasteService {
 
     /// Prompt the user to grant Accessibility permissions.
     static func promptForAccessibility() {
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
-        AXIsProcessTrustedWithOptions(options)
+        // Use the string literal to avoid concurrency-safety warning on kAXTrustedCheckOptionPrompt
+        let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
+        _ = AXIsProcessTrustedWithOptions(options)
     }
 }

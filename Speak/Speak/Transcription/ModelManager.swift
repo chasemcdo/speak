@@ -1,5 +1,6 @@
 import Speech
 
+@MainActor
 final class ModelManager {
     /// Check if a locale is supported by SpeechTranscriber.
     func isSupported(locale: Locale) async -> Bool {
