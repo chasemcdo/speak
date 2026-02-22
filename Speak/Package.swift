@@ -14,6 +14,9 @@ let package = Package(
             resources: [
                 .process("Assets.xcassets")
             ],
+            swiftSettings: [
+                .define("SPEAK_APP")
+            ],
             linkerSettings: [
                 .linkedFramework("Speech"),
                 .linkedFramework("AVFoundation"),
