@@ -42,19 +42,19 @@ enum PasteService {
 
     /// Simulate a Cmd+V keystroke using CGEvent.
     private static func simulatePaste() {
-        let source = CGEventSource(stateID: .hidEventState)
+        let source = CGEventSource(stateID: .combinedSessionState)
 
         // Virtual key code 0x09 = 'v'
-        guard let keyDown = CGEvent(keyboardEventType: .keyDown, virtualKey: 0x09, keyIsDown: true),
-              let keyUp = CGEvent(keyboardEventType: .keyUp, virtualKey: 0x09, keyIsDown: false) else {
+        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: true),
+              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: false) else {
             return
         }
 
-        keyDown.flags = .maskCommand
-        keyUp.flags = .maskCommand
+        keyDown.flags = CGEventFlags.maskCommand
+        keyUp.flags = CGEventFlags.maskCommand
 
-        keyDown.post(tap: .cghidEventTap)
-        keyUp.post(tap: .cghidEventTap)
+        keyDown.post(tap: CGEventTapLocation.cghidEventTap)
+        keyUp.post(tap: CGEventTapLocation.cghidEventTap)
     }
 
     /// Check if Accessibility permissions are granted (required for CGEvent posting).
@@ -64,7 +64,7 @@ enum PasteService {
 
     /// Prompt the user to grant Accessibility permissions.
     static func promptForAccessibility() {
-        let options = [kAXTrustedCheckOptionPrompt.takeRetainedValue(): true] as CFDictionary
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
         AXIsProcessTrustedWithOptions(options)
     }
 }

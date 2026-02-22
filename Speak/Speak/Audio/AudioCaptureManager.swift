@@ -31,9 +31,11 @@ final class AudioCaptureManager: @unchecked Sendable {
     /// Call this before startCapture to set up format conversion.
     func prepareFormat(compatibleWith module: SpeechTranscriber) async throws {
         let inputFormat = audioEngine.inputNode.outputFormat(forBus: 0)
-        let bestFormat = try await SpeechAnalyzer.bestAvailableAudioFormat(
+        guard let bestFormat = await SpeechAnalyzer.bestAvailableAudioFormat(
             compatibleWith: [module]
-        )
+        ) else {
+            throw AudioCaptureError.formatConversionFailed
+        }
 
         if inputFormat.sampleRate != bestFormat.sampleRate ||
            inputFormat.channelCount != bestFormat.channelCount {
