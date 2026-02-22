@@ -32,7 +32,7 @@ struct SettingsView: View {
                 HStack {
                     Text("Toggle dictation")
                     Spacer()
-                    Text("⌥ Space")
+                    Text("fn")
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
