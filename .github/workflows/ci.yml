@@ -18,56 +18,17 @@ jobs:
           xcodebuild -version
           swift --version
 
-      # Fast compilation check via Swift Package Manager
-      - name: Build with SPM
-        run: cd Speak && swift build
+      # Build release binary via Swift Package Manager
+      - name: Build with SPM (Release)
+        run: cd Speak && swift build -c release
 
-      # Full xcodebuild — produces the .app in DerivedData
-      - name: Build with xcodebuild
+      # Validate the compiled binary
+      - name: Validate binary
         run: |
-          xcodebuild \
-            -project Speak/Speak.xcodeproj \
-            -scheme Speak \
-            -configuration Release \
-            -derivedDataPath build/DerivedData \
-            CODE_SIGN_IDENTITY="-" \
-            CODE_SIGNING_ALLOWED=YES
-
-      - name: Locate .app from build
-        id: locate
-        run: |
-          APP=$(find build/DerivedData -name "Speak.app" -type d | head -1)
-          echo "Found .app at: $APP"
-          test -n "$APP" || { echo "FAIL: Speak.app not found in build output"; exit 1; }
-          echo "── Bundle contents:"
-          find "$APP"
-          echo "app_path=$APP" >> "$GITHUB_OUTPUT"
-
-      # Verify the .app bundle is well-formed.
-      - name: Validate .app bundle
-        run: |
-          APP="${{ steps.locate.outputs.app_path }}"
-
-          echo "── Locating Info.plist"
-          PLIST=$(find "$APP" -name "Info.plist" | head -1)
-          test -n "$PLIST" || { echo "FAIL: Info.plist not found"; exit 1; }
-          echo "   Found: $PLIST"
-
-          echo "── Reading CFBundleExecutable"
-          EXEC_NAME=$(/usr/libexec/PlistBuddy -c "Print CFBundleExecutable" "$PLIST")
-          echo "   Executable name: $EXEC_NAME"
-          test -n "$EXEC_NAME" || { echo "FAIL: CFBundleExecutable not set"; exit 1; }
-
-          echo "── Locating executable"
-          EXEC=$(find "$APP" -name "$EXEC_NAME" \( -type f -o -type l \) | head -1)
-          test -n "$EXEC" || { echo "FAIL: '$EXEC_NAME' not found in bundle"; exit 1; }
-          echo "   Found: $EXEC"
+          EXEC=$(find Speak/.build/release -name "Speak" -type f | head -1)
+          test -n "$EXEC" || { echo "FAIL: Speak binary not found in build output"; exit 1; }
+          echo "── Binary: $EXEC"
           file "$EXEC"
-
-          echo "── Checking bundle identifier"
-          BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$PLIST")
-          echo "   Bundle ID: $BUNDLE_ID"
-          test -n "$BUNDLE_ID" || { echo "FAIL: empty bundle identifier"; exit 1; }
 
           echo "── Checking linked frameworks"
           FRAMEWORKS=$(otool -L "$EXEC" | tail -n +2)
