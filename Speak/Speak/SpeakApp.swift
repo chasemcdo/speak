@@ -4,6 +4,7 @@ import SwiftUI
 struct SpeakApp: App {
     @State private var appState = AppState()
     @State private var coordinator = AppCoordinator()
+    @State private var historyStore = HistoryStore()
     @AppStorage("onboardingComplete") private var onboardingComplete = false
     @Environment(\.openWindow) private var openWindow
 
@@ -21,8 +22,9 @@ struct SpeakApp: App {
             MenuBarView()
                 .environment(appState)
                 .environment(coordinator)
+                .environment(historyStore)
                 .onAppear {
-                    coordinator.setUp(appState: appState)
+                    coordinator.setUp(appState: appState, historyStore: historyStore)
 
                     // If permissions were revoked (e.g., after Xcode rebuild),
                     // reset onboarding so the user is prompted to re-grant them.
@@ -58,5 +60,10 @@ struct SpeakApp: App {
         }
         .windowResizability(.contentSize)
         .defaultPosition(.center)
+
+        Window("History", id: "history") {
+            HistoryView()
+                .environment(historyStore)
+        }
     }
 }
