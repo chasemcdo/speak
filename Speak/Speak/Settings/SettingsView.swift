@@ -6,6 +6,7 @@ struct SettingsView: View {
     @Environment(AppState.self) private var appState
     @AppStorage("locale") private var localeIdentifier = Locale.current.identifier
     @AppStorage("autoPaste") private var autoPaste = true
+    @AppStorage("hotkeyModifier") private var hotkey: TranscriptionHotkey = .fn
     @AppStorage("launchAtLogin") private var launchAtLogin = false
 
     @State private var supportedLocales: [Locale] = []
@@ -29,13 +30,10 @@ struct SettingsView: View {
             }
 
             Section("Hotkey") {
-                HStack {
-                    Text("Toggle dictation")
-                    Spacer()
-                    Text("fn")
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+                Picker("Toggle dictation", selection: $hotkey) {
+                    ForEach(TranscriptionHotkey.allCases, id: \.self) { key in
+                        Text(key.label).tag(key)
+                    }
                 }
             }
 
