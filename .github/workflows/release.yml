@@ -22,25 +22,39 @@ jobs:
           xcodebuild -version
           swift --version
 
-      - name: Build release archive
-        run: |
-          xcodebuild \
-            -project Speak/Speak.xcodeproj \
-            -scheme Speak \
-            -configuration Release \
-            -derivedDataPath build/DerivedData \
-            -archivePath build/Speak.xcarchive \
-            archive \
-            CODE_SIGN_IDENTITY="-" \
-            CODE_SIGNING_ALLOWED=YES \
-            SKIP_INSTALL=NO
+      - name: Build release binary
+        run: cd Speak && swift build -c release
 
-      - name: Extract .app from archive
+      - name: Assemble .app bundle
         run: |
-          mkdir -p build
-          APP_SRC=$(find build/Speak.xcarchive -name "Speak.app" -type d | head -1)
-          test -n "$APP_SRC" || { echo "FAIL: Speak.app not found in archive"; exit 1; }
-          ditto "$APP_SRC" build/Speak.app
+          BIN_PATH=$(cd Speak && swift build -c release --show-bin-path)
+          APP=build/Speak.app
+
+          mkdir -p "$APP/Contents/MacOS"
+          mkdir -p "$APP/Contents/Resources"
+
+          # Binary
+          cp "$BIN_PATH/Speak" "$APP/Contents/MacOS/Speak"
+
+          # Info.plist
+          cp Speak/Speak/Info.plist "$APP/Contents/Info.plist"
+
+          # PkgInfo
+          echo -n "APPL????" > "$APP/Contents/PkgInfo"
+
+          # Copy SPM-compiled resource bundles (includes processed assets)
+          for bundle in "$BIN_PATH"/*.bundle; do
+            [ -d "$bundle" ] && cp -R "$bundle" "$APP/Contents/Resources/"
+          done
+
+          # Ad-hoc code sign with entitlements
+          codesign --force --deep \
+            --sign "-" \
+            --entitlements Speak/Speak/Speak.entitlements \
+            "$APP"
+
+          echo "Built: $APP"
+          find "$APP" -type f
 
       # ── Optional: code signing & notarization ──────────────────────
       # Uncomment this section once you have an Apple Developer ID.
