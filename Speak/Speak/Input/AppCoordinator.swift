@@ -8,6 +8,7 @@ final class AppCoordinator {
     private let transcriptionEngine = TranscriptionEngine()
     private let overlayManager = OverlayManager()
     private let hotkeyManager = HotkeyManager()
+    private let historyHotkeyManager = HistoryHotkeyManager()
     private let textProcessor = TextProcessor()
     private let contextReader = ContextReader()
 
@@ -15,10 +16,12 @@ final class AppCoordinator {
     private var capturedContext: String?
     private var capturedVocabulary: ScreenVocabulary?
     private var appState: AppState?
+    private var historyStore: HistoryStore?
 
     /// Set up the coordinator with the shared app state. Call once at app launch.
-    func setUp(appState: AppState) {
+    func setUp(appState: AppState, historyStore: HistoryStore) {
         self.appState = appState
+        self.historyStore = historyStore
 
         // Register the global hotkey (double-tap to toggle on, hold to transcribe)
         hotkeyManager.register(
@@ -59,6 +62,13 @@ final class AppCoordinator {
         if UserDefaults.standard.bool(forKey: "llmRewrite") {
             Task {
                 await LLMRewriter.prewarm()
+            }
+        }
+
+        // Register Cmd+Ctrl+V to paste the last history entry
+        historyHotkeyManager.register { [weak self] in
+            Task { @MainActor in
+                await self?.pasteLastFromHistory()
             }
         }
     }
@@ -125,7 +135,8 @@ final class AppCoordinator {
         await transcriptionEngine.stopSession()
         appState.isRecording = false
 
-        var text = appState.displayText
+        let rawText = appState.displayText
+        var text = rawText
 
         // Run post-processing pipeline if we have text
         if !text.isEmpty {
@@ -147,6 +158,16 @@ final class AppCoordinator {
                 text = await textProcessor.process(text, context: context)
                 appState.isPostProcessing = false
             }
+        }
+
+        // Save to history
+        if !text.isEmpty {
+            historyStore?.add(HistoryEntry(
+                rawText: rawText,
+                processedText: text,
+                sourceAppName: previousApp?.localizedName,
+                sourceAppBundleID: previousApp?.bundleIdentifier
+            ))
         }
 
         // Hide overlay
@@ -187,6 +208,14 @@ final class AppCoordinator {
         previousApp = nil
         capturedContext = nil
         capturedVocabulary = nil
+    }
+
+    /// Paste the most recent history entry into the current app.
+    func pasteLastFromHistory() async {
+        guard let appState, !appState.isRecording,
+              let entry = historyStore?.mostRecent else { return }
+        let currentApp = NSWorkspace.shared.frontmostApplication
+        await PasteService.paste(entry.processedText, into: currentApp)
     }
 
     // MARK: - Private
