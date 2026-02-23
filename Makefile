@@ -38,8 +38,9 @@ app:
 		-archivePath $(BUILD_DIR)/$(APP_NAME).xcarchive \
 		archive \
 		CODE_SIGN_IDENTITY="-" \
-		CODE_SIGNING_ALLOWED=YES
-	@# Export the .app from the archive (ditto preserves symlinks and macOS metadata)
+		CODE_SIGNING_ALLOWED=YES \
+		SKIP_INSTALL=NO
+	@# Export the .app from the archive
 	@APP_SRC=$$(find $(BUILD_DIR)/$(APP_NAME).xcarchive -name "$(APP_NAME).app" -type d | head -1); \
 		test -n "$$APP_SRC" || { echo "FAIL: $(APP_NAME).app not found in archive"; exit 1; }; \
 		ditto "$$APP_SRC" $(APP_PATH)

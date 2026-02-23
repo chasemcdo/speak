@@ -22,61 +22,31 @@ jobs:
       - name: Build with SPM
         run: cd Speak && swift build
 
-      # Full archive build — same as the release pipeline
-      - name: Build release archive
+      # Full xcodebuild — produces the .app in DerivedData
+      - name: Build with xcodebuild
         run: |
           xcodebuild \
             -project Speak/Speak.xcodeproj \
             -scheme Speak \
             -configuration Release \
             -derivedDataPath build/DerivedData \
-            -archivePath build/Speak.xcarchive \
-            archive \
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_ALLOWED=YES
 
-      - name: Inspect archive structure
+      - name: Locate .app from build
+        id: locate
         run: |
-          echo "── Full archive tree (files, symlinks, dirs):"
-          find build/Speak.xcarchive -maxdepth 6 | head -120
-          echo ""
-          echo "── Symlinks in archive:"
-          find build/Speak.xcarchive -type l -exec ls -l {} \;
-          echo ""
-          echo "── Files named Speak (any type):"
-          find build/Speak.xcarchive -name "Speak"
-
-      - name: Extract .app from archive
-        run: |
-          mkdir -p build
-          # Find the .app wherever it lives in the archive
-          APP_SRC=$(find build/Speak.xcarchive -name "Speak.app" -type d | head -1)
-          echo "Found .app at: $APP_SRC"
-          test -n "$APP_SRC" || { echo "FAIL: Speak.app not found in archive"; exit 1; }
-          # Use ditto to properly copy the macOS bundle (preserves symlinks,
-          # resource forks, and HFS metadata that cp -R can miss)
-          ditto "$APP_SRC" build/Speak.app
-
-      - name: Inspect .app bundle structure
-        run: |
-          echo "── Full .app tree (including symlinks):"
-          find build/Speak.app
-          echo ""
-          echo "── Symlinks:"
-          find build/Speak.app -type l -exec ls -l {} \;
-          echo ""
-          echo "── file(1) output for regular files:"
-          find build/Speak.app -type f | while read f; do
-            file "$f"
-          done
-          echo ""
-          echo "── ls -lR:"
-          ls -lR build/Speak.app
+          APP=$(find build/DerivedData -name "Speak.app" -type d | head -1)
+          echo "Found .app at: $APP"
+          test -n "$APP" || { echo "FAIL: Speak.app not found in build output"; exit 1; }
+          echo "── Bundle contents:"
+          find "$APP"
+          echo "app_path=$APP" >> "$GITHUB_OUTPUT"
 
       # Verify the .app bundle is well-formed.
       - name: Validate .app bundle
         run: |
-          APP=build/Speak.app
+          APP="${{ steps.locate.outputs.app_path }}"
 
           echo "── Locating Info.plist"
           PLIST=$(find "$APP" -name "Info.plist" | head -1)
@@ -88,11 +58,10 @@ jobs:
           echo "   Executable name: $EXEC_NAME"
           test -n "$EXEC_NAME" || { echo "FAIL: CFBundleExecutable not set"; exit 1; }
 
-          echo "── Locating executable by name (files and symlinks)"
+          echo "── Locating executable"
           EXEC=$(find "$APP" -name "$EXEC_NAME" \( -type f -o -type l \) | head -1)
           test -n "$EXEC" || { echo "FAIL: '$EXEC_NAME' not found in bundle"; exit 1; }
           echo "   Found: $EXEC"
-          ls -l "$EXEC"
           file "$EXEC"
 
           echo "── Checking bundle identifier"
