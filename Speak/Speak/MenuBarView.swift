@@ -17,8 +17,8 @@ struct MenuBarView: View {
                 }
                 .keyboardShortcut(.escape)
             } else {
-                Button("Start Dictation (fn)") {
-                    Task { await coordinator.toggle() }
+                Button("Start Dictation (fn fn)") {
+                    Task { await coordinator.start() }
                 }
             }
 
