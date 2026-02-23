@@ -37,14 +37,14 @@ jobs:
 
       - name: Inspect archive structure
         run: |
-          echo "── Archive contents:"
-          find build/Speak.xcarchive -maxdepth 5 -type f | head -80
+          echo "── Full archive tree (files, symlinks, dirs):"
+          find build/Speak.xcarchive -maxdepth 6 | head -120
           echo ""
-          echo "── Looking for .app bundles:"
-          find build/Speak.xcarchive -name "*.app" -type d
+          echo "── Symlinks in archive:"
+          find build/Speak.xcarchive -type l -exec ls -l {} \;
           echo ""
-          echo "── Looking for executables named Speak:"
-          find build/Speak.xcarchive -name "Speak" -type f
+          echo "── Files named Speak (any type):"
+          find build/Speak.xcarchive -name "Speak"
 
       - name: Extract .app from archive
         run: |
@@ -53,17 +53,25 @@ jobs:
           APP_SRC=$(find build/Speak.xcarchive -name "Speak.app" -type d | head -1)
           echo "Found .app at: $APP_SRC"
           test -n "$APP_SRC" || { echo "FAIL: Speak.app not found in archive"; exit 1; }
-          cp -R "$APP_SRC" build/Speak.app
+          # Use ditto to properly copy the macOS bundle (preserves symlinks,
+          # resource forks, and HFS metadata that cp -R can miss)
+          ditto "$APP_SRC" build/Speak.app
 
       - name: Inspect .app bundle structure
         run: |
-          echo "── Full .app tree:"
-          find build/Speak.app -type f
+          echo "── Full .app tree (including symlinks):"
+          find build/Speak.app
           echo ""
-          echo "── file(1) output for every file:"
+          echo "── Symlinks:"
+          find build/Speak.app -type l -exec ls -l {} \;
+          echo ""
+          echo "── file(1) output for regular files:"
           find build/Speak.app -type f | while read f; do
             file "$f"
           done
+          echo ""
+          echo "── ls -lR:"
+          ls -lR build/Speak.app
 
       # Verify the .app bundle is well-formed.
       - name: Validate .app bundle
@@ -71,7 +79,7 @@ jobs:
           APP=build/Speak.app
 
           echo "── Locating Info.plist"
-          PLIST=$(find "$APP" -name "Info.plist" -type f | head -1)
+          PLIST=$(find "$APP" -name "Info.plist" | head -1)
           test -n "$PLIST" || { echo "FAIL: Info.plist not found"; exit 1; }
           echo "   Found: $PLIST"
 
@@ -80,10 +88,11 @@ jobs:
           echo "   Executable name: $EXEC_NAME"
           test -n "$EXEC_NAME" || { echo "FAIL: CFBundleExecutable not set"; exit 1; }
 
-          echo "── Locating executable by name"
-          EXEC=$(find "$APP" -name "$EXEC_NAME" -type f | head -1)
+          echo "── Locating executable by name (files and symlinks)"
+          EXEC=$(find "$APP" -name "$EXEC_NAME" \( -type f -o -type l \) | head -1)
           test -n "$EXEC" || { echo "FAIL: '$EXEC_NAME' not found in bundle"; exit 1; }
           echo "   Found: $EXEC"
+          ls -l "$EXEC"
           file "$EXEC"
 
           echo "── Checking bundle identifier"

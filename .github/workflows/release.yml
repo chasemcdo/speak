@@ -37,7 +37,9 @@ jobs:
       - name: Extract .app from archive
         run: |
           mkdir -p build
-          cp -R build/Speak.xcarchive/Products/Applications/Speak.app build/Speak.app
+          APP_SRC=$(find build/Speak.xcarchive -name "Speak.app" -type d | head -1)
+          test -n "$APP_SRC" || { echo "FAIL: Speak.app not found in archive"; exit 1; }
+          ditto "$APP_SRC" build/Speak.app
 
       # ── Optional: code signing & notarization ──────────────────────
       # Uncomment this section once you have an Apple Developer ID.

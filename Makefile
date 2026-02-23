@@ -39,8 +39,10 @@ app:
 		archive \
 		CODE_SIGN_IDENTITY="-" \
 		CODE_SIGNING_ALLOWED=YES
-	@# Export the .app from the archive
-	@cp -R $(BUILD_DIR)/$(APP_NAME).xcarchive/Products/Applications/$(APP_NAME).app $(APP_PATH)
+	@# Export the .app from the archive (ditto preserves symlinks and macOS metadata)
+	@APP_SRC=$$(find $(BUILD_DIR)/$(APP_NAME).xcarchive -name "$(APP_NAME).app" -type d | head -1); \
+		test -n "$$APP_SRC" || { echo "FAIL: $(APP_NAME).app not found in archive"; exit 1; }; \
+		ditto "$$APP_SRC" $(APP_PATH)
 	@echo "Built: $(APP_PATH)"
 
 # --- DMG packaging ---
@@ -61,7 +63,7 @@ check: app
 	echo "   Executable name: $$EXEC_NAME"; \
 	test -n "$$EXEC_NAME" || { echo "FAIL: CFBundleExecutable not set"; exit 1; }; \
 	echo "── Locating executable by name"; \
-	EXEC=$$(find $(APP_PATH) -name "$$EXEC_NAME" -type f | head -1); \
+	EXEC=$$(find $(APP_PATH) -name "$$EXEC_NAME" \( -type f -o -type l \) | head -1); \
 	test -n "$$EXEC" || { echo "FAIL: '$$EXEC_NAME' not found in bundle"; exit 1; }; \
 	echo "   Found: $$EXEC"; \
 	echo "── Checking bundle identifier"; \
