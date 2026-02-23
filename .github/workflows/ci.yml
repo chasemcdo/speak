@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build & Validate
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Print build environment
+        run: |
+          xcodebuild -version
+          swift --version
+
+      # Fast compilation check via Swift Package Manager
+      - name: Build with SPM
+        run: cd Speak && swift build
+
+      # Full archive build — same as the release pipeline
+      - name: Build release archive
+        run: |
+          xcodebuild \
+            -project Speak/Speak.xcodeproj \
+            -scheme Speak \
+            -configuration Release \
+            -derivedDataPath build/DerivedData \
+            -archivePath build/Speak.xcarchive \
+            archive \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_ALLOWED=YES
+
+      - name: Extract .app from archive
+        run: |
+          mkdir -p build
+          cp -R build/Speak.xcarchive/Products/Applications/Speak.app build/Speak.app
+
+      # Verify the .app bundle is well-formed
+      - name: Validate .app bundle
+        run: |
+          APP=build/Speak.app
+
+          echo "── Checking executable exists"
+          test -f "$APP/Contents/MacOS/Speak" || { echo "FAIL: missing executable"; exit 1; }
+
+          echo "── Checking Info.plist exists"
+          test -f "$APP/Contents/Info.plist" || { echo "FAIL: missing Info.plist"; exit 1; }
+
+          echo "── Checking bundle identifier"
+          BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$APP/Contents/Info.plist")
+          echo "   Bundle ID: $BUNDLE_ID"
+          test -n "$BUNDLE_ID" || { echo "FAIL: empty bundle identifier"; exit 1; }
+
+          echo "── Checking linked frameworks"
+          FRAMEWORKS=$(otool -L "$APP/Contents/MacOS/Speak" | tail -n +2)
+          echo "$FRAMEWORKS"
+          for fw in Speech AVFoundation AppKit CoreGraphics; do
+            echo "$FRAMEWORKS" | grep -q "$fw" || { echo "FAIL: $fw not linked"; exit 1; }
+          done
+
+          echo "── All checks passed"

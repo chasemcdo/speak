@@ -4,6 +4,7 @@
 #   make release     Build release binary via SPM
 #   make app         Build a release .app bundle via xcodebuild
 #   make dmg         Package the .app into a DMG
+#   make check       Build, then validate .app bundle (used by CI)
 #   make clean       Remove build artifacts
 
 APP_NAME     := Speak
@@ -15,7 +16,7 @@ APP_PATH     := $(BUILD_DIR)/$(APP_NAME).app
 DMG_PATH     := $(BUILD_DIR)/$(APP_NAME).dmg
 VERSION      := $(shell /usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" Speak/Speak/Info.plist 2>/dev/null || echo "0.1.0")
 
-.PHONY: build release app dmg clean
+.PHONY: build release app dmg check clean
 
 # --- SPM (for development) ---
 
@@ -46,6 +47,24 @@ app:
 
 dmg: app
 	@./scripts/create-dmg.sh $(APP_PATH) $(DMG_PATH) $(VERSION)
+
+# --- CI check (build + validate bundle) ---
+
+check: app
+	@echo "── Checking executable exists"
+	@test -f $(APP_PATH)/Contents/MacOS/$(APP_NAME) || { echo "FAIL: missing executable"; exit 1; }
+	@echo "── Checking Info.plist exists"
+	@test -f $(APP_PATH)/Contents/Info.plist || { echo "FAIL: missing Info.plist"; exit 1; }
+	@echo "── Checking bundle identifier"
+	@BUNDLE_ID=$$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" $(APP_PATH)/Contents/Info.plist); \
+		echo "   Bundle ID: $$BUNDLE_ID"; \
+		test -n "$$BUNDLE_ID" || { echo "FAIL: empty bundle identifier"; exit 1; }
+	@echo "── Checking linked frameworks"
+	@for fw in Speech AVFoundation AppKit CoreGraphics; do \
+		otool -L $(APP_PATH)/Contents/MacOS/$(APP_NAME) | grep -q "$$fw" \
+			|| { echo "FAIL: $$fw not linked"; exit 1; }; \
+	done
+	@echo "── All checks passed"
 
 # --- Cleanup ---
 
