@@ -47,8 +47,8 @@ struct SettingsView: View {
                 Toggle("Auto-format text", isOn: $autoFormat)
                     .help("Auto-capitalize sentences and clean up punctuation.")
 
-                Toggle("AI-powered cleanup", isOn: $llmRewrite)
-                    .help("Use Apple Intelligence to rewrite transcribed text for clarity and grammar.")
+                Toggle("AI-powered formatting", isOn: $llmRewrite)
+                    .help("Use Apple Intelligence to clean up grammar, format lists, add paragraphs, and match your writing style.")
                     .disabled(!llmAvailable)
 
                 if !llmAvailable {
