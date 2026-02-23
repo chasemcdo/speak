@@ -28,6 +28,15 @@ struct LLMRewriter: TextFilter {
         thought, keep it as a single line — do NOT force it into a list
         - Match any existing formatting style if surrounding context is provided
 
+        Screen vocabulary rules:
+        - When a vocabulary list from the user's screen is provided, use those exact \
+        spellings for any names, filenames, identifiers, or terms that sound similar
+        - For example, if the vocabulary contains "Daniyal" and the speaker says something \
+        that sounds like "Daniel", use "Daniyal"
+        - If the vocabulary contains "generate_changelog.sh", use that exact formatting \
+        rather than "generate changelog" or "generate_changelog"
+        - Only apply vocabulary corrections when the spoken word is a plausible match
+
         Important:
         - Do NOT add information, opinions, or change the intent
         - Do NOT over-format — short simple dictations should stay as plain sentences
@@ -40,6 +49,9 @@ struct LLMRewriter: TextFilter {
             return text
         }
 
+        // Build vocabulary hint from screen context
+        let vocabularyHint = Self.buildVocabularyHint(from: context.screenVocabulary)
+
         let prompt: String
         if let surrounding = context.surroundingText, !surrounding.isEmpty {
             prompt = """
@@ -47,7 +59,7 @@ struct LLMRewriter: TextFilter {
             ---
             \(surrounding)
             ---
-
+            \(vocabularyHint)
             Format this dictated text to match the style above. \
             Return ONLY the formatted text:
 
@@ -55,6 +67,7 @@ struct LLMRewriter: TextFilter {
             """
         } else {
             prompt = """
+            \(vocabularyHint)
             Format this dictated text for written communication. \
             Return ONLY the formatted text:
 
@@ -79,6 +92,43 @@ struct LLMRewriter: TextFilter {
 
             return cleaned
         }
+    }
+
+    // MARK: - Screen vocabulary
+
+    /// Build a compact vocabulary hint string from screen context.
+    /// Returns an empty string if there's nothing useful.
+    private static func buildVocabularyHint(from vocab: ScreenVocabulary?) -> String {
+        guard let vocab, !vocab.isEmpty else { return "" }
+
+        var terms: [String] = []
+
+        if let title = vocab.windowTitle {
+            terms.append("Window: \(title)")
+        }
+
+        if let doc = vocab.documentPath {
+            // Extract just the filename from a full path
+            let filename = (doc as NSString).lastPathComponent
+            if !filename.isEmpty {
+                terms.append("File: \(filename)")
+            }
+        }
+
+        // Add visible terms (tab titles, labels, headers)
+        for term in vocab.visibleTerms.prefix(15) {
+            terms.append(term)
+        }
+
+        guard !terms.isEmpty else { return "" }
+
+        let joined = terms.joined(separator: "\n- ")
+        return """
+
+        Screen vocabulary (use these exact spellings for matching names/terms):
+        - \(joined)
+
+        """
     }
 
     /// Check whether the on-device model is available for use.

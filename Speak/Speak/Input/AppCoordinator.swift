@@ -13,6 +13,7 @@ final class AppCoordinator {
 
     private var previousApp: NSRunningApplication?
     private var capturedContext: String?
+    private var capturedVocabulary: ScreenVocabulary?
     private var appState: AppState?
 
     /// Set up the coordinator with the shared app state. Call once at app launch.
@@ -72,6 +73,11 @@ final class AppCoordinator {
         // Capture context from the focused text field before we steal focus
         capturedContext = contextReader.readContext(from: previousApp)
 
+        // Capture screen vocabulary (names, filenames, terms) if enabled
+        if UserDefaults.standard.bool(forKey: "screenContext") {
+            capturedVocabulary = contextReader.readScreenVocabulary(from: previousApp)
+        }
+
         // Reset state
         appState.reset()
 
@@ -123,6 +129,7 @@ final class AppCoordinator {
 
                 let context = ProcessingContext(
                     surroundingText: capturedContext,
+                    screenVocabulary: capturedVocabulary,
                     locale: locale
                 )
 
@@ -150,6 +157,7 @@ final class AppCoordinator {
 
         previousApp = nil
         capturedContext = nil
+        capturedVocabulary = nil
     }
 
     /// Cancel the current dictation session.
@@ -167,6 +175,7 @@ final class AppCoordinator {
         previousApp?.activate()
         previousApp = nil
         capturedContext = nil
+        capturedVocabulary = nil
     }
 
     // MARK: - Private

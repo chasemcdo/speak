@@ -12,6 +12,7 @@ struct SettingsView: View {
     @AppStorage("removeFillerWords") private var removeFillerWords = true
     @AppStorage("autoFormat") private var autoFormat = true
     @AppStorage("llmRewrite") private var llmRewrite = false
+    @AppStorage("screenContext") private var screenContext = false
 
     @State private var supportedLocales: [Locale] = []
     @State private var micGranted = AudioCaptureManager.permissionGranted
@@ -50,6 +51,10 @@ struct SettingsView: View {
                 Toggle("AI-powered formatting", isOn: $llmRewrite)
                     .help("Use Apple Intelligence to clean up grammar, format lists, add paragraphs, and match your writing style.")
                     .disabled(!llmAvailable)
+
+                Toggle("Screen context", isOn: $screenContext)
+                    .help("Read names, filenames, and terms from your screen to correct spelling in dictated text.")
+                    .disabled(!llmRewrite)
 
                 if !llmAvailable {
                     Text("AI cleanup requires Apple Intelligence to be enabled in System Settings.")
