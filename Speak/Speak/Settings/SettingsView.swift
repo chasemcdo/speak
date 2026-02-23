@@ -7,12 +7,16 @@ struct SettingsView: View {
     @Environment(AppState.self) private var appState
     @AppStorage("locale") private var localeIdentifier = Locale.current.identifier
     @AppStorage("autoPaste") private var autoPaste = true
+    @AppStorage("hotkeyModifier") private var hotkey: TranscriptionHotkey = .fn
     @AppStorage("launchAtLogin") private var launchAtLogin = false
     @AppStorage("removeFillerWords") private var removeFillerWords = true
     @AppStorage("autoFormat") private var autoFormat = true
     @AppStorage("llmRewrite") private var llmRewrite = false
 
     @State private var supportedLocales: [Locale] = []
+    @State private var micGranted = AudioCaptureManager.permissionGranted
+    @State private var accessibilityGranted = PasteService.accessibilityGranted
+    @State private var speechGranted = ModelManager.authorizationGranted
 
     private var llmAvailable: Bool {
         SystemLanguageModel.default.availability == .available
@@ -55,13 +59,10 @@ struct SettingsView: View {
             }
 
             Section("Hotkey") {
-                HStack {
-                    Text("Toggle dictation")
-                    Spacer()
-                    Text("fn")
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
+                Picker("Toggle dictation", selection: $hotkey) {
+                    ForEach(TranscriptionHotkey.allCases, id: \.self) { key in
+                        Text(key.label).tag(key)
+                    }
                 }
             }
 
@@ -75,17 +76,17 @@ struct SettingsView: View {
             Section("Permissions") {
                 PermissionRow(
                     title: "Microphone",
-                    granted: AudioCaptureManager.permissionGranted,
+                    granted: micGranted,
                     settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
                 )
                 PermissionRow(
                     title: "Accessibility",
-                    granted: PasteService.accessibilityGranted,
+                    granted: accessibilityGranted,
                     settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
                 )
                 PermissionRow(
                     title: "Speech Recognition",
-                    granted: ModelManager.authorizationGranted,
+                    granted: speechGranted,
                     settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_SpeechRecognition"
                 )
             }
@@ -94,6 +95,15 @@ struct SettingsView: View {
         .frame(width: 420, height: 440)
         .task {
             await loadSupportedLocales()
+        }
+        .task {
+            // Poll for permission changes (e.g., user grants access via System Settings)
+            while !Task.isCancelled {
+                micGranted = AudioCaptureManager.permissionGranted
+                accessibilityGranted = PasteService.accessibilityGranted
+                speechGranted = ModelManager.authorizationGranted
+                try? await Task.sleep(for: .seconds(2))
+            }
         }
     }
 

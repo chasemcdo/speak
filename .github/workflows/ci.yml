@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build & Validate
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Print build environment
+        run: |
+          xcodebuild -version
+          swift --version
+
+      # Build release binary via Swift Package Manager
+      - name: Build with SPM (Release)
+        run: cd Speak && swift build -c release
+
+      # Validate the compiled binary
+      - name: Validate binary
+        run: |
+          BIN_PATH=$(cd Speak && swift build -c release --show-bin-path)
+          echo "── SPM bin path: $BIN_PATH"
+
+          EXEC="$BIN_PATH/Speak"
+          if [ ! -f "$EXEC" ]; then
+            echo "── Speak not at expected path, searching..."
+            echo "── Contents of $BIN_PATH:"
+            ls -la "$BIN_PATH" || true
+            echo "── All files named Speak under .build:"
+            find Speak/.build -name "Speak" 2>/dev/null || true
+            EXEC=$(find Speak/.build -name "Speak" -type f | head -1)
+          fi
+
+          test -f "$EXEC" || { echo "FAIL: Speak binary not found"; exit 1; }
+          echo "── Binary: $EXEC"
+          file "$EXEC"
+
+          echo "── Checking linked frameworks"
+          FRAMEWORKS=$(otool -L "$EXEC" | tail -n +2)
+          echo "$FRAMEWORKS"
+          for fw in Speech AVFoundation AppKit CoreGraphics; do
+            echo "$FRAMEWORKS" | grep -q "$fw" || { echo "FAIL: $fw not linked"; exit 1; }
+          done
+
+          echo "── All checks passed"

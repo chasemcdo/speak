@@ -24,6 +24,17 @@ struct SpeakApp: App {
                 .onAppear {
                     coordinator.setUp(appState: appState)
 
+                    // If permissions were revoked (e.g., after Xcode rebuild),
+                    // reset onboarding so the user is prompted to re-grant them.
+                    if onboardingComplete {
+                        let hasAllPermissions = AudioCaptureManager.permissionGranted
+                            && PasteService.accessibilityGranted
+                            && ModelManager.authorizationGranted
+                        if !hasAllPermissions {
+                            onboardingComplete = false
+                        }
+                    }
+
                     if !onboardingComplete {
                         openWindow(id: "onboarding")
                     }
