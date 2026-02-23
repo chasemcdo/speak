@@ -52,11 +52,12 @@ jobs:
           done
 
           # Embed Sparkle.framework from SPM build artifacts
-          SPARKLE_FRAMEWORK=$(find Speak/.build -path "*/artifacts/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework" -type d | head -1)
+          SPARKLE_FRAMEWORK=$(find Speak/.build/artifacts -name "Sparkle.framework" -path "*/macos-*" -type d | head -1)
           if [ -n "$SPARKLE_FRAMEWORK" ]; then
             cp -R "$SPARKLE_FRAMEWORK" "$APP/Contents/Frameworks/"
+            echo "Embedded: $SPARKLE_FRAMEWORK"
           else
-            echo "WARNING: Sparkle.framework not found in SPM artifacts"
+            echo "ERROR: Sparkle.framework not found in SPM artifacts" && exit 1
           fi
 
           # Ad-hoc code sign with entitlements
