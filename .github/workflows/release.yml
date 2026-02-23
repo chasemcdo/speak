@@ -137,7 +137,7 @@ jobs:
             echo "WARNING: SPARKLE_ED_PRIVATE_KEY not set — skipping signing"
             exit 0
           fi
-          SIGN_OUTPUT=$(echo "$SPARKLE_ED_PRIVATE_KEY" | sparkle-tools/bin/sign_update build/Speak.zip)
+          SIGN_OUTPUT=$(echo "$SPARKLE_ED_PRIVATE_KEY" | sparkle-tools/bin/sign_update --ed-key-file - build/Speak.zip)
           echo "SPARKLE_SIGNATURE<<EOF" >> "$GITHUB_ENV"
           echo "$SIGN_OUTPUT" >> "$GITHUB_ENV"
           echo "EOF" >> "$GITHUB_ENV"
@@ -160,6 +160,7 @@ jobs:
             cp docs/appcast.xml build/appcast-staging/
           fi
           echo "$SPARKLE_ED_PRIVATE_KEY" | sparkle-tools/bin/generate_appcast \
+            --ed-key-file - \
             --download-url-prefix "https://github.com/chasemcdo/speak/releases/download/${GITHUB_REF_NAME}/" \
             build/appcast-staging
           cp build/appcast-staging/appcast.xml docs/appcast.xml
