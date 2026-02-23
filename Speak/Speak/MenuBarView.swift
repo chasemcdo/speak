@@ -18,8 +18,8 @@ struct MenuBarView: View {
                 }
                 .keyboardShortcut(.escape)
             } else {
-                Button("Start Dictation (\(hotkey.shortLabel))") {
-                    Task { await coordinator.toggle() }
+                Button("Start Dictation (\(hotkey.shortLabel) \(hotkey.shortLabel))") {
+                    Task { await coordinator.start() }
                 }
             }
 

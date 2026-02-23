@@ -16,12 +16,19 @@ final class AppCoordinator {
     func setUp(appState: AppState) {
         self.appState = appState
 
-        // Register the global hotkey
-        hotkeyManager.register { [weak self] in
-            Task { @MainActor in
-                await self?.toggle()
+        // Register the global hotkey (double-tap to toggle on, hold to transcribe)
+        hotkeyManager.register(
+            onStart: { [weak self] in
+                Task { @MainActor in
+                    await self?.start()
+                }
+            },
+            onStop: { [weak self] in
+                Task { @MainActor in
+                    await self?.confirm()
+                }
             }
-        }
+        )
 
         // Listen for overlay cancel/confirm from keyboard events in the panel
         NotificationCenter.default.addObserver(
@@ -42,17 +49,6 @@ final class AppCoordinator {
             Task { @MainActor in
                 await self?.confirm()
             }
-        }
-    }
-
-    /// Toggle dictation on/off.
-    func toggle() async {
-        guard let appState else { return }
-
-        if appState.isRecording {
-            await confirm()
-        } else {
-            await start()
         }
     }
 
@@ -85,6 +81,9 @@ final class AppCoordinator {
     func confirm() async {
         guard let appState, appState.isRecording else { return }
 
+        // Reset hotkey state in case recording was stopped via keyboard/menu
+        hotkeyManager.resetState()
+
         // Stop transcription
         await transcriptionEngine.stopSession()
         appState.isRecording = false
@@ -114,6 +113,9 @@ final class AppCoordinator {
     /// Cancel the current dictation session.
     func cancel() async {
         guard let appState, appState.isRecording else { return }
+
+        // Reset hotkey state in case recording was stopped via keyboard/menu
+        hotkeyManager.resetState()
 
         await transcriptionEngine.stopSession()
         appState.reset()
