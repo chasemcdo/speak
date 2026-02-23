@@ -1,6 +1,8 @@
 import SwiftUI
+import Sparkle
 
 struct MenuBarView: View {
+    let updater: SPUUpdater
     @Environment(AppState.self) private var appState
     @Environment(AppCoordinator.self) private var coordinator
     @AppStorage("hotkeyModifier") private var hotkey: TranscriptionHotkey = .fn
@@ -30,6 +32,8 @@ struct MenuBarView: View {
                     .foregroundStyle(.red)
                 Divider()
             }
+
+            CheckForUpdatesView(updater: updater)
 
             SettingsLink {
                 Text("Settings...")

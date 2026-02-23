@@ -2,8 +2,10 @@ import SwiftUI
 import Speech
 import ServiceManagement
 import FoundationModels
+import Sparkle
 
 struct SettingsView: View {
+    let updater: SPUUpdater
     @Environment(AppState.self) private var appState
     @AppStorage("locale") private var localeIdentifier = Locale.current.identifier
     @AppStorage("autoPaste") private var autoPaste = true
@@ -13,6 +15,9 @@ struct SettingsView: View {
     @AppStorage("autoFormat") private var autoFormat = true
     @AppStorage("llmRewrite") private var llmRewrite = false
     @AppStorage("screenContext") private var screenContext = false
+
+    @State private var automaticallyChecksForUpdates = false
+    @State private var automaticallyDownloadsUpdates = false
 
     @State private var supportedLocales: [Locale] = []
     @State private var micGranted = AudioCaptureManager.permissionGranted
@@ -78,6 +83,17 @@ struct SettingsView: View {
                     }
             }
 
+            Section("Updates") {
+                Toggle("Automatically check for updates", isOn: $automaticallyChecksForUpdates)
+                    .onChange(of: automaticallyChecksForUpdates) { _, newValue in
+                        updater.automaticallyChecksForUpdates = newValue
+                    }
+                Toggle("Automatically download updates", isOn: $automaticallyDownloadsUpdates)
+                    .onChange(of: automaticallyDownloadsUpdates) { _, newValue in
+                        updater.automaticallyDownloadsUpdates = newValue
+                    }
+            }
+
             Section("Permissions") {
                 PermissionRow(
                     title: "Microphone",
@@ -97,7 +113,11 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 420, height: 440)
+        .frame(width: 420, height: 520)
+        .onAppear {
+            automaticallyChecksForUpdates = updater.automaticallyChecksForUpdates
+            automaticallyDownloadsUpdates = updater.automaticallyDownloadsUpdates
+        }
         .task {
             await loadSupportedLocales()
         }

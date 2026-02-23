@@ -1,4 +1,5 @@
 import SwiftUI
+import Sparkle
 
 @main
 struct SpeakApp: App {
@@ -6,6 +7,8 @@ struct SpeakApp: App {
     @State private var coordinator = AppCoordinator()
     @AppStorage("onboardingComplete") private var onboardingComplete = false
     @Environment(\.openWindow) private var openWindow
+
+    let updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
 
     init() {
         UserDefaults.standard.register(defaults: [
@@ -18,7 +21,7 @@ struct SpeakApp: App {
 
     var body: some Scene {
         MenuBarExtra("Speak", systemImage: appState.isRecording ? "mic.fill" : "mic") {
-            MenuBarView()
+            MenuBarView(updater: updaterController.updater)
                 .environment(appState)
                 .environment(coordinator)
                 .onAppear {
@@ -48,7 +51,7 @@ struct SpeakApp: App {
         }
 
         Settings {
-            SettingsView()
+            SettingsView(updater: updaterController.updater)
                 .environment(appState)
         }
 

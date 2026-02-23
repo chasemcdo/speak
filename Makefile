@@ -74,7 +74,7 @@ check: app
 	echo "── Checking linked frameworks"; \
 	FRAMEWORKS=$$(otool -L "$$EXEC" | tail -n +2); \
 	echo "$$FRAMEWORKS"; \
-	for fw in Speech AVFoundation AppKit CoreGraphics; do \
+	for fw in Speech AVFoundation AppKit CoreGraphics Sparkle; do \
 		echo "$$FRAMEWORKS" | grep -q "$$fw" \
 			|| { echo "FAIL: $$fw not linked"; exit 1; }; \
 	done; \
