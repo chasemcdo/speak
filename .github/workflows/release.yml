@@ -169,6 +169,11 @@ jobs:
 
       - name: Publish appcast to gh-pages
         run: |
+          # Only publish appcast for stable semver tags (vX.Y.Z)
+          if ! echo "${GITHUB_REF_NAME}" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Skipping appcast publish for non-stable tag: ${GITHUB_REF_NAME}"
+            exit 0
+          fi
           if [ ! -f docs/appcast.xml ]; then
             echo "No appcast.xml to publish — skipping"
             exit 0
