@@ -1,6 +1,7 @@
 import SwiftUI
 import Speech
 import ServiceManagement
+import FoundationModels
 
 struct SettingsView: View {
     @Environment(AppState.self) private var appState
@@ -8,11 +9,19 @@ struct SettingsView: View {
     @AppStorage("autoPaste") private var autoPaste = true
     @AppStorage("hotkeyModifier") private var hotkey: TranscriptionHotkey = .fn
     @AppStorage("launchAtLogin") private var launchAtLogin = false
+    @AppStorage("removeFillerWords") private var removeFillerWords = true
+    @AppStorage("autoFormat") private var autoFormat = true
+    @AppStorage("llmRewrite") private var llmRewrite = false
+    @AppStorage("screenContext") private var screenContext = false
 
     @State private var supportedLocales: [Locale] = []
     @State private var micGranted = AudioCaptureManager.permissionGranted
     @State private var accessibilityGranted = PasteService.accessibilityGranted
     @State private var speechGranted = ModelManager.authorizationGranted
+
+    private var llmAvailable: Bool {
+        SystemLanguageModel.default.availability == .available
+    }
 
     var body: some View {
         Form {
@@ -30,6 +39,28 @@ struct SettingsView: View {
 
                 Toggle("Auto-paste into active app", isOn: $autoPaste)
                     .help("When enabled, text is automatically pasted into the focused app. When disabled, text is copied to the clipboard.")
+            }
+
+            Section("Post-Processing") {
+                Toggle("Remove filler words", isOn: $removeFillerWords)
+                    .help("Strip filler words like 'um', 'uh', 'like', 'you know' from transcribed text.")
+
+                Toggle("Auto-format text", isOn: $autoFormat)
+                    .help("Auto-capitalize sentences and clean up punctuation.")
+
+                Toggle("AI-powered formatting", isOn: $llmRewrite)
+                    .help("Use Apple Intelligence to clean up grammar, format lists, add paragraphs, and match your writing style.")
+                    .disabled(!llmAvailable)
+
+                Toggle("Screen context", isOn: $screenContext)
+                    .help("Read names, filenames, and terms from your screen to correct spelling in dictated text.")
+                    .disabled(!llmRewrite)
+
+                if !llmAvailable {
+                    Text("AI cleanup requires Apple Intelligence to be enabled in System Settings.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Section("Hotkey") {
@@ -66,7 +97,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 420, height: 380)
+        .frame(width: 420, height: 440)
         .task {
             await loadSupportedLocales()
         }

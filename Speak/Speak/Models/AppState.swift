@@ -9,6 +9,7 @@ final class AppState {
     var volatileText = ""
     var error: String?
     var isModelDownloading = false
+    var isPostProcessing = false
     var permissionsGranted = false
 
     var displayText: String {

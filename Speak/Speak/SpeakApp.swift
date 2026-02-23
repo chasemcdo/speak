@@ -9,7 +9,10 @@ struct SpeakApp: App {
 
     init() {
         UserDefaults.standard.register(defaults: [
-            "autoPaste": true
+            "autoPaste": true,
+            "removeFillerWords": true,
+            "autoFormat": true,
+            "llmRewrite": false,
         ])
     }
 

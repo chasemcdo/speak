@@ -5,13 +5,22 @@ struct OverlayView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            // Recording indicator
-            RecordingDot()
-                .padding(.top, 4)
+            // Status indicator
+            if appState.isPostProcessing {
+                ProcessingIndicator()
+                    .padding(.top, 4)
+            } else {
+                RecordingDot()
+                    .padding(.top, 4)
+            }
 
             // Transcription text
             VStack(alignment: .leading, spacing: 4) {
-                if appState.hasText {
+                if appState.isPostProcessing {
+                    Text("Formatting...")
+                        .foregroundStyle(.secondary)
+                        .font(.body)
+                } else if appState.hasText {
                     transcriptionText
                 } else if appState.isModelDownloading {
                     Text("Downloading speech model...")
@@ -60,5 +69,24 @@ struct RecordingDot: View {
                 value: isPulsing
             )
             .onAppear { isPulsing = true }
+    }
+}
+
+// MARK: - Processing indicator
+
+struct ProcessingIndicator: View {
+    @State private var isAnimating = false
+
+    var body: some View {
+        Image(systemName: "text.badge.checkmark")
+            .foregroundStyle(.blue)
+            .font(.system(size: 10))
+            .opacity(isAnimating ? 0.4 : 1.0)
+            .animation(
+                .easeInOut(duration: 0.5)
+                .repeatForever(autoreverses: true),
+                value: isAnimating
+            )
+            .onAppear { isAnimating = true }
     }
 }
