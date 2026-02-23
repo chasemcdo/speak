@@ -7,6 +7,7 @@ struct SpeakApp: App {
     @State private var coordinator = AppCoordinator()
     @State private var historyStore = HistoryStore()
     @AppStorage("onboardingComplete") private var onboardingComplete = false
+    @State private var needsPermissionRecovery = false
     @Environment(\.openWindow) private var openWindow
 
     let updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
@@ -29,24 +30,20 @@ struct SpeakApp: App {
                 .onAppear {
                     coordinator.setUp(appState: appState, historyStore: historyStore)
 
-                    // If permissions were revoked (e.g., after Xcode rebuild),
-                    // reset onboarding so the user is prompted to re-grant them.
-                    if onboardingComplete {
+                    if !onboardingComplete {
+                        openWindow(id: "onboarding")
+                    } else {
+                        // Check if permissions were lost (e.g., after system update
+                        // or manual revocation in System Settings). Show a lightweight
+                        // recovery view instead of resetting onboarding.
                         let hasAllPermissions = AudioCaptureManager.permissionGranted
                             && PasteService.accessibilityGranted
                             && ModelManager.authorizationGranted
                         if !hasAllPermissions {
-                            onboardingComplete = false
+                            needsPermissionRecovery = true
+                            openWindow(id: "permission-recovery")
                         }
-                    }
 
-                    if !onboardingComplete {
-                        openWindow(id: "onboarding")
-                    }
-
-                    // Pre-download the speech model so it's ready when the
-                    // user starts their first recording.
-                    if onboardingComplete {
                         coordinator.preloadModel()
                     }
                 }
@@ -60,6 +57,12 @@ struct SpeakApp: App {
         Window("Welcome to Speak", id: "onboarding") {
             OnboardingView()
                 .environment(appState)
+        }
+        .windowResizability(.contentSize)
+        .defaultPosition(.center)
+
+        Window("Permissions", id: "permission-recovery") {
+            PermissionRecoveryView()
         }
         .windowResizability(.contentSize)
         .defaultPosition(.center)

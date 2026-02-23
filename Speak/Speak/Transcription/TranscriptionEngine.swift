@@ -13,12 +13,23 @@ final class TranscriptionEngine {
     private var inputContinuation: AsyncStream<AnalyzerInput>.Continuation?
 
     private(set) var isRunning = false
+    private var isSettingUp = false
 
     // MARK: - Session lifecycle
 
     /// Start a transcription session. Streams results into the provided AppState.
     func startSession(appState: AppState, locale: Locale) async throws {
-        guard !isRunning else { return }
+        guard !isRunning, !isSettingUp else { return }
+        isSettingUp = true
+        defer { isSettingUp = false }
+
+        // Pre-check permissions before doing any work
+        guard AudioCaptureManager.permissionGranted else {
+            throw AudioCaptureError.microphonePermissionDenied
+        }
+        guard ModelManager.authorizationGranted else {
+            throw TranscriptionError.notAuthorized
+        }
 
         // 1. Set up the transcriber module
         let transcriber = SpeechTranscriber(
@@ -49,35 +60,43 @@ final class TranscriptionEngine {
         // 5. Start audio capture
         let audioStream = try audioCapture.startCapture()
 
-        // 6. Create the AnalyzerInput stream, bridging audio buffers
-        let (inputSequence, inputContinuation) = AsyncStream<AnalyzerInput>.makeStream()
-        self.inputContinuation = inputContinuation
+        // Steps 6-8 depend on audio capture being active. If any fail,
+        // clean up the capture to avoid a leaked tap/engine.
+        do {
+            // 6. Create the AnalyzerInput stream, bridging audio buffers
+            let (inputSequence, inputContinuation) = AsyncStream<AnalyzerInput>.makeStream()
+            self.inputContinuation = inputContinuation
 
-        // Feed audio buffers into the analyzer input stream
-        Task {
-            for await buffer in audioStream {
-                inputContinuation.yield(AnalyzerInput(buffer: buffer))
-            }
-            inputContinuation.finish()
-        }
-
-        // 7. Start the analyzer
-        try await analyzer.start(inputSequence: inputSequence)
-
-        // 8. Consume results
-        resultsTask = Task {
-            do {
-                for try await result in transcriber.results {
-                    let text = String(result.text.characters)
-                    if result.isFinal {
-                        appState.appendFinalizedText(text)
-                    } else {
-                        appState.updateVolatileText(text)
-                    }
+            // Feed audio buffers into the analyzer input stream
+            Task {
+                for await buffer in audioStream {
+                    inputContinuation.yield(AnalyzerInput(buffer: buffer))
                 }
-            } catch {
-                appState.error = "Transcription error: \(error.localizedDescription)"
+                inputContinuation.finish()
             }
+
+            // 7. Start the analyzer
+            try await analyzer.start(inputSequence: inputSequence)
+
+            // 8. Consume results
+            resultsTask = Task {
+                do {
+                    for try await result in transcriber.results {
+                        let text = String(result.text.characters)
+                        if result.isFinal {
+                            appState.appendFinalizedText(text)
+                        } else {
+                            appState.updateVolatileText(text)
+                        }
+                    }
+                } catch {
+                    appState.error = "Transcription error: \(error.localizedDescription)"
+                }
+            }
+        } catch {
+            // Clean up the audio capture that was started in step 5
+            audioCapture.stopCapture()
+            throw error
         }
 
         isRunning = true

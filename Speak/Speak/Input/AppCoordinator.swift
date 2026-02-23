@@ -88,6 +88,16 @@ final class AppCoordinator {
     func start() async {
         guard let appState, !appState.isRecording else { return }
 
+        // Pre-check permissions before showing the overlay
+        guard AudioCaptureManager.permissionGranted else {
+            appState.error = AudioCaptureError.microphonePermissionDenied.localizedDescription
+            return
+        }
+        guard ModelManager.authorizationGranted else {
+            appState.error = TranscriptionError.notAuthorized.localizedDescription
+            return
+        }
+
         // Remember which app had focus
         previousApp = NSWorkspace.shared.frontmostApplication
 
@@ -114,6 +124,13 @@ final class AppCoordinator {
         } catch {
             appState.error = error.localizedDescription
             appState.isRecording = false
+            // Dismiss the overlay so the user isn't stuck on a broken session
+            overlayManager.hide()
+            previousApp?.activate()
+            previousApp = nil
+            capturedContext = nil
+            capturedVocabulary = nil
+            return
         }
 
         // Prewarm LLM in parallel with recording if enabled
