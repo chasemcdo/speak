@@ -120,9 +120,9 @@ jobs:
 
       - name: Download Sparkle CLI tools
         run: |
-          SPARKLE_VERSION=$(grep -A2 'sparkle-project/Sparkle' Speak/Package.resolved | grep version | head -1 | sed 's/.*: "\(.*\)".*/\1/')
+          SPARKLE_VERSION=$(python3 -c "import json; pins=json.load(open('Speak/Package.resolved'))['pins']; print(next(p['state']['version'] for p in pins if 'sparkle' in p['identity'].lower()))")
           if [ -z "$SPARKLE_VERSION" ]; then
-            SPARKLE_VERSION="2.7.5"
+            SPARKLE_VERSION="2.9.0"
           fi
           curl -sL "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz" -o sparkle.tar.xz
           mkdir -p sparkle-tools
@@ -137,7 +137,7 @@ jobs:
             echo "WARNING: SPARKLE_ED_PRIVATE_KEY not set — skipping signing"
             exit 0
           fi
-          SIGN_OUTPUT=$(echo "$SPARKLE_ED_PRIVATE_KEY" | sparkle-tools/bin/sign_update build/Speak.zip)
+          SIGN_OUTPUT=$(echo "$SPARKLE_ED_PRIVATE_KEY" | sparkle-tools/bin/sign_update --ed-key-file - build/Speak.zip)
           echo "SPARKLE_SIGNATURE<<EOF" >> "$GITHUB_ENV"
           echo "$SIGN_OUTPUT" >> "$GITHUB_ENV"
           echo "EOF" >> "$GITHUB_ENV"
@@ -160,27 +160,35 @@ jobs:
             cp docs/appcast.xml build/appcast-staging/
           fi
           echo "$SPARKLE_ED_PRIVATE_KEY" | sparkle-tools/bin/generate_appcast \
+            --ed-key-file - \
             --download-url-prefix "https://github.com/chasemcdo/speak/releases/download/${GITHUB_REF_NAME}/" \
             build/appcast-staging
           cp build/appcast-staging/appcast.xml docs/appcast.xml
           echo "Appcast generated at docs/appcast.xml"
 
-      - name: Commit appcast to main
+      - name: Publish appcast to gh-pages
         run: |
           if [ ! -f docs/appcast.xml ]; then
-            echo "No appcast.xml to commit — skipping"
+            echo "No appcast.xml to publish — skipping"
             exit 0
           fi
+          cp docs/appcast.xml /tmp/appcast.xml
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin main
-          git checkout main
-          git add docs/appcast.xml
+          # Create orphan gh-pages branch or check it out
+          if git fetch origin gh-pages 2>/dev/null; then
+            git checkout gh-pages
+          else
+            git checkout --orphan gh-pages
+            git rm -rf --ignore-unmatch . > /dev/null 2>&1
+          fi
+          cp /tmp/appcast.xml appcast.xml
+          git add appcast.xml
           if git diff --cached --quiet; then
-            echo "No appcast changes to commit"
+            echo "No appcast changes to publish"
           else
             git commit -m "Update appcast.xml for ${GITHUB_REF_NAME}"
-            git push origin main
+            git push origin gh-pages
           fi
 
       - name: Create GitHub Release
