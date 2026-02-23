@@ -166,22 +166,29 @@ jobs:
           cp build/appcast-staging/appcast.xml docs/appcast.xml
           echo "Appcast generated at docs/appcast.xml"
 
-      - name: Commit appcast to main
+      - name: Publish appcast to gh-pages
         run: |
           if [ ! -f docs/appcast.xml ]; then
-            echo "No appcast.xml to commit — skipping"
+            echo "No appcast.xml to publish — skipping"
             exit 0
           fi
+          cp docs/appcast.xml /tmp/appcast.xml
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin main
-          git checkout main
-          git add docs/appcast.xml
+          # Create orphan gh-pages branch or check it out
+          if git fetch origin gh-pages 2>/dev/null; then
+            git checkout gh-pages
+          else
+            git checkout --orphan gh-pages
+            git rm -rf --ignore-unmatch . > /dev/null 2>&1
+          fi
+          cp /tmp/appcast.xml appcast.xml
+          git add appcast.xml
           if git diff --cached --quiet; then
-            echo "No appcast changes to commit"
+            echo "No appcast changes to publish"
           else
             git commit -m "Update appcast.xml for ${GITHUB_REF_NAME}"
-            git push origin main
+            git push origin gh-pages
           fi
 
       - name: Create GitHub Release
