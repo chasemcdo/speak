@@ -3,6 +3,7 @@ import SwiftUI
 struct MenuBarView: View {
     @Environment(AppState.self) private var appState
     @Environment(AppCoordinator.self) private var coordinator
+    @AppStorage("hotkeyModifier") private var hotkey: TranscriptionHotkey = .fn
 
     var body: some View {
         Group {
@@ -17,7 +18,7 @@ struct MenuBarView: View {
                 }
                 .keyboardShortcut(.escape)
             } else {
-                Button("Start Dictation (fn)") {
+                Button("Start Dictation (\(hotkey.shortLabel))") {
                     Task { await coordinator.toggle() }
                 }
             }
