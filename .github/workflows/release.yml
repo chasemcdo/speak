@@ -13,36 +13,48 @@ permissions:
 jobs:
   build:
     name: Build & Package
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
-
-      # Use latest Xcode available on the runner.
-      # Update this when GitHub adds macOS 26 / Xcode 26 runners.
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
       - name: Print build environment
         run: |
           xcodebuild -version
           swift --version
 
-      - name: Build release archive
-        run: |
-          xcodebuild \
-            -project Speak/Speak.xcodeproj \
-            -scheme Speak \
-            -configuration Release \
-            -derivedDataPath build/DerivedData \
-            -archivePath build/Speak.xcarchive \
-            archive \
-            CODE_SIGN_IDENTITY="-" \
-            CODE_SIGNING_ALLOWED=YES
+      - name: Build release binary
+        run: cd Speak && swift build -c release
 
-      - name: Extract .app from archive
+      - name: Assemble .app bundle
         run: |
-          mkdir -p build
-          cp -R build/Speak.xcarchive/Products/Applications/Speak.app build/Speak.app
+          BIN_PATH=$(cd Speak && swift build -c release --show-bin-path)
+          APP=build/Speak.app
+
+          mkdir -p "$APP/Contents/MacOS"
+          mkdir -p "$APP/Contents/Resources"
+
+          # Binary
+          cp "$BIN_PATH/Speak" "$APP/Contents/MacOS/Speak"
+
+          # Info.plist
+          cp Speak/Speak/Info.plist "$APP/Contents/Info.plist"
+
+          # PkgInfo
+          echo -n "APPL????" > "$APP/Contents/PkgInfo"
+
+          # Copy SPM-compiled resource bundles (includes processed assets)
+          for bundle in "$BIN_PATH"/*.bundle; do
+            [ -d "$bundle" ] && cp -R "$bundle" "$APP/Contents/Resources/"
+          done
+
+          # Ad-hoc code sign with entitlements
+          codesign --force --deep \
+            --sign "-" \
+            --entitlements Speak/Speak/Speak.entitlements \
+            "$APP"
+
+          echo "Built: $APP"
+          find "$APP" -type f
 
       # ── Optional: code signing & notarization ──────────────────────
       # Uncomment this section once you have an Apple Developer ID.
