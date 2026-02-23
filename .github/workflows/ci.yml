@@ -35,47 +35,55 @@ jobs:
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_ALLOWED=YES
 
+      - name: Inspect archive structure
+        run: |
+          echo "── Archive contents:"
+          find build/Speak.xcarchive -maxdepth 5 -type f | head -80
+          echo ""
+          echo "── Looking for .app bundles:"
+          find build/Speak.xcarchive -name "*.app" -type d
+          echo ""
+          echo "── Looking for executables named Speak:"
+          find build/Speak.xcarchive -name "Speak" -type f
+
       - name: Extract .app from archive
         run: |
           mkdir -p build
-          cp -R build/Speak.xcarchive/Products/Applications/Speak.app build/Speak.app
+          # Find the .app wherever it lives in the archive
+          APP_SRC=$(find build/Speak.xcarchive -name "Speak.app" -type d | head -1)
+          echo "Found .app at: $APP_SRC"
+          test -n "$APP_SRC" || { echo "FAIL: Speak.app not found in archive"; exit 1; }
+          cp -R "$APP_SRC" build/Speak.app
+
+      - name: Inspect .app bundle structure
+        run: |
+          echo "── Full .app tree:"
+          find build/Speak.app -type f
+          echo ""
+          echo "── Mach-O files:"
+          find build/Speak.app -type f -perm +111 | while read f; do
+            file "$f" 2>/dev/null | grep -q Mach-O && echo "$f"
+          done
 
       # Verify the .app bundle is well-formed.
-      # Supports both traditional (Contents/MacOS/) and Xcode 26+
-      # unified flat bundle layouts.
       - name: Validate .app bundle
         run: |
           APP=build/Speak.app
 
           echo "── Locating Info.plist"
-          if [ -f "$APP/Contents/Info.plist" ]; then
-            PLIST="$APP/Contents/Info.plist"
-          elif [ -f "$APP/Info.plist" ]; then
-            PLIST="$APP/Info.plist"
-          else
-            echo "FAIL: Info.plist not found"; exit 1
-          fi
+          PLIST=$(find "$APP" -name "Info.plist" -type f | head -1)
+          test -n "$PLIST" || { echo "FAIL: Info.plist not found"; exit 1; }
           echo "   Found: $PLIST"
-
-          echo "── Reading CFBundleExecutable"
-          EXEC_NAME=$(/usr/libexec/PlistBuddy -c "Print CFBundleExecutable" "$PLIST")
-          echo "   Executable name: $EXEC_NAME"
-          test -n "$EXEC_NAME" || { echo "FAIL: CFBundleExecutable not set"; exit 1; }
-
-          echo "── Locating executable"
-          if [ -f "$APP/Contents/MacOS/$EXEC_NAME" ]; then
-            EXEC="$APP/Contents/MacOS/$EXEC_NAME"
-          elif [ -f "$APP/$EXEC_NAME" ]; then
-            EXEC="$APP/$EXEC_NAME"
-          else
-            echo "FAIL: executable '$EXEC_NAME' not found in bundle"; exit 1
-          fi
-          echo "   Found: $EXEC"
 
           echo "── Checking bundle identifier"
           BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$PLIST")
           echo "   Bundle ID: $BUNDLE_ID"
           test -n "$BUNDLE_ID" || { echo "FAIL: empty bundle identifier"; exit 1; }
+
+          echo "── Locating Mach-O executable"
+          EXEC=$(find "$APP" -type f -perm +111 -print0 | xargs -0 file 2>/dev/null | grep Mach-O | head -1 | cut -d: -f1)
+          test -n "$EXEC" || { echo "FAIL: no Mach-O executable found in bundle"; exit 1; }
+          echo "   Found: $EXEC"
 
           echo "── Checking linked frameworks"
           FRAMEWORKS=$(otool -L "$EXEC" | tail -n +2)

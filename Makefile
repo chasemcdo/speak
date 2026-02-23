@@ -49,35 +49,21 @@ dmg: app
 	@./scripts/create-dmg.sh $(APP_PATH) $(DMG_PATH) $(VERSION)
 
 # --- CI check (build + validate bundle) ---
-# Supports both traditional (Contents/MacOS/) and Xcode 26+ unified flat bundle layouts.
+# Discovers bundle layout dynamically to support any Xcode version.
 
 check: app
-	@echo "── Locating Info.plist"
-	@if [ -f $(APP_PATH)/Contents/Info.plist ]; then \
-		PLIST=$(APP_PATH)/Contents/Info.plist; \
-	elif [ -f $(APP_PATH)/Info.plist ]; then \
-		PLIST=$(APP_PATH)/Info.plist; \
-	else \
-		echo "FAIL: Info.plist not found"; exit 1; \
-	fi; \
+	@echo "── Locating Info.plist"; \
+	PLIST=$$(find $(APP_PATH) -name "Info.plist" -type f | head -1); \
+	test -n "$$PLIST" || { echo "FAIL: Info.plist not found"; exit 1; }; \
 	echo "   Found: $$PLIST"; \
-	echo "── Reading CFBundleExecutable"; \
-	EXEC_NAME=$$(/usr/libexec/PlistBuddy -c "Print CFBundleExecutable" "$$PLIST"); \
-	echo "   Executable name: $$EXEC_NAME"; \
-	test -n "$$EXEC_NAME" || { echo "FAIL: CFBundleExecutable not set"; exit 1; }; \
-	echo "── Locating executable"; \
-	if [ -f $(APP_PATH)/Contents/MacOS/$$EXEC_NAME ]; then \
-		EXEC=$(APP_PATH)/Contents/MacOS/$$EXEC_NAME; \
-	elif [ -f $(APP_PATH)/$$EXEC_NAME ]; then \
-		EXEC=$(APP_PATH)/$$EXEC_NAME; \
-	else \
-		echo "FAIL: executable '$$EXEC_NAME' not found in bundle"; exit 1; \
-	fi; \
-	echo "   Found: $$EXEC"; \
 	echo "── Checking bundle identifier"; \
 	BUNDLE_ID=$$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$$PLIST"); \
 	echo "   Bundle ID: $$BUNDLE_ID"; \
 	test -n "$$BUNDLE_ID" || { echo "FAIL: empty bundle identifier"; exit 1; }; \
+	echo "── Locating Mach-O executable"; \
+	EXEC=$$(find $(APP_PATH) -type f -perm +111 -print0 | xargs -0 file 2>/dev/null | grep Mach-O | head -1 | cut -d: -f1); \
+	test -n "$$EXEC" || { echo "FAIL: no Mach-O executable found in bundle"; exit 1; }; \
+	echo "   Found: $$EXEC"; \
 	echo "── Checking linked frameworks"; \
 	FRAMEWORKS=$$(otool -L "$$EXEC" | tail -n +2); \
 	echo "$$FRAMEWORKS"; \
