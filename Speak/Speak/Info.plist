@@ -22,5 +22,9 @@
     <string>Speak needs microphone access to transcribe your voice.</string>
     <key>NSSpeechRecognitionUsageDescription</key>
     <string>Speak uses on-device speech recognition to transcribe your voice.</string>
+    <key>SUFeedURL</key>
+    <string>https://chasemcdo.github.io/speak/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>Rh09of34SBqj/rE5LU66Q+Vawz/qiw7I9E/CAB0QQUc=</string>
 </dict>
 </plist>

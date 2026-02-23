@@ -29,15 +29,19 @@ jobs:
         run: |
           BIN_PATH=$(cd Speak && swift build -c release --show-bin-path)
           APP=build/Speak.app
+          VERSION="${GITHUB_REF_NAME#v}"
 
           mkdir -p "$APP/Contents/MacOS"
           mkdir -p "$APP/Contents/Resources"
+          mkdir -p "$APP/Contents/Frameworks"
 
           # Binary
           cp "$BIN_PATH/Speak" "$APP/Contents/MacOS/Speak"
 
-          # Info.plist
+          # Info.plist — inject version from git tag
           cp Speak/Speak/Info.plist "$APP/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$APP/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" "$APP/Contents/Info.plist"
 
           # PkgInfo
           echo -n "APPL????" > "$APP/Contents/PkgInfo"
@@ -46,6 +50,14 @@ jobs:
           for bundle in "$BIN_PATH"/*.bundle; do
             [ -d "$bundle" ] && cp -R "$bundle" "$APP/Contents/Resources/"
           done
+
+          # Embed Sparkle.framework from SPM build artifacts
+          SPARKLE_FRAMEWORK=$(find Speak/.build -path "*/artifacts/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework" -type d | head -1)
+          if [ -n "$SPARKLE_FRAMEWORK" ]; then
+            cp -R "$SPARKLE_FRAMEWORK" "$APP/Contents/Frameworks/"
+          else
+            echo "WARNING: Sparkle.framework not found in SPM artifacts"
+          fi
 
           # Ad-hoc code sign with entitlements
           codesign --force --deep \
@@ -105,6 +117,71 @@ jobs:
       # Also create a zip for users who prefer it / Homebrew casks
       - name: Create zip
         run: ditto -c -k --keepParent build/Speak.app build/Speak.zip
+
+      - name: Download Sparkle CLI tools
+        run: |
+          SPARKLE_VERSION=$(grep -A2 'sparkle-project/Sparkle' Speak/Package.resolved | grep version | head -1 | sed 's/.*: "\(.*\)".*/\1/')
+          if [ -z "$SPARKLE_VERSION" ]; then
+            SPARKLE_VERSION="2.7.5"
+          fi
+          curl -sL "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz" -o sparkle.tar.xz
+          mkdir -p sparkle-tools
+          tar -xf sparkle.tar.xz -C sparkle-tools
+          echo "Sparkle CLI tools extracted (v${SPARKLE_VERSION})"
+
+      - name: Sign update with EdDSA
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: |
+          if [ -z "$SPARKLE_ED_PRIVATE_KEY" ]; then
+            echo "WARNING: SPARKLE_ED_PRIVATE_KEY not set — skipping signing"
+            exit 0
+          fi
+          SIGN_OUTPUT=$(echo "$SPARKLE_ED_PRIVATE_KEY" | sparkle-tools/bin/sign_update build/Speak.zip)
+          echo "SPARKLE_SIGNATURE<<EOF" >> "$GITHUB_ENV"
+          echo "$SIGN_OUTPUT" >> "$GITHUB_ENV"
+          echo "EOF" >> "$GITHUB_ENV"
+          echo "Signed: $SIGN_OUTPUT"
+
+      - name: Generate appcast
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: |
+          if [ -z "$SPARKLE_ED_PRIVATE_KEY" ]; then
+            echo "WARNING: SPARKLE_ED_PRIVATE_KEY not set — skipping appcast generation"
+            exit 0
+          fi
+          mkdir -p docs
+          # Copy the zip into a staging dir for generate_appcast
+          mkdir -p build/appcast-staging
+          cp build/Speak.zip build/appcast-staging/
+          # If an existing appcast exists, use it as a base
+          if [ -f docs/appcast.xml ]; then
+            cp docs/appcast.xml build/appcast-staging/
+          fi
+          echo "$SPARKLE_ED_PRIVATE_KEY" | sparkle-tools/bin/generate_appcast \
+            --download-url-prefix "https://github.com/chasemcdo/speak/releases/download/${GITHUB_REF_NAME}/" \
+            build/appcast-staging
+          cp build/appcast-staging/appcast.xml docs/appcast.xml
+          echo "Appcast generated at docs/appcast.xml"
+
+      - name: Commit appcast to main
+        run: |
+          if [ ! -f docs/appcast.xml ]; then
+            echo "No appcast.xml to commit — skipping"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git checkout main
+          git add docs/appcast.xml
+          if git diff --cached --quiet; then
+            echo "No appcast changes to commit"
+          else
+            git commit -m "Update appcast.xml for ${GITHUB_REF_NAME}"
+            git push origin main
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
