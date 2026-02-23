@@ -56,14 +56,18 @@ check: app
 	PLIST=$$(find $(APP_PATH) -name "Info.plist" -type f | head -1); \
 	test -n "$$PLIST" || { echo "FAIL: Info.plist not found"; exit 1; }; \
 	echo "   Found: $$PLIST"; \
+	echo "── Reading CFBundleExecutable"; \
+	EXEC_NAME=$$(/usr/libexec/PlistBuddy -c "Print CFBundleExecutable" "$$PLIST"); \
+	echo "   Executable name: $$EXEC_NAME"; \
+	test -n "$$EXEC_NAME" || { echo "FAIL: CFBundleExecutable not set"; exit 1; }; \
+	echo "── Locating executable by name"; \
+	EXEC=$$(find $(APP_PATH) -name "$$EXEC_NAME" -type f | head -1); \
+	test -n "$$EXEC" || { echo "FAIL: '$$EXEC_NAME' not found in bundle"; exit 1; }; \
+	echo "   Found: $$EXEC"; \
 	echo "── Checking bundle identifier"; \
 	BUNDLE_ID=$$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$$PLIST"); \
 	echo "   Bundle ID: $$BUNDLE_ID"; \
 	test -n "$$BUNDLE_ID" || { echo "FAIL: empty bundle identifier"; exit 1; }; \
-	echo "── Locating Mach-O executable"; \
-	EXEC=$$(find $(APP_PATH) -type f -perm +111 -print0 | xargs -0 file 2>/dev/null | grep Mach-O | head -1 | cut -d: -f1); \
-	test -n "$$EXEC" || { echo "FAIL: no Mach-O executable found in bundle"; exit 1; }; \
-	echo "   Found: $$EXEC"; \
 	echo "── Checking linked frameworks"; \
 	FRAMEWORKS=$$(otool -L "$$EXEC" | tail -n +2); \
 	echo "$$FRAMEWORKS"; \
