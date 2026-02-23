@@ -38,6 +38,12 @@ struct SpeakApp: App {
                     if !onboardingComplete {
                         openWindow(id: "onboarding")
                     }
+
+                    // Pre-download the speech model so it's ready when the
+                    // user starts their first recording.
+                    if onboardingComplete {
+                        coordinator.preloadModel()
+                    }
                 }
         }
 

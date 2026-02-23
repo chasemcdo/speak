@@ -24,6 +24,18 @@ final class ModelManager {
         }
     }
 
+    /// Ensure the speech model for the given locale is available.
+    /// Creates a temporary transcriber to check and download if necessary.
+    func ensureModelAvailable(for locale: Locale) async throws {
+        let transcriber = SpeechTranscriber(
+            locale: locale,
+            transcriptionOptions: [],
+            reportingOptions: [.volatileResults],
+            attributeOptions: [.audioTimeRange]
+        )
+        try await ensureModelAvailable(for: transcriber)
+    }
+
     /// Request speech recognition authorization.
     func requestAuthorization() async -> Bool {
         await withCheckedContinuation { continuation in
