@@ -52,6 +52,17 @@ final class AppCoordinator {
         }
     }
 
+    /// Pre-download the speech model for the user's selected locale so it's
+    /// ready when they start recording.
+    func preloadModel() {
+        Task {
+            let modelManager = ModelManager()
+            let locale = UserDefaults.standard.string(forKey: "locale")
+                .flatMap { Locale(identifier: $0) } ?? Locale.current
+            try? await modelManager.ensureModelAvailable(for: locale)
+        }
+    }
+
     /// Start a dictation session.
     func start() async {
         guard let appState, !appState.isRecording else { return }
