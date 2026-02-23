@@ -120,9 +120,9 @@ jobs:
 
       - name: Download Sparkle CLI tools
         run: |
-          SPARKLE_VERSION=$(grep -A2 'sparkle-project/Sparkle' Speak/Package.resolved | grep version | head -1 | sed 's/.*: "\(.*\)".*/\1/')
+          SPARKLE_VERSION=$(python3 -c "import json; pins=json.load(open('Speak/Package.resolved'))['pins']; print(next(p['state']['version'] for p in pins if 'sparkle' in p['identity'].lower()))")
           if [ -z "$SPARKLE_VERSION" ]; then
-            SPARKLE_VERSION="2.7.5"
+            SPARKLE_VERSION="2.9.0"
           fi
           curl -sL "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz" -o sparkle.tar.xz
           mkdir -p sparkle-tools
