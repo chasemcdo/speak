@@ -25,8 +25,20 @@ jobs:
       # Validate the compiled binary
       - name: Validate binary
         run: |
-          EXEC=$(find Speak/.build/release -name "Speak" -type f | head -1)
-          test -n "$EXEC" || { echo "FAIL: Speak binary not found in build output"; exit 1; }
+          BIN_PATH=$(cd Speak && swift build -c release --show-bin-path)
+          echo "── SPM bin path: $BIN_PATH"
+
+          EXEC="$BIN_PATH/Speak"
+          if [ ! -f "$EXEC" ]; then
+            echo "── Speak not at expected path, searching..."
+            echo "── Contents of $BIN_PATH:"
+            ls -la "$BIN_PATH" || true
+            echo "── All files named Speak under .build:"
+            find Speak/.build -name "Speak" 2>/dev/null || true
+            EXEC=$(find Speak/.build -name "Speak" -type f | head -1)
+          fi
+
+          test -f "$EXEC" || { echo "FAIL: Speak binary not found"; exit 1; }
           echo "── Binary: $EXEC"
           file "$EXEC"
 
