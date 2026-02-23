@@ -60,6 +60,9 @@ jobs:
             echo "ERROR: Sparkle.framework not found in SPM artifacts" && exit 1
           fi
 
+          # Add rpath so the binary can find Sparkle.framework in Contents/Frameworks/
+          install_name_tool -add_rpath @executable_path/../Frameworks "$APP/Contents/MacOS/Speak"
+
           # Ad-hoc code sign with entitlements
           codesign --force --deep \
             --sign "-" \
