@@ -5,6 +5,8 @@ struct MenuBarView: View {
     let updater: SPUUpdater
     @Environment(AppState.self) private var appState
     @Environment(AppCoordinator.self) private var coordinator
+    @Environment(HistoryStore.self) private var historyStore
+    @Environment(\.openWindow) private var openWindow
     @AppStorage("hotkeyModifier") private var hotkey: TranscriptionHotkey = .fn
 
     var body: some View {
@@ -30,6 +32,24 @@ struct MenuBarView: View {
             if let error = appState.error {
                 Text(error)
                     .foregroundStyle(.red)
+                Divider()
+            }
+
+            if !historyStore.entries.isEmpty {
+                ForEach(historyStore.entries.prefix(5)) { entry in
+                    Button {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(entry.processedText, forType: .string)
+                    } label: {
+                        Text(entry.processedText)
+                            .lineLimit(1)
+                    }
+                }
+
+                Button("Show All History...") {
+                    openWindow(id: "history")
+                }
+
                 Divider()
             }
 
