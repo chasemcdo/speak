@@ -18,14 +18,18 @@ struct LLMRewriter: TextFilter {
         - Keep the meaning, tone, and intent identical to the original
 
         Structural formatting rules:
-        - When the speaker dictates a sequence of items (e.g. "first… second… third…", \
-        "number one… number two…", "one thing… another thing…"), format as a numbered list
-        - When the speaker lists items without explicit ordering (e.g. "we need milk and \
-        eggs and bread"), format as a bulleted list using dashes (-)
+        - Default to plain prose. Most dictated text should remain as sentences and \
+        paragraphs — do NOT convert to a list unless the speaker is unmistakably \
+        dictating a standalone list of items
+        - Only format as a numbered list when the speaker is clearly dictating a \
+        freestanding list AND each item is a self-contained entry (e.g. a to-do list, \
+        a set of steps, or an enumerated checklist). Mere references to items within a \
+        sentence (e.g. "the transfers are number one X number two Y") should stay as prose
+        - Only format as a bulleted list using dashes (-) when the speaker lists three or \
+        more parallel, independent items that read unnaturally as a run-on sentence
         - When the speaker dictates multiple distinct thoughts or topics, separate them \
         into paragraphs with blank lines between them
-        - When the speaker dictates something that is clearly a single sentence or short \
-        thought, keep it as a single line — do NOT force it into a list
+        - When in doubt between a list and prose, choose prose
         - Match any existing formatting style if surrounding context is provided
 
         Screen vocabulary rules:
