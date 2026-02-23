@@ -1,0 +1,114 @@
+name: Release
+
+# Trigger on version tags: push a tag like v0.1.0 to create a release.
+on:
+  push:
+    tags:
+      - "v*"
+
+# Allow creating GitHub Releases
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build & Package
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      # Use latest Xcode available on the runner.
+      # Update this when GitHub adds macOS 26 / Xcode 26 runners.
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Print build environment
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Build release archive
+        run: |
+          xcodebuild \
+            -project Speak/Speak.xcodeproj \
+            -scheme Speak \
+            -configuration Release \
+            -derivedDataPath build/DerivedData \
+            -archivePath build/Speak.xcarchive \
+            archive \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_ALLOWED=YES
+
+      - name: Extract .app from archive
+        run: |
+          mkdir -p build
+          cp -R build/Speak.xcarchive/Products/Applications/Speak.app build/Speak.app
+
+      # ── Optional: code signing & notarization ──────────────────────
+      # Uncomment this section once you have an Apple Developer ID.
+      # Required secrets:
+      #   DEVELOPER_ID_CERT_BASE64  — base64-encoded .p12 certificate
+      #   DEVELOPER_ID_CERT_PASS   — password for the .p12
+      #   APPLE_ID                 — your Apple ID email
+      #   APPLE_ID_PASSWORD        — app-specific password
+      #   APPLE_TEAM_ID            — your team ID
+      #
+      # - name: Import signing certificate
+      #   env:
+      #     CERT_BASE64: ${{ secrets.DEVELOPER_ID_CERT_BASE64 }}
+      #     CERT_PASS: ${{ secrets.DEVELOPER_ID_CERT_PASS }}
+      #   run: |
+      #     echo "$CERT_BASE64" | base64 --decode > cert.p12
+      #     security create-keychain -p "" build.keychain
+      #     security default-keychain -s build.keychain
+      #     security unlock-keychain -p "" build.keychain
+      #     security import cert.p12 -k build.keychain -P "$CERT_PASS" -T /usr/bin/codesign
+      #     security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+      #     rm cert.p12
+      #
+      # - name: Sign app
+      #   run: |
+      #     codesign --force --deep --options runtime \
+      #       --sign "Developer ID Application" \
+      #       build/Speak.app
+      #
+      # - name: Notarize app
+      #   env:
+      #     APPLE_ID: ${{ secrets.APPLE_ID }}
+      #     APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+      #     APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      #   run: |
+      #     ditto -c -k --keepParent build/Speak.app build/Speak-notarize.zip
+      #     xcrun notarytool submit build/Speak-notarize.zip \
+      #       --apple-id "$APPLE_ID" \
+      #       --password "$APPLE_ID_PASSWORD" \
+      #       --team-id "$APPLE_TEAM_ID" \
+      #       --wait
+      #     xcrun stapler staple build/Speak.app
+      # ────────────────────────────────────────────────────────────────
+
+      - name: Create DMG
+        run: ./scripts/create-dmg.sh build/Speak.app build/Speak.dmg "${GITHUB_REF_NAME#v}"
+
+      # Also create a zip for users who prefer it / Homebrew casks
+      - name: Create zip
+        run: ditto -c -k --keepParent build/Speak.app build/Speak.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          files: |
+            build/Speak.dmg
+            build/Speak.zip
+          body: |
+            ## Installation
+
+            1. Download **Speak.dmg** and open it
+            2. Drag **Speak** to your Applications folder
+            3. On first launch, right-click the app → **Open** (required for unsigned builds)
+            4. Grant Microphone and Accessibility permissions when prompted
+
+            > **Note:** This build is not notarized with Apple. macOS will show a warning
+            > on first launch. Right-click → Open bypasses this. You only need to do it once.

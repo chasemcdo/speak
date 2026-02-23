@@ -19,6 +19,33 @@ Speak aims to bridge that gap: **the accuracy of Apple's on-device model, wrappe
 - Real-time streaming transcription with volatile + final results
 - Lightweight native Swift app
 
+## Install
+
+### Download (easiest)
+
+1. Grab the latest **Speak.dmg** from [Releases](../../releases)
+2. Open the DMG and drag **Speak** to your Applications folder
+3. On first launch, right-click the app and choose **Open** (macOS requires this for unsigned apps — you only need to do it once)
+4. Grant Microphone and Accessibility permissions when prompted
+
+### Build from source
+
+Requires macOS 26+ and Xcode 26+.
+
+```bash
+git clone https://github.com/chasemcdo/speak.git
+cd speak
+make app       # builds build/Speak.app
+make dmg       # packages into build/Speak.dmg (optional)
+```
+
+Or with Swift Package Manager for development:
+
+```bash
+cd Speak
+swift build
+```
+
 ## Status
 
 Early planning phase. See [ARCHITECTURE.md](ARCHITECTURE.md) and [ROADMAP.md](ROADMAP.md) for details.
@@ -26,8 +53,7 @@ Early planning phase. See [ARCHITECTURE.md](ARCHITECTURE.md) and [ROADMAP.md](RO
 ## Requirements
 
 - macOS 26+
-- Xcode 26+
-- Swift 6.2+
+- Xcode 26+ (build from source only)
 - Microphone permission
 - Accessibility permission (for pasting into active text fields)
 
