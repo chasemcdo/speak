@@ -10,6 +10,9 @@ struct SettingsView: View {
     @AppStorage("launchAtLogin") private var launchAtLogin = false
 
     @State private var supportedLocales: [Locale] = []
+    @State private var micGranted = AudioCaptureManager.permissionGranted
+    @State private var accessibilityGranted = PasteService.accessibilityGranted
+    @State private var speechGranted = ModelManager.authorizationGranted
 
     var body: some View {
         Form {
@@ -47,17 +50,17 @@ struct SettingsView: View {
             Section("Permissions") {
                 PermissionRow(
                     title: "Microphone",
-                    granted: AudioCaptureManager.permissionGranted,
+                    granted: micGranted,
                     settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
                 )
                 PermissionRow(
                     title: "Accessibility",
-                    granted: PasteService.accessibilityGranted,
+                    granted: accessibilityGranted,
                     settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
                 )
                 PermissionRow(
                     title: "Speech Recognition",
-                    granted: ModelManager.authorizationGranted,
+                    granted: speechGranted,
                     settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_SpeechRecognition"
                 )
             }
@@ -66,6 +69,15 @@ struct SettingsView: View {
         .frame(width: 420, height: 380)
         .task {
             await loadSupportedLocales()
+        }
+        .task {
+            // Poll for permission changes (e.g., user grants access via System Settings)
+            while !Task.isCancelled {
+                micGranted = AudioCaptureManager.permissionGranted
+                accessibilityGranted = PasteService.accessibilityGranted
+                speechGranted = ModelManager.authorizationGranted
+                try? await Task.sleep(for: .seconds(2))
+            }
         }
     }
 
