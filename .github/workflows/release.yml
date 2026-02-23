@@ -25,6 +25,38 @@ jobs:
       - name: Build release binary
         run: cd Speak && swift build -c release
 
+      # Import self-signed certificate for stable code identity across updates.
+      # This preserves macOS TCC permissions (microphone, accessibility) through
+      # Sparkle updates by keeping the same signing identity.
+      #
+      # One-time setup:
+      #   1. Create a self-signed certificate named "Speak Signing" via
+      #      Keychain Access → Certificate Assistant → Create a Certificate
+      #      (type: Code Signing, 10-year validity recommended)
+      #   2. Export as .p12 file with a password
+      #   3. base64-encode it: base64 -i speak-signing.p12 | pbcopy
+      #   4. Add GitHub repo secrets:
+      #      - SIGNING_CERT_BASE64: the base64-encoded .p12
+      #      - SIGNING_CERT_PASS: the .p12 password
+      - name: Import signing certificate
+        env:
+          SIGNING_CERT_BASE64: ${{ secrets.SIGNING_CERT_BASE64 }}
+          SIGNING_CERT_PASS: ${{ secrets.SIGNING_CERT_PASS }}
+        run: |
+          if [ -z "$SIGNING_CERT_BASE64" ]; then
+            echo "SIGNING_CERT_BASE64 not set — will fall back to ad-hoc signing"
+            echo "SIGNING_IDENTITY=-" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          echo "$SIGNING_CERT_BASE64" | base64 --decode > cert.p12
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security import cert.p12 -k build.keychain -P "$SIGNING_CERT_PASS" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+          rm cert.p12
+          echo "SIGNING_IDENTITY=Speak Signing" >> "$GITHUB_ENV"
+
       - name: Assemble .app bundle
         run: |
           BIN_PATH=$(cd Speak && swift build -c release --show-bin-path)
@@ -63,12 +95,13 @@ jobs:
           # Add rpath so the binary can find Sparkle.framework in Contents/Frameworks/
           install_name_tool -add_rpath @executable_path/../Frameworks "$APP/Contents/MacOS/Speak"
 
-          # Ad-hoc code sign with entitlements
+          # Code sign with stable identity (or ad-hoc fallback)
           codesign --force --deep \
-            --sign "-" \
+            --sign "$SIGNING_IDENTITY" \
             --entitlements Speak/Speak/Speak.entitlements \
             "$APP"
 
+          echo "Signed with identity: $SIGNING_IDENTITY"
           echo "Built: $APP"
           find "$APP" -type f
 

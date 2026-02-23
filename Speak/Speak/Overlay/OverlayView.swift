@@ -16,7 +16,11 @@ struct OverlayView: View {
 
             // Transcription text
             VStack(alignment: .leading, spacing: 4) {
-                if appState.isPostProcessing {
+                if let error = appState.error {
+                    Text(error)
+                        .foregroundStyle(.red)
+                        .font(.body)
+                } else if appState.isPostProcessing {
                     Text("Formatting...")
                         .foregroundStyle(.secondary)
                         .font(.body)

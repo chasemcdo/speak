@@ -25,12 +25,28 @@ final class AudioCaptureManager: @unchecked Sendable {
         AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
     }
 
+    // MARK: - Input validation
+
+    /// Validate that an audio input device is available and has a usable format.
+    /// Accessing `audioEngine.inputNode` with no audio device throws an unrecoverable
+    /// NSException, so we check via AVCaptureDevice first.
+    private func validateAudioInput() throws -> AVAudioFormat {
+        guard AVCaptureDevice.default(for: .audio) != nil else {
+            throw AudioCaptureError.noAudioInputDevice
+        }
+        let inputFormat = audioEngine.inputNode.outputFormat(forBus: 0)
+        guard inputFormat.sampleRate > 0 else {
+            throw AudioCaptureError.invalidAudioFormat
+        }
+        return inputFormat
+    }
+
     // MARK: - Format negotiation
 
     /// Determine the best audio format compatible with the given transcriber module.
     /// Call this before startCapture to set up format conversion.
     func prepareFormat(compatibleWith module: SpeechTranscriber) async throws {
-        let inputFormat = audioEngine.inputNode.outputFormat(forBus: 0)
+        let inputFormat = try validateAudioInput()
         guard let bestFormat = await SpeechAnalyzer.bestAvailableAudioFormat(
             compatibleWith: [module]
         ) else {
@@ -58,7 +74,11 @@ final class AudioCaptureManager: @unchecked Sendable {
         )
         self.continuation = continuation
 
-        let inputFormat = audioEngine.inputNode.outputFormat(forBus: 0)
+        let inputFormat = try validateAudioInput()
+
+        // Remove any stale tap from a prior failed session to prevent
+        // "tap already installed" crash on re-start.
+        audioEngine.inputNode.removeTap(onBus: 0)
 
         audioEngine.inputNode.installTap(
             onBus: 0,
@@ -139,6 +159,8 @@ private final class ConversionState: @unchecked Sendable {
 enum AudioCaptureError: LocalizedError {
     case formatConversionFailed
     case microphonePermissionDenied
+    case noAudioInputDevice
+    case invalidAudioFormat
 
     var errorDescription: String? {
         switch self {
@@ -146,6 +168,10 @@ enum AudioCaptureError: LocalizedError {
             return "Failed to convert audio format for speech recognition."
         case .microphonePermissionDenied:
             return "Microphone access is required for dictation."
+        case .noAudioInputDevice:
+            return "No microphone found. Please connect an audio input device."
+        case .invalidAudioFormat:
+            return "Audio input device has an invalid format."
         }
     }
 }
