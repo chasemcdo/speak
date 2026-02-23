@@ -49,22 +49,43 @@ dmg: app
 	@./scripts/create-dmg.sh $(APP_PATH) $(DMG_PATH) $(VERSION)
 
 # --- CI check (build + validate bundle) ---
+# Supports both traditional (Contents/MacOS/) and Xcode 26+ unified flat bundle layouts.
 
 check: app
-	@echo "── Checking executable exists"
-	@test -f $(APP_PATH)/Contents/MacOS/$(APP_NAME) || { echo "FAIL: missing executable"; exit 1; }
-	@echo "── Checking Info.plist exists"
-	@test -f $(APP_PATH)/Contents/Info.plist || { echo "FAIL: missing Info.plist"; exit 1; }
-	@echo "── Checking bundle identifier"
-	@BUNDLE_ID=$$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" $(APP_PATH)/Contents/Info.plist); \
-		echo "   Bundle ID: $$BUNDLE_ID"; \
-		test -n "$$BUNDLE_ID" || { echo "FAIL: empty bundle identifier"; exit 1; }
-	@echo "── Checking linked frameworks"
-	@for fw in Speech AVFoundation AppKit CoreGraphics; do \
-		otool -L $(APP_PATH)/Contents/MacOS/$(APP_NAME) | grep -q "$$fw" \
+	@echo "── Locating Info.plist"
+	@if [ -f $(APP_PATH)/Contents/Info.plist ]; then \
+		PLIST=$(APP_PATH)/Contents/Info.plist; \
+	elif [ -f $(APP_PATH)/Info.plist ]; then \
+		PLIST=$(APP_PATH)/Info.plist; \
+	else \
+		echo "FAIL: Info.plist not found"; exit 1; \
+	fi; \
+	echo "   Found: $$PLIST"; \
+	echo "── Reading CFBundleExecutable"; \
+	EXEC_NAME=$$(/usr/libexec/PlistBuddy -c "Print CFBundleExecutable" "$$PLIST"); \
+	echo "   Executable name: $$EXEC_NAME"; \
+	test -n "$$EXEC_NAME" || { echo "FAIL: CFBundleExecutable not set"; exit 1; }; \
+	echo "── Locating executable"; \
+	if [ -f $(APP_PATH)/Contents/MacOS/$$EXEC_NAME ]; then \
+		EXEC=$(APP_PATH)/Contents/MacOS/$$EXEC_NAME; \
+	elif [ -f $(APP_PATH)/$$EXEC_NAME ]; then \
+		EXEC=$(APP_PATH)/$$EXEC_NAME; \
+	else \
+		echo "FAIL: executable '$$EXEC_NAME' not found in bundle"; exit 1; \
+	fi; \
+	echo "   Found: $$EXEC"; \
+	echo "── Checking bundle identifier"; \
+	BUNDLE_ID=$$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$$PLIST"); \
+	echo "   Bundle ID: $$BUNDLE_ID"; \
+	test -n "$$BUNDLE_ID" || { echo "FAIL: empty bundle identifier"; exit 1; }; \
+	echo "── Checking linked frameworks"; \
+	FRAMEWORKS=$$(otool -L "$$EXEC" | tail -n +2); \
+	echo "$$FRAMEWORKS"; \
+	for fw in Speech AVFoundation AppKit CoreGraphics; do \
+		echo "$$FRAMEWORKS" | grep -q "$$fw" \
 			|| { echo "FAIL: $$fw not linked"; exit 1; }; \
-	done
-	@echo "── All checks passed"
+	done; \
+	echo "── All checks passed"
 
 # --- Cleanup ---
 
