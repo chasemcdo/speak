@@ -36,6 +36,8 @@ export default function QuickStartPage() {
           alt="Dictation flow from holding fn to pasting output"
           width={1200}
           height={260}
+          sizes="(max-width: 768px) 100vw, 800px"
+          style={{ width: "100%", height: "auto" }}
         />
       </figure>
 
