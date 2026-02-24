@@ -11,7 +11,7 @@ struct MenuBarView: View {
 
     var body: some View {
         Group {
-            if appState.isDismissedPreview {
+            if appState.isPreviewing {
                 Button("Paste Transcription") {
                     Task { await coordinator.pasteFromPreview() }
                 }
@@ -27,7 +27,7 @@ struct MenuBarView: View {
                 }
                 .keyboardShortcut(.return)
 
-                Button("Cancel") {
+                Button("Stop & Preview") {
                     Task { await coordinator.stopWithoutPaste() }
                 }
                 .keyboardShortcut(.escape)

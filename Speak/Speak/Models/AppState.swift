@@ -11,7 +11,7 @@ final class AppState {
     var isModelDownloading = false
     var isPostProcessing = false
     var permissionsGranted = false
-    var isDismissedPreview = false
+    var isPreviewing = false
     var previewText = ""
 
     var displayText: String {
@@ -27,7 +27,7 @@ final class AppState {
         finalizedText = ""
         volatileText = ""
         error = nil
-        isDismissedPreview = false
+        isPreviewing = false
         previewText = ""
     }
 

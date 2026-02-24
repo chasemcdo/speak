@@ -5,7 +5,7 @@ struct OverlayView: View {
 
     var body: some View {
         Group {
-            if appState.isDismissedPreview {
+            if appState.isPreviewing {
                 previewContent
             } else {
                 recordingContent
@@ -79,6 +79,7 @@ struct OverlayView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
+                .disabled(appState.previewText.isEmpty)
 
                 Button {
                     NotificationCenter.default.post(name: .overlayCancelRequested, object: nil)

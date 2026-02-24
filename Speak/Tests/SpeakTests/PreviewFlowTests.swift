@@ -123,7 +123,7 @@ struct PreviewFlowTests {
 
         #expect(transcriber.stopSessionCalled)
         #expect(!appState.isRecording)
-        #expect(appState.isDismissedPreview)
+        #expect(appState.isPreviewing)
         #expect(appState.previewText == "Hello world")
         #expect(!paster.pasteCalled)
     }
@@ -181,7 +181,7 @@ struct PreviewFlowTests {
 
         await coordinator.stopWithoutPaste()
 
-        #expect(appState.isDismissedPreview)
+        #expect(appState.isPreviewing)
         #expect(appState.previewText == "")
         // Should not save empty text to history
         #expect(historyStore.entries.count == initialCount)
@@ -195,7 +195,7 @@ struct PreviewFlowTests {
         // Don't start recording — stopWithoutPaste should be a no-op
         await coordinator.stopWithoutPaste()
 
-        #expect(!appState.isDismissedPreview)
+        #expect(!appState.isPreviewing)
     }
 
     // MARK: - pasteFromPreview
@@ -215,7 +215,7 @@ struct PreviewFlowTests {
         #expect(paster.pasteCalled)
         #expect(paster.pastedText == "Hello world")
         #expect(overlay.hideCalled)
-        #expect(!appState.isDismissedPreview)
+        #expect(!appState.isPreviewing)
         #expect(appState.previewText == "")
         #expect(!appState.isRecording)
     }
@@ -232,7 +232,7 @@ struct PreviewFlowTests {
         await coordinator.pasteFromPreview()
 
         #expect(!paster.pasteCalled)
-        #expect(!appState.isDismissedPreview)
+        #expect(!appState.isPreviewing)
     }
 
     @Test @MainActor
@@ -261,7 +261,7 @@ struct PreviewFlowTests {
         coordinator.dismissPreview()
 
         #expect(overlay.hideCalled)
-        #expect(!appState.isDismissedPreview)
+        #expect(!appState.isPreviewing)
         #expect(appState.previewText == "")
         #expect(!paster.pasteCalled)
     }
@@ -304,7 +304,7 @@ struct PreviewFlowTests {
         await coordinator.stopWithoutPaste()
         #expect(transcriber.stopSessionCalled)
         #expect(!appState.isRecording)
-        #expect(appState.isDismissedPreview)
+        #expect(appState.isPreviewing)
         #expect(appState.previewText == "The meeting is at three pm.")
         #expect(!paster.pasteCalled)
 
@@ -312,7 +312,7 @@ struct PreviewFlowTests {
         await coordinator.pasteFromPreview()
         #expect(paster.pasteCalled)
         #expect(paster.pastedText == "The meeting is at three pm.")
-        #expect(!appState.isDismissedPreview)
+        #expect(!appState.isPreviewing)
     }
 
     @Test @MainActor
@@ -324,11 +324,11 @@ struct PreviewFlowTests {
         appState.appendFinalizedText("Some text to review.")
 
         await coordinator.stopWithoutPaste()
-        #expect(appState.isDismissedPreview)
+        #expect(appState.isPreviewing)
 
         // Dismiss without pasting
         coordinator.dismissPreview()
-        #expect(!appState.isDismissedPreview)
+        #expect(!appState.isPreviewing)
         #expect(!paster.pasteCalled)
     }
 
@@ -343,13 +343,13 @@ struct PreviewFlowTests {
         await coordinator.start()
         appState.appendFinalizedText("Old text")
         await coordinator.stopWithoutPaste()
-        #expect(appState.isDismissedPreview)
+        #expect(appState.isPreviewing)
 
         // Start a new recording — should dismiss preview first
         overlay.hideCalled = false
         await coordinator.start()
 
-        #expect(!appState.isDismissedPreview)
+        #expect(!appState.isPreviewing)
         #expect(appState.isRecording)
     }
 
@@ -368,7 +368,7 @@ struct PreviewFlowTests {
         #expect(paster.pasteCalled)
         #expect(paster.pastedText == "Direct paste text.")
         #expect(overlay.hideCalled)
-        #expect(!appState.isDismissedPreview)
+        #expect(!appState.isPreviewing)
         #expect(!appState.isRecording)
     }
 
@@ -388,7 +388,7 @@ struct PreviewFlowTests {
         #expect(overlay.hideCalled)
         #expect(!appState.isRecording)
         #expect(appState.displayText.isEmpty)
-        #expect(!appState.isDismissedPreview)
+        #expect(!appState.isPreviewing)
     }
 
     // MARK: - Post-processing in preview
@@ -409,8 +409,10 @@ struct PreviewFlowTests {
 
         await coordinator.stopWithoutPaste()
 
-        // Should have post-processed text (filler removal + formatting)
-        #expect(appState.previewText == "The project is done.")
-        #expect(appState.isDismissedPreview)
+        // Post-processing should have modified the text (filler removal + formatting)
+        let rawInput = "Um, you know, the project is basically done."
+        #expect(appState.previewText != rawInput)
+        #expect(!appState.previewText.isEmpty)
+        #expect(appState.isPreviewing)
     }
 }

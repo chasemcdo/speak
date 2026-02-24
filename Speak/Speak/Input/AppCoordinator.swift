@@ -70,7 +70,7 @@ final class AppCoordinator {
         ) { [weak self] _ in
             Task { @MainActor in
                 guard let self, let appState = self.appState else { return }
-                if appState.isDismissedPreview {
+                if appState.isPreviewing {
                     self.dismissPreview()
                 } else if appState.isRecording {
                     await self.stopWithoutPaste()
@@ -85,7 +85,7 @@ final class AppCoordinator {
         ) { [weak self] _ in
             Task { @MainActor in
                 guard let self, let appState = self.appState else { return }
-                if appState.isDismissedPreview {
+                if appState.isPreviewing {
                     await self.pasteFromPreview()
                 } else if appState.isRecording {
                     await self.confirm()
@@ -124,7 +124,7 @@ final class AppCoordinator {
         guard let appState, !appState.isRecording else { return }
 
         // Dismiss any active preview before starting a new recording
-        if appState.isDismissedPreview {
+        if appState.isPreviewing {
             dismissPreview()
         }
 
@@ -185,47 +185,7 @@ final class AppCoordinator {
     func confirm() async {
         guard let appState, appState.isRecording else { return }
 
-        // Reset hotkey state in case recording was stopped via keyboard/menu
-        hotkeyManager.resetState()
-
-        // Stop transcription
-        await transcriptionEngine.stopSession()
-        appState.isRecording = false
-
-        let rawText = appState.displayText
-        var text = rawText
-
-        // Run post-processing pipeline if we have text
-        if !text.isEmpty {
-            // Build the filter pipeline based on user preferences
-            configureFilters()
-
-            if !textProcessor.filters.isEmpty {
-                appState.isPostProcessing = true
-
-                let locale = UserDefaults.standard.string(forKey: "locale")
-                    .flatMap { Locale(identifier: $0) } ?? Locale.current
-
-                let context = ProcessingContext(
-                    surroundingText: capturedContext,
-                    screenVocabulary: capturedVocabulary,
-                    locale: locale
-                )
-
-                text = await textProcessor.process(text, context: context)
-                appState.isPostProcessing = false
-            }
-        }
-
-        // Save to history
-        if !text.isEmpty {
-            historyStore?.add(HistoryEntry(
-                rawText: rawText,
-                processedText: text,
-                sourceAppName: previousApp?.localizedName,
-                sourceAppBundleID: previousApp?.bundleIdentifier
-            ))
-        }
+        let text = await stopAndProcess()
 
         // Hide overlay
         overlayManager.hide()
@@ -271,49 +231,10 @@ final class AppCoordinator {
     func stopWithoutPaste() async {
         guard let appState, appState.isRecording else { return }
 
-        // Reset hotkey state
-        hotkeyManager.resetState()
-
-        // Stop transcription
-        await transcriptionEngine.stopSession()
-        appState.isRecording = false
-
-        let rawText = appState.displayText
-        var text = rawText
-
-        // Run post-processing pipeline if we have text
-        if !text.isEmpty {
-            configureFilters()
-
-            if !textProcessor.filters.isEmpty {
-                appState.isPostProcessing = true
-
-                let locale = UserDefaults.standard.string(forKey: "locale")
-                    .flatMap { Locale(identifier: $0) } ?? Locale.current
-
-                let context = ProcessingContext(
-                    surroundingText: capturedContext,
-                    screenVocabulary: capturedVocabulary,
-                    locale: locale
-                )
-
-                text = await textProcessor.process(text, context: context)
-                appState.isPostProcessing = false
-            }
-        }
-
-        // Save to history
-        if !text.isEmpty {
-            historyStore?.add(HistoryEntry(
-                rawText: rawText,
-                processedText: text,
-                sourceAppName: previousApp?.localizedName,
-                sourceAppBundleID: previousApp?.bundleIdentifier
-            ))
-        }
+        let text = await stopAndProcess()
 
         // Enter preview state — overlay stays visible
-        appState.isDismissedPreview = true
+        appState.isPreviewing = true
         appState.previewText = text
 
         // Give focus back to the previous app
@@ -334,7 +255,7 @@ final class AppCoordinator {
 
     /// Paste the preview text and dismiss the overlay.
     func pasteFromPreview() async {
-        guard let appState, appState.isDismissedPreview else { return }
+        guard let appState, appState.isPreviewing else { return }
 
         let text = appState.previewText
         removePreviewMonitors()
@@ -362,7 +283,7 @@ final class AppCoordinator {
 
     /// Dismiss the preview without pasting.
     func dismissPreview() {
-        guard let appState else { return }
+        guard let appState, appState.isPreviewing else { return }
 
         removePreviewMonitors()
         overlayManager.hide()
@@ -382,6 +303,49 @@ final class AppCoordinator {
     }
 
     // MARK: - Private
+
+    /// Stop transcription, run post-processing, and save to history.
+    /// Returns the processed text.
+    private func stopAndProcess() async -> String {
+        hotkeyManager.resetState()
+
+        await transcriptionEngine.stopSession()
+        appState?.isRecording = false
+
+        let rawText = appState?.displayText ?? ""
+        var text = rawText
+
+        if !text.isEmpty {
+            configureFilters()
+
+            if !textProcessor.filters.isEmpty {
+                appState?.isPostProcessing = true
+
+                let locale = UserDefaults.standard.string(forKey: "locale")
+                    .flatMap { Locale(identifier: $0) } ?? Locale.current
+
+                let context = ProcessingContext(
+                    surroundingText: capturedContext,
+                    screenVocabulary: capturedVocabulary,
+                    locale: locale
+                )
+
+                text = await textProcessor.process(text, context: context)
+                appState?.isPostProcessing = false
+            }
+        }
+
+        if !text.isEmpty {
+            historyStore?.add(HistoryEntry(
+                rawText: rawText,
+                processedText: text,
+                sourceAppName: previousApp?.localizedName,
+                sourceAppBundleID: previousApp?.bundleIdentifier
+            ))
+        }
+
+        return text
+    }
 
     /// Install a global key monitor for Escape/Return during preview.
     private func installPreviewKeyMonitor() {
