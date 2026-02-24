@@ -9,6 +9,8 @@ struct PermissionRecoveryView: View {
     @State private var micGranted = AudioCaptureManager.permissionGranted
     @State private var accessibilityGranted = PasteService.accessibilityGranted
     @State private var speechGranted = ModelManager.authorizationGranted
+    @State private var canRequestMic = AudioCaptureManager.permissionNotDetermined
+    @State private var canRequestSpeech = ModelManager.authorizationNotDetermined
 
     private var allGranted: Bool {
         micGranted && accessibilityGranted && speechGranted
@@ -38,11 +40,12 @@ struct PermissionRecoveryView: View {
                     PermissionRecoveryRow(
                         title: "Microphone",
                         description: "Required to hear your voice",
-                        canRequestDirectly: AudioCaptureManager.permissionNotDetermined,
+                        canRequestDirectly: canRequestMic,
                         settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
                     ) {
                         let manager = AudioCaptureManager()
                         micGranted = await manager.requestPermission()
+                        canRequestMic = AudioCaptureManager.permissionNotDetermined
                     }
                 }
 
@@ -50,11 +53,12 @@ struct PermissionRecoveryView: View {
                     PermissionRecoveryRow(
                         title: "Speech Recognition",
                         description: "Required for on-device transcription",
-                        canRequestDirectly: ModelManager.authorizationNotDetermined,
+                        canRequestDirectly: canRequestSpeech,
                         settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_SpeechRecognition"
                     ) {
                         let manager = ModelManager()
                         speechGranted = await manager.requestAuthorization()
+                        canRequestSpeech = ModelManager.authorizationNotDetermined
                     }
                 }
 

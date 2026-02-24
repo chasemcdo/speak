@@ -142,9 +142,9 @@ final class AudioCaptureManager: @unchecked Sendable {
         }
 
         var error: NSError?
-        converter.convert(to: outputBuffer, error: &error, withInputFrom: inputBlock)
+        let status = converter.convert(to: outputBuffer, error: &error, withInputFrom: inputBlock)
 
-        if error != nil {
+        if error != nil || status == .error {
             return nil
         }
         return outputBuffer
