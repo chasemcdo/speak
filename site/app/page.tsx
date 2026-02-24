@@ -4,24 +4,24 @@ import { siteConfig } from "@/lib/site-config";
 
 const features = [
   {
-    title: "On-device transcription",
+    title: "Local-first speech pipeline",
     description:
-      "Speech stays on your Mac using Apple's speech framework. No cloud pipeline is required.",
+      "Audio, decoding, and post-processing stay on your machine using Apple's modern speech stack.",
   },
   {
-    title: "Global hotkey workflow",
+    title: "Global hotkey control loop",
     description:
-      "Start dictation from any app with a single keypress, then paste directly back into your active field.",
+      "Trigger from any app, stream partial results live, then commit into the focused text field in one motion.",
   },
   {
-    title: "Live overlay feedback",
+    title: "Live volatile + final rendering",
     description:
-      "Watch words appear in real time while volatile and final segments settle for a predictable UX.",
+      "See rapid in-progress text and stable final segments so dictation feels responsive without being noisy.",
   },
   {
-    title: "Free and open source",
+    title: "Inspectable and scriptable",
     description:
-      "No subscription and no paywalls. Inspect, run, and contribute on GitHub.",
+      "Open source by default. Clone it, build it, and evolve the workflow for your own team.",
   },
 ];
 
@@ -32,10 +32,11 @@ export default function Home() {
         <div className="site-container hero-grid">
           <div>
             <p className="eyebrow">macOS Dictation</p>
-            <h1>Dictate anywhere on Mac. Fast, local, and free.</h1>
+            <h1>Voice-to-text for developers who care about local-first tools.</h1>
             <p className="hero-copy">
-              Speak wraps Apple&apos;s on-device speech stack in a focused UX:
-              press a hotkey, talk, and paste clean text into any app.
+              Speak wraps Apple&apos;s on-device speech APIs in a fast command-loop:
+              hold <code>fn</code>, dictate, release, and your text lands where
+              you were already working.
             </p>
             <div className="cta-row">
               <a className="button button-primary" href={siteConfig.latestDmgUrl}>
@@ -50,15 +51,34 @@ export default function Home() {
               required for full workflow.
             </p>
           </div>
-          <aside className="hero-card">
-            <h2>How it works</h2>
-            <ol>
-              <li>Hold <code>fn</code> to start dictation</li>
-              <li>Speak while the floating overlay streams text</li>
-              <li>Release <code>fn</code> to confirm and paste</li>
-            </ol>
-            <Link href="/docs/quickstart">Read quick start</Link>
-          </aside>
+          <div className="hero-visual-wrap">
+            <div className="hero-orb hero-orb-a" />
+            <div className="hero-orb hero-orb-b" />
+            <aside className="hero-card hero-card-visual">
+              <div className="visual-topbar">
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className="visual-title">Live Session / Speak Overlay</div>
+              <div className="visual-line visual-line-1" />
+              <div className="visual-line visual-line-2" />
+              <div className="visual-line visual-line-3" />
+              <div className="wave-row">
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className="visual-footer">
+                <p>Input: MacBook Pro Microphone</p>
+                <p>Engine: SpeechAnalyzer (on-device)</p>
+              </div>
+            </aside>
+            <div className="hero-reflection" aria-hidden />
+          </div>
         </div>
       </section>
 
@@ -95,10 +115,15 @@ export default function Home() {
           <article className="faq-card">
             <h3>Can I build from source?</h3>
             <p>
-              Yes. Full source and build steps are in the repository README and
-              docs.
+              Yes. Clone, run <code>make app</code>, and ship your own fork.
             </p>
           </article>
+        </div>
+      </section>
+      <section className="platform-strip">
+        <div className="site-container strip-row">
+          <p>Built for engineers shipping in terminals, editors, and browser tabs.</p>
+          <Link href="/docs/quickstart">Read setup docs</Link>
         </div>
       </section>
     </SiteChrome>
