@@ -100,18 +100,27 @@ struct SettingsView: View {
                 PermissionRow(
                     title: "Microphone",
                     granted: micGranted,
+                    canRequestDirectly: AudioCaptureManager.permissionNotDetermined,
                     settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
-                )
+                ) {
+                    let manager = AudioCaptureManager()
+                    micGranted = await manager.requestPermission()
+                }
                 PermissionRow(
                     title: "Accessibility",
                     granted: accessibilityGranted,
+                    canRequestDirectly: false,
                     settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
-                )
+                ) { }
                 PermissionRow(
                     title: "Speech Recognition",
                     granted: speechGranted,
+                    canRequestDirectly: ModelManager.authorizationNotDetermined,
                     settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_SpeechRecognition"
-                )
+                ) {
+                    let manager = ModelManager()
+                    speechGranted = await manager.requestAuthorization()
+                }
             }
         }
         .formStyle(.grouped)
@@ -163,7 +172,9 @@ struct SettingsView: View {
 struct PermissionRow: View {
     let title: String
     let granted: Bool
+    let canRequestDirectly: Bool
     let settingsURL: String
+    let requestAction: @MainActor () async -> Void
 
     var body: some View {
         HStack {
@@ -172,8 +183,14 @@ struct PermissionRow: View {
             if granted {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(.green)
+            } else if canRequestDirectly {
+                Button("Enable") {
+                    Task { await requestAction() }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
             } else {
-                Button("Grant Access") {
+                Button("Open Settings") {
                     if let url = URL(string: settingsURL) {
                         NSWorkspace.shared.open(url)
                     }
