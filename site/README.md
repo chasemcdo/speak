@@ -21,5 +21,6 @@ pnpm start
 Copy `.env.example` to `.env.local` and adjust values if needed.
 
 - `NEXT_PUBLIC_GITHUB_REPO`
+- `NEXT_PUBLIC_LATEST_DMG_URL`
 - `NEXT_PUBLIC_RELEASES_URL`
 - `NEXT_PUBLIC_DOCS_BASE_URL`

@@ -38,7 +38,7 @@ export default function Home() {
               press a hotkey, talk, and paste clean text into any app.
             </p>
             <div className="cta-row">
-              <a className="button button-primary" href={siteConfig.releasesUrl}>
+              <a className="button button-primary" href={siteConfig.latestDmgUrl}>
                 Download Latest Release
               </a>
               <a className="button button-secondary" href={siteConfig.githubRepo}>
