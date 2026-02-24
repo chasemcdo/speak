@@ -91,7 +91,9 @@ struct PermissionRecoveryView: View {
                 accessibilityGranted = PasteService.accessibilityGranted
                 speechGranted = ModelManager.authorizationGranted
             }
-            dismissWindow(id: "permission-recovery")
+            if allGranted {
+                dismissWindow(id: "permission-recovery")
+            }
         }
     }
 }
@@ -103,7 +105,7 @@ private struct PermissionRecoveryRow: View {
     let description: String
     let canRequestDirectly: Bool
     let settingsURL: String
-    let requestAction: () async -> Void
+    let requestAction: @MainActor () async -> Void
 
     var body: some View {
         HStack(spacing: 12) {

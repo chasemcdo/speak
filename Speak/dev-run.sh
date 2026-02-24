@@ -15,6 +15,11 @@ cp "$BUILD_DIR/Speak" "$APP_DIR/MacOS/Speak"
 cp Speak/Info.plist "$APP_DIR/Info.plist"
 
 # Symlink Sparkle.framework so @loader_path resolution works
+SPARKLE_FW="$BUILD_DIR/Sparkle.framework"
+if [ ! -d "$SPARKLE_FW" ]; then
+    echo "error: Sparkle.framework not found at $SPARKLE_FW" >&2
+    exit 1
+fi
 ln -sfh "../../../Sparkle.framework" "$APP_DIR/MacOS/Sparkle.framework"
 
 # Copy the bundled resources SPM generates (Assets.xcassets, etc.)
@@ -28,14 +33,14 @@ fi
 # The cp above invalidates the original SPM ad-hoc signature.
 codesign --force --sign - --deep "$BUILD_DIR/Speak.app"
 
-# Kill any existing instance
-pkill -f "Speak.app/Contents/MacOS/Speak" 2>/dev/null || true
+# Kill any existing instance (use absolute path to avoid matching unrelated processes)
+APP_PATH="$(cd "$BUILD_DIR" && pwd)/Speak.app"
+pkill -f "$APP_PATH/Contents/MacOS/Speak" 2>/dev/null || true
 sleep 0.5
 
 # Launch via `open -n` with absolute path. -n forces a new instance so Launch
 # Services won't redirect to /Applications/Speak.app. Using `open` (not exec)
 # is required so macOS sets up the full .app bundle context — TCC reads
 # Info.plist usage descriptions from the bundle, not the bare binary.
-APP_PATH="$(cd "$BUILD_DIR" && pwd)/Speak.app"
 echo "Launching $APP_PATH ..."
 open -n "$APP_PATH"
