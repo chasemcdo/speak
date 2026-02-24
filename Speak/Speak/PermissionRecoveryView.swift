@@ -68,14 +68,7 @@ struct PermissionRecoveryView: View {
                 }
             }
 
-            // Continue button appears when all permissions are restored
-            if allGranted {
-                Button("Continue") {
-                    dismissWindow(id: "permission-recovery")
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-            } else {
+            if !allGranted {
                 Text("Grant the permissions above to continue")
                     .font(.caption)
                     .foregroundStyle(.secondary)
