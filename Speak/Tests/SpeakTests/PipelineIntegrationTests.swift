@@ -6,6 +6,7 @@ import Testing
 
 @MainActor
 private final class MockTranscriber: Transcribing {
+    var levelMonitor: AudioLevelMonitor?
     var startSessionCalled = false
     var stopSessionCalled = false
     var shouldThrow = false

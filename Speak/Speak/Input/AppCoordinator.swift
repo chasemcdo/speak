@@ -5,7 +5,7 @@ import Observation
 @MainActor
 @Observable
 final class AppCoordinator {
-    private let transcriptionEngine: any Transcribing
+    private var transcriptionEngine: any Transcribing
     private let overlayManager: any OverlayPresenting
     private let hotkeyManager: any HotkeyManaging
     private let historyHotkeyManager: any HistoryHotkeyManaging
