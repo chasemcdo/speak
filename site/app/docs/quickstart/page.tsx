@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { DocsShell } from "@/components/docs-shell";
 
 export default function QuickStartPage() {
@@ -29,6 +30,14 @@ export default function QuickStartPage() {
         <li>Hold <code>fn</code> to start dictation.</li>
         <li>Release <code>fn</code> to confirm and paste.</li>
       </ol>
+      <figure className="flow-figure">
+        <Image
+          src="/dictation-flow.svg"
+          alt="Dictation flow from holding fn to pasting output"
+          width={1200}
+          height={260}
+        />
+      </figure>
 
       <h2>Build from source (optional)</h2>
       <pre>
