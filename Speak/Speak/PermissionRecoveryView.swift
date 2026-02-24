@@ -91,6 +91,7 @@ struct PermissionRecoveryView: View {
                 accessibilityGranted = PasteService.accessibilityGranted
                 speechGranted = ModelManager.authorizationGranted
             }
+            dismissWindow(id: "permission-recovery")
         }
     }
 }
