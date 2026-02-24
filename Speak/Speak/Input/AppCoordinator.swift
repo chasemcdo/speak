@@ -5,12 +5,35 @@ import Observation
 @MainActor
 @Observable
 final class AppCoordinator {
-    private let transcriptionEngine = TranscriptionEngine()
-    private let overlayManager = OverlayManager()
-    private let hotkeyManager = HotkeyManager()
-    private let historyHotkeyManager = HistoryHotkeyManager()
+    private let transcriptionEngine: any Transcribing
+    private let overlayManager: any OverlayPresenting
+    private let hotkeyManager: any HotkeyManaging
+    private let historyHotkeyManager: any HistoryHotkeyManaging
     private let textProcessor = TextProcessor()
-    private let contextReader = ContextReader()
+    private let contextReader: any ContextReading
+    private let pasteService: any Pasting
+    private let checkMicPermission: @MainActor () -> Bool
+    private let checkSpeechAuth: @MainActor () -> Bool
+
+    init(
+        transcriptionEngine: any Transcribing = TranscriptionEngine(),
+        overlayManager: any OverlayPresenting = OverlayManager(),
+        hotkeyManager: any HotkeyManaging = HotkeyManager(),
+        historyHotkeyManager: any HistoryHotkeyManaging = HistoryHotkeyManager(),
+        contextReader: any ContextReading = ContextReader(),
+        pasteService: any Pasting = PasteServiceAdapter(),
+        checkMicPermission: @escaping @MainActor () -> Bool = { AudioCaptureManager.permissionGranted },
+        checkSpeechAuth: @escaping @MainActor () -> Bool = { ModelManager.authorizationGranted }
+    ) {
+        self.transcriptionEngine = transcriptionEngine
+        self.overlayManager = overlayManager
+        self.hotkeyManager = hotkeyManager
+        self.historyHotkeyManager = historyHotkeyManager
+        self.contextReader = contextReader
+        self.pasteService = pasteService
+        self.checkMicPermission = checkMicPermission
+        self.checkSpeechAuth = checkSpeechAuth
+    }
 
     private var previousApp: NSRunningApplication?
     private var capturedContext: String?
@@ -106,11 +129,11 @@ final class AppCoordinator {
         }
 
         // Pre-check permissions before showing the overlay
-        guard AudioCaptureManager.permissionGranted else {
+        guard checkMicPermission() else {
             appState.error = AudioCaptureError.microphonePermissionDenied.localizedDescription
             return
         }
-        guard ModelManager.authorizationGranted else {
+        guard checkSpeechAuth() else {
             appState.error = TranscriptionError.notAuthorized.localizedDescription
             return
         }
@@ -211,7 +234,7 @@ final class AppCoordinator {
         if !text.isEmpty {
             let autoPaste = UserDefaults.standard.bool(forKey: "autoPaste")
             if autoPaste {
-                await PasteService.paste(text, into: previousApp)
+                await pasteService.paste(text, into: previousApp)
             } else {
                 // Just leave it on the clipboard
                 NSPasteboard.general.clearContents()
@@ -355,7 +378,7 @@ final class AppCoordinator {
         guard let appState, !appState.isRecording,
               let entry = historyStore?.mostRecent else { return }
         let currentApp = NSWorkspace.shared.frontmostApplication
-        await PasteService.paste(entry.processedText, into: currentApp)
+        await pasteService.paste(entry.processedText, into: currentApp)
     }
 
     // MARK: - Private
