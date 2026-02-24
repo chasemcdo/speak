@@ -10,7 +10,10 @@ struct SpeakApp: App {
     @State private var needsPermissionRecovery = false
     @Environment(\.openWindow) private var openWindow
 
-    let updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+    let updaterController: SPUStandardUpdaterController? = {
+        guard Bundle.main.bundleIdentifier != nil else { return nil }
+        return SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+    }()
 
     init() {
         UserDefaults.standard.register(defaults: [
@@ -22,13 +25,18 @@ struct SpeakApp: App {
     }
 
     var body: some Scene {
-        MenuBarExtra("Speak", systemImage: appState.isRecording ? "mic.fill" : "mic") {
-            MenuBarView(updater: updaterController.updater)
+        MenuBarExtra {
+            MenuBarView(updater: updaterController?.updater)
                 .environment(appState)
                 .environment(coordinator)
                 .environment(historyStore)
-                .onAppear {
+        } label: {
+            Image(systemName: appState.isRecording ? "mic.fill" : "mic")
+                .task {
                     coordinator.setUp(appState: appState, historyStore: historyStore)
+
+                    // Let scene registration complete before opening windows
+                    try? await Task.sleep(for: .milliseconds(200))
 
                     if !onboardingComplete {
                         openWindow(id: "onboarding")
@@ -50,7 +58,7 @@ struct SpeakApp: App {
         }
 
         Settings {
-            SettingsView(updater: updaterController.updater)
+            SettingsView(updater: updaterController?.updater)
                 .environment(appState)
         }
 

@@ -37,7 +37,7 @@ final class ModelManager {
     }
 
     /// Request speech recognition authorization.
-    func requestAuthorization() async -> Bool {
+    nonisolated func requestAuthorization() async -> Bool {
         await withCheckedContinuation { continuation in
             SFSpeechRecognizer.requestAuthorization { status in
                 continuation.resume(returning: status == .authorized)
@@ -47,5 +47,9 @@ final class ModelManager {
 
     static var authorizationGranted: Bool {
         SFSpeechRecognizer.authorizationStatus() == .authorized
+    }
+
+    static var authorizationNotDetermined: Bool {
+        SFSpeechRecognizer.authorizationStatus() == .notDetermined
     }
 }

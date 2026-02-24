@@ -17,8 +17,9 @@ let package = Package(
                 .product(name: "Sparkle", package: "Sparkle"),
             ],
             path: "Speak",
+            exclude: ["Info.plist", "Speak.entitlements"],
             resources: [
-                .process("Assets.xcassets")
+                .process("Assets.xcassets"),
             ],
             swiftSettings: [
                 .define("SPEAK_APP")

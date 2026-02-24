@@ -5,7 +5,7 @@ import FoundationModels
 import Sparkle
 
 struct SettingsView: View {
-    let updater: SPUUpdater
+    let updater: SPUUpdater?
     @Environment(AppState.self) private var appState
     @AppStorage("locale") private var localeIdentifier = Locale.current.identifier
     @AppStorage("autoPaste") private var autoPaste = true
@@ -83,40 +83,53 @@ struct SettingsView: View {
                     }
             }
 
-            Section("Updates") {
-                Toggle("Automatically check for updates", isOn: $automaticallyChecksForUpdates)
-                    .onChange(of: automaticallyChecksForUpdates) { _, newValue in
-                        updater.automaticallyChecksForUpdates = newValue
-                    }
-                Toggle("Automatically download updates", isOn: $automaticallyDownloadsUpdates)
-                    .onChange(of: automaticallyDownloadsUpdates) { _, newValue in
-                        updater.automaticallyDownloadsUpdates = newValue
-                    }
+            if let updater {
+                Section("Updates") {
+                    Toggle("Automatically check for updates", isOn: $automaticallyChecksForUpdates)
+                        .onChange(of: automaticallyChecksForUpdates) { _, newValue in
+                            updater.automaticallyChecksForUpdates = newValue
+                        }
+                    Toggle("Automatically download updates", isOn: $automaticallyDownloadsUpdates)
+                        .onChange(of: automaticallyDownloadsUpdates) { _, newValue in
+                            updater.automaticallyDownloadsUpdates = newValue
+                        }
+                }
             }
 
             Section("Permissions") {
                 PermissionRow(
                     title: "Microphone",
                     granted: micGranted,
+                    canRequestDirectly: AudioCaptureManager.permissionNotDetermined,
                     settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
-                )
+                ) {
+                    let manager = AudioCaptureManager()
+                    micGranted = await manager.requestPermission()
+                }
                 PermissionRow(
                     title: "Accessibility",
                     granted: accessibilityGranted,
+                    canRequestDirectly: false,
                     settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
-                )
+                ) { }
                 PermissionRow(
                     title: "Speech Recognition",
                     granted: speechGranted,
+                    canRequestDirectly: ModelManager.authorizationNotDetermined,
                     settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_SpeechRecognition"
-                )
+                ) {
+                    let manager = ModelManager()
+                    speechGranted = await manager.requestAuthorization()
+                }
             }
         }
         .formStyle(.grouped)
         .frame(width: 420, height: 520)
         .onAppear {
-            automaticallyChecksForUpdates = updater.automaticallyChecksForUpdates
-            automaticallyDownloadsUpdates = updater.automaticallyDownloadsUpdates
+            if let updater {
+                automaticallyChecksForUpdates = updater.automaticallyChecksForUpdates
+                automaticallyDownloadsUpdates = updater.automaticallyDownloadsUpdates
+            }
         }
         .task {
             await loadSupportedLocales()
@@ -159,7 +172,9 @@ struct SettingsView: View {
 struct PermissionRow: View {
     let title: String
     let granted: Bool
+    let canRequestDirectly: Bool
     let settingsURL: String
+    let requestAction: @MainActor () async -> Void
 
     var body: some View {
         HStack {
@@ -168,8 +183,14 @@ struct PermissionRow: View {
             if granted {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(.green)
+            } else if canRequestDirectly {
+                Button("Enable") {
+                    Task { await requestAction() }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
             } else {
-                Button("Grant Access") {
+                Button("Open Settings") {
                     if let url = URL(string: settingsURL) {
                         NSWorkspace.shared.open(url)
                     }

@@ -2,7 +2,7 @@ import SwiftUI
 import Sparkle
 
 struct MenuBarView: View {
-    let updater: SPUUpdater
+    let updater: SPUUpdater?
     @Environment(AppState.self) private var appState
     @Environment(AppCoordinator.self) private var coordinator
     @Environment(HistoryStore.self) private var historyStore
@@ -41,8 +41,7 @@ struct MenuBarView: View {
                         NSPasteboard.general.clearContents()
                         NSPasteboard.general.setString(entry.processedText, forType: .string)
                     } label: {
-                        Text(entry.processedText)
-                            .lineLimit(1)
+                        Text(entry.processedText.menuLabel)
                     }
                 }
 
@@ -53,7 +52,9 @@ struct MenuBarView: View {
                 Divider()
             }
 
-            CheckForUpdatesView(updater: updater)
+            if let updater {
+                CheckForUpdatesView(updater: updater)
+            }
 
             SettingsLink {
                 Text("Settings...")
@@ -66,5 +67,14 @@ struct MenuBarView: View {
             }
             .keyboardShortcut("q")
         }
+    }
+}
+
+private extension String {
+    /// Single-line truncated label suitable for a menu item.
+    var menuLabel: String {
+        let flat = self.replacingOccurrences(of: "\n", with: " ")
+        if flat.count <= 50 { return flat }
+        return String(flat.prefix(50)) + "…"
     }
 }
