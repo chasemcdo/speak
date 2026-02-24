@@ -31,7 +31,6 @@ let package = Package(
                 .linkedFramework("CoreGraphics"),
                 .linkedFramework("ServiceManagement"),
                 .linkedFramework("FoundationModels"),
-                .unsafeFlags(["-Xlinker", "-sectcreate", "-Xlinker", "__TEXT", "-Xlinker", "__info_plist", "-Xlinker", "Speak/Info.plist"]),
             ]
         )
     ]
