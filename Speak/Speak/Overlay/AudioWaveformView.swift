@@ -13,12 +13,12 @@ struct AudioWaveformView: View {
         HStack(spacing: spacing) {
             ForEach(0..<barCount, id: \.self) { index in
                 let level = index < barLevels.count ? CGFloat(barLevels[index]) : 0
-                // Map RMS level (typically 0.0–0.3) to bar height
-                let normalized = min(level / 0.15, 1.0)
+                // Map RMS level to bar height (0.03 ≈ normal speech at desk distance)
+                let normalized = min(level / 0.015, 1.0)
                 let height = minHeight + normalized * (maxHeight - minHeight)
 
                 RoundedRectangle(cornerRadius: barWidth / 2)
-                    .fill(.red)
+                    .fill(.blue)
                     .frame(width: barWidth, height: height)
             }
         }
