@@ -41,8 +41,7 @@ struct MenuBarView: View {
                         NSPasteboard.general.clearContents()
                         NSPasteboard.general.setString(entry.processedText, forType: .string)
                     } label: {
-                        Text(entry.processedText)
-                            .lineLimit(1)
+                        Text(entry.processedText.menuLabel)
                     }
                 }
 
@@ -68,5 +67,14 @@ struct MenuBarView: View {
             }
             .keyboardShortcut("q")
         }
+    }
+}
+
+private extension String {
+    /// Single-line truncated label suitable for a menu item.
+    var menuLabel: String {
+        let flat = self.replacingOccurrences(of: "\n", with: " ")
+        if flat.count <= 50 { return flat }
+        return String(flat.prefix(50)) + "…"
     }
 }
