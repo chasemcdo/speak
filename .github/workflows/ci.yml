@@ -26,6 +26,10 @@ jobs:
           xcodebuild -version
           swift --version
 
+      # Run unit tests
+      - name: Run tests
+        run: cd Speak && swift test
+
       # Build release binary via Swift Package Manager
       - name: Build with SPM (Release)
         run: cd Speak && swift build -c release
