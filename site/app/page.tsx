@@ -53,11 +53,9 @@ export default function Home() {
           <aside className="hero-card">
             <h2>How it works</h2>
             <ol>
-              <li>
-                Press your hotkey (<code>fn</code> by default)
-              </li>
+              <li>Hold <code>fn</code> to start dictation</li>
               <li>Speak while the floating overlay streams text</li>
-              <li>Confirm and paste into your active app</li>
+              <li>Release <code>fn</code> to confirm and paste</li>
             </ol>
             <Link href="/docs/quickstart">Read quick start</Link>
           </aside>
@@ -90,8 +88,8 @@ export default function Home() {
           <article className="faq-card">
             <h3>What if macOS blocks launch?</h3>
             <p>
-              Unsigned builds may require right-clicking the app and choosing{" "}
-              <strong>Open</strong> on first launch.
+              Open System Settings &gt; Privacy &amp; Security and click{" "}
+              <strong>Open Anyway</strong> for Speak.
             </p>
           </article>
           <article className="faq-card">

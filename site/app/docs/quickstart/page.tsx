@@ -10,7 +10,10 @@ export default function QuickStartPage() {
       <ol>
         <li>Download the latest <strong>Speak.dmg</strong> from Releases.</li>
         <li>Drag Speak into your Applications folder.</li>
-        <li>On first launch, right-click Speak and choose <strong>Open</strong>.</li>
+        <li>
+          If macOS blocks launch, open System Settings &gt; Privacy &amp; Security,
+          then click <strong>Open Anyway</strong> for Speak.
+        </li>
       </ol>
 
       <h2>2. Complete onboarding</h2>
@@ -23,8 +26,8 @@ export default function QuickStartPage() {
       <h2>3. Dictate text</h2>
       <ol>
         <li>Focus any text field.</li>
-        <li>Press the dictation hotkey (<code>fn</code> by default).</li>
-        <li>Speak, then press the hotkey again to confirm and paste.</li>
+        <li>Hold <code>fn</code> to start dictation.</li>
+        <li>Release <code>fn</code> to confirm and paste.</li>
       </ol>
 
       <h2>Build from source (optional)</h2>

@@ -29,8 +29,9 @@ export default function TroubleshootingPage() {
 
       <h2>App does not open due to security warning</h2>
       <ul>
-        <li>In Finder, right-click Speak and choose <strong>Open</strong>.</li>
-        <li>Confirm the dialog once. Later launches should work normally.</li>
+        <li>Open System Settings &gt; Privacy &amp; Security.</li>
+        <li>Find the blocked app message for Speak and click <strong>Open Anyway</strong>.</li>
+        <li>Confirm the dialog and relaunch Speak.</li>
       </ul>
     </DocsShell>
   );
