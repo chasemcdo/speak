@@ -1,0 +1,7 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Speak Logo Draft - S Wave</title>
+  <desc id="desc">A minimal S-shaped monogram built from two wave strokes.</desc>
+  <rect width="256" height="256" rx="52" fill="#0C1629"/>
+  <path d="M184 74C169 59 148 52 125 52C92 52 64 73 64 104C64 127 81 143 113 151L141 158C160 163 170 170 170 182C170 196 154 206 132 206C111 206 92 198 77 184" stroke="#8BD7FF" stroke-width="20" stroke-linecap="round"/>
+  <path d="M72 181C87 196 108 204 131 204C164 204 192 183 192 152C192 129 175 113 143 105L115 98C96 93 86 86 86 74C86 60 102 50 124 50C145 50 164 58 179 72" stroke="#3E86FF" stroke-width="20" stroke-linecap="round" opacity="0.9"/>
+</svg>

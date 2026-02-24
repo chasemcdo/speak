@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 type SiteChromeProps = {
@@ -10,7 +11,15 @@ export function SiteChrome({ children }: SiteChromeProps) {
       <header className="site-header">
         <div className="site-container nav-row">
           <Link href="/" className="brand-mark">
-            Speak
+            <Image
+              src="/speak-mark.svg"
+              alt=""
+              aria-hidden
+              className="brand-mark-icon"
+              width={26}
+              height={26}
+            />
+            <span>Speak</span>
           </Link>
           <nav className="main-nav">
             <Link href="/docs">Docs</Link>

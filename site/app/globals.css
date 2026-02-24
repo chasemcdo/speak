@@ -75,6 +75,15 @@ pre {
   font-weight: 700;
   letter-spacing: 0.01em;
   color: #dff2ff;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-mark-icon {
+  width: 26px;
+  height: 26px;
+  display: block;
 }
 
 .main-nav {
@@ -523,6 +532,20 @@ h3 {
   border-radius: 10px;
   border: 1px solid #2b3e5f;
   overflow-x: auto;
+}
+
+.flow-figure {
+  margin: 14px 0 8px;
+  border: 1px solid #2b3f5f;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #070d18;
+}
+
+.flow-figure img {
+  width: 100%;
+  height: auto;
+  display: block;
 }
 
 .site-footer {

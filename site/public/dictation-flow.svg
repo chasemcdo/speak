@@ -1,0 +1,53 @@
+<svg width="1200" height="260" viewBox="0 0 1200 260" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Speak Dictation Flow</title>
+  <desc id="desc">Four-step pipeline from holding function key to pasting text.</desc>
+  <defs>
+    <linearGradient id="card" x1="60" y1="32" x2="320" y2="226" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#16263F"/>
+      <stop offset="1" stop-color="#0C1629"/>
+    </linearGradient>
+    <linearGradient id="arrow" x1="0" y1="0" x2="56" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#86DEFF"/>
+      <stop offset="1" stop-color="#4B8AFF"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="260" rx="18" fill="#070D19"/>
+
+  <g>
+    <rect x="36" y="28" width="252" height="204" rx="16" fill="url(#card)" stroke="#2C4264"/>
+    <text x="64" y="74" fill="#A4BCDE" font-family="IBM Plex Sans, sans-serif" font-size="13" letter-spacing="0.06em">STEP 1</text>
+    <text x="64" y="106" fill="#ECF4FF" font-family="IBM Plex Sans, sans-serif" font-size="24" font-weight="600">Hold fn</text>
+    <text x="64" y="138" fill="#8CA4C8" font-family="IBM Plex Sans, sans-serif" font-size="15">Start dictation capture</text>
+  </g>
+
+  <g>
+    <rect x="334" y="28" width="252" height="204" rx="16" fill="url(#card)" stroke="#2C4264"/>
+    <text x="362" y="74" fill="#A4BCDE" font-family="IBM Plex Sans, sans-serif" font-size="13" letter-spacing="0.06em">STEP 2</text>
+    <text x="362" y="106" fill="#ECF4FF" font-family="IBM Plex Sans, sans-serif" font-size="24" font-weight="600">Speak naturally</text>
+    <text x="362" y="138" fill="#8CA4C8" font-family="IBM Plex Sans, sans-serif" font-size="15">Live overlay streams text</text>
+  </g>
+
+  <g>
+    <rect x="632" y="28" width="252" height="204" rx="16" fill="url(#card)" stroke="#2C4264"/>
+    <text x="660" y="74" fill="#A4BCDE" font-family="IBM Plex Sans, sans-serif" font-size="13" letter-spacing="0.06em">STEP 3</text>
+    <text x="660" y="106" fill="#ECF4FF" font-family="IBM Plex Sans, sans-serif" font-size="24" font-weight="600">Release fn</text>
+    <text x="660" y="138" fill="#8CA4C8" font-family="IBM Plex Sans, sans-serif" font-size="15">Session finalizes instantly</text>
+  </g>
+
+  <g>
+    <rect x="930" y="28" width="234" height="204" rx="16" fill="url(#card)" stroke="#2C4264"/>
+    <text x="958" y="74" fill="#A4BCDE" font-family="IBM Plex Sans, sans-serif" font-size="13" letter-spacing="0.06em">STEP 4</text>
+    <text x="958" y="106" fill="#ECF4FF" font-family="IBM Plex Sans, sans-serif" font-size="24" font-weight="600">Paste output</text>
+    <text x="958" y="138" fill="#8CA4C8" font-family="IBM Plex Sans, sans-serif" font-size="15">Text lands in active app</text>
+  </g>
+
+  <g stroke="url(#arrow)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M294 130H320"/>
+    <path d="M313 122L321 130L313 138"/>
+    <path d="M592 130H618"/>
+    <path d="M611 122L619 130L611 138"/>
+    <path d="M890 130H916"/>
+    <path d="M909 122L917 130L909 138"/>
+  </g>
+</svg>

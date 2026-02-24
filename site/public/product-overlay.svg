@@ -1,0 +1,58 @@
+<svg width="860" height="520" viewBox="0 0 860 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Speak Product Overlay</title>
+  <desc id="desc">Stylized transcription overlay with live waveform and dictation output.</desc>
+  <defs>
+    <linearGradient id="panel" x1="120" y1="72" x2="730" y2="430" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1C2C45"/>
+      <stop offset="1" stop-color="#0D1526"/>
+    </linearGradient>
+    <linearGradient id="line" x1="190" y1="0" x2="620" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8CE4FF"/>
+      <stop offset="1" stop-color="#4A7FFF"/>
+    </linearGradient>
+    <linearGradient id="wave" x1="340" y1="300" x2="520" y2="300" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6FD6FF"/>
+      <stop offset="1" stop-color="#4A8CFF"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(430 250) rotate(90) scale(190 320)">
+      <stop stop-color="#68C8FF" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#68C8FF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="70" y="50" width="720" height="420" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="24" stdDeviation="24" flood-color="#000914" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+
+  <rect width="860" height="520" fill="none"/>
+  <ellipse cx="430" cy="430" rx="240" ry="44" fill="#6DC5FF" fill-opacity="0.14"/>
+
+  <g filter="url(#shadow)">
+    <rect x="130" y="90" width="600" height="340" rx="24" fill="url(#panel)" stroke="#2F4A70" stroke-width="2"/>
+  </g>
+
+  <rect x="130" y="90" width="600" height="340" rx="24" fill="url(#halo)"/>
+
+  <rect x="170" y="126" width="12" height="12" rx="6" fill="#4D6B95"/>
+  <rect x="190" y="126" width="12" height="12" rx="6" fill="#4D6B95"/>
+  <rect x="210" y="126" width="12" height="12" rx="6" fill="#4D6B95"/>
+
+  <text x="170" y="170" fill="#9BB5D8" font-family="IBM Plex Sans, sans-serif" font-size="16" font-weight="600" letter-spacing="0.08em">LIVE DICTATION SESSION</text>
+
+  <rect x="170" y="194" width="496" height="12" rx="6" fill="url(#line)" fill-opacity="0.9"/>
+  <rect x="170" y="218" width="420" height="12" rx="6" fill="url(#line)" fill-opacity="0.7"/>
+  <rect x="170" y="242" width="532" height="12" rx="6" fill="url(#line)" fill-opacity="0.55"/>
+
+  <rect x="170" y="288" width="8" height="20" rx="4" fill="url(#wave)"/>
+  <rect x="186" y="274" width="8" height="34" rx="4" fill="url(#wave)"/>
+  <rect x="202" y="260" width="8" height="48" rx="4" fill="url(#wave)"/>
+  <rect x="218" y="282" width="8" height="26" rx="4" fill="url(#wave)"/>
+  <rect x="234" y="268" width="8" height="40" rx="4" fill="url(#wave)"/>
+  <rect x="250" y="278" width="8" height="30" rx="4" fill="url(#wave)"/>
+
+  <text x="170" y="344" fill="#7F99BE" font-family="IBM Plex Mono, monospace" font-size="13">Input: MacBook Pro Microphone</text>
+  <text x="170" y="366" fill="#7F99BE" font-family="IBM Plex Mono, monospace" font-size="13">Engine: SpeechAnalyzer (on-device)</text>
+
+  <path d="M130 338L730 338" stroke="#2C4467"/>
+
+  <path d="M182 436C250 466 610 466 678 436" stroke="#70C6FF" stroke-opacity="0.22" stroke-width="8" stroke-linecap="round"/>
+</svg>
