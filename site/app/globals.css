@@ -498,6 +498,7 @@ h3 {
 .docs-card,
 .privacy-card {
   padding: 24px;
+  min-width: 0;
 }
 
 .docs-card h1,
@@ -541,6 +542,7 @@ h3 {
   border-radius: 12px;
   overflow: hidden;
   background: #070d18;
+  width: 100%;
   max-width: 100%;
 }
 
@@ -636,6 +638,17 @@ h3 {
     padding: 14px;
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .flow-figure {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .flow-figure img {
+    min-width: 720px;
+    max-width: none;
   }
 }
 
