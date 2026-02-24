@@ -7,7 +7,6 @@ struct SpeakApp: App {
     @State private var coordinator = AppCoordinator()
     @State private var historyStore = HistoryStore()
     @AppStorage("onboardingComplete") private var onboardingComplete = false
-    @State private var needsPermissionRecovery = false
     @Environment(\.openWindow) private var openWindow
 
     let updaterController: SPUStandardUpdaterController? = {
@@ -48,11 +47,12 @@ struct SpeakApp: App {
                             && PasteService.accessibilityGranted
                             && ModelManager.authorizationGranted
                         if !hasAllPermissions {
-                            needsPermissionRecovery = true
                             openWindow(id: "permission-recovery")
                         }
 
-                        coordinator.preloadModel()
+                        if hasAllPermissions {
+                            coordinator.preloadModel()
+                        }
                     }
                 }
         }
