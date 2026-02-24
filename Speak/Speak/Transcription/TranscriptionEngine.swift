@@ -98,7 +98,8 @@ final class TranscriptionEngine {
                 }
             }
         } catch {
-            // Clean up the audio capture that was started in step 5
+            // Clean up the monitor and audio capture that were started in step 5
+            levelMonitor?.stopMonitoring()
             audioCapture.stopCapture()
             throw error
         }

@@ -6,7 +6,7 @@ import os
 final class AudioLevelMonitor {
     private(set) var barLevels: [Float] = [0, 0, 0, 0, 0]
 
-    private let rawLevel = OSAllocatedUnfairLock(initialState: Float(0))
+    nonisolated private let rawLevel = OSAllocatedUnfairLock(initialState: Float(0))
     private var smoothedLevel: Float = 0
     private var timer: Timer?
 
@@ -42,9 +42,10 @@ final class AudioLevelMonitor {
         timer = nil
         smoothedLevel = 0
         barLevels = [0, 0, 0, 0, 0]
+        rawLevel.withLock { $0 = 0 }
     }
 
-    private func tick() {
+    func tick() {
         let raw = rawLevel.withLock { $0 }
 
         // Exponential smoothing — fast attack, slower decay
