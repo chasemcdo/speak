@@ -32,6 +32,11 @@ let package = Package(
                 .linkedFramework("ServiceManagement"),
                 .linkedFramework("FoundationModels"),
             ]
-        )
+        ),
+        .testTarget(
+            name: "SpeakTests",
+            dependencies: ["Speak"],
+            path: "Tests/SpeakTests"
+        ),
     ]
 )
