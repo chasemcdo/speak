@@ -540,10 +540,12 @@ h3 {
   border-radius: 12px;
   overflow: hidden;
   background: #070d18;
+  max-width: 100%;
 }
 
 .flow-figure img {
   width: 100%;
+  max-width: 100%;
   height: auto;
   display: block;
 }
