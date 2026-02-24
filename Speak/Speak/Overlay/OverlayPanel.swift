@@ -20,7 +20,7 @@ final class OverlayPanel: NSPanel {
         isMovableByWindowBackground = true
         animationBehavior = .utilityWindow
 
-        let hostingView = NSHostingView(rootView: contentView)
+        let hostingView = FirstMouseHostingView(rootView: contentView)
         self.contentView = hostingView
 
         positionAtBottomCenter()
@@ -49,6 +49,12 @@ final class OverlayPanel: NSPanel {
             super.keyDown(with: event)
         }
     }
+}
+
+/// NSHostingView subclass that accepts the first mouse click, allowing buttons
+/// in the non-activating panel to respond without requiring a prior click to focus.
+final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
 extension Notification.Name {

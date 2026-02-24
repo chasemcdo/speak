@@ -11,6 +11,8 @@ final class AppState {
     var isModelDownloading = false
     var isPostProcessing = false
     var permissionsGranted = false
+    var isDismissedPreview = false
+    var previewText = ""
 
     var displayText: String {
         finalizedText + volatileText
@@ -25,6 +27,8 @@ final class AppState {
         finalizedText = ""
         volatileText = ""
         error = nil
+        isDismissedPreview = false
+        previewText = ""
     }
 
     func appendFinalizedText(_ text: String) {

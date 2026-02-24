@@ -49,6 +49,8 @@ enum TranscriptionHotkey: String, CaseIterable {
 final class HotkeyManager {
     private var globalMonitor: Any?
     private var localMonitor: Any?
+    private var keyDownGlobalMonitor: Any?
+    private var keyDownLocalMonitor: Any?
     private var onStart: (() -> Void)?
     private var onStop: (() -> Void)?
 
@@ -111,6 +113,7 @@ final class HotkeyManager {
         onStart = nil
         onStop = nil
         cancelTimers()
+        removeKeyDownMonitor()
         state = .idle
         hotkeyDown = false
     }
@@ -119,7 +122,45 @@ final class HotkeyManager {
     /// externally (e.g. via Enter/Escape keys or the menu bar).
     func resetState() {
         cancelTimers()
+        removeKeyDownMonitor()
         state = .idle
+    }
+
+    // MARK: - Spacebar hold-to-persist
+
+    /// Install keyDown monitors to detect spacebar during hold recording.
+    private func installKeyDownMonitor() {
+        guard keyDownGlobalMonitor == nil else { return }
+
+        keyDownGlobalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            self?.handleKeyDown(event)
+        }
+
+        keyDownLocalMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            let consumed = self?.handleKeyDown(event) ?? false
+            return consumed ? nil : event
+        }
+    }
+
+    /// Remove the keyDown monitors.
+    private func removeKeyDownMonitor() {
+        if let keyDownGlobalMonitor {
+            NSEvent.removeMonitor(keyDownGlobalMonitor)
+        }
+        if let keyDownLocalMonitor {
+            NSEvent.removeMonitor(keyDownLocalMonitor)
+        }
+        keyDownGlobalMonitor = nil
+        keyDownLocalMonitor = nil
+    }
+
+    /// Handle a keyDown event. Returns `true` if the event was consumed.
+    @discardableResult
+    private func handleKeyDown(_ event: NSEvent) -> Bool {
+        guard event.keyCode == 0x31, state == .holdRecording else { return false }
+        state = .toggleRecording
+        removeKeyDownMonitor()
+        return true
     }
 
     // MARK: - Event handling
@@ -151,6 +192,7 @@ final class HotkeyManager {
             let work = DispatchWorkItem { [weak self] in
                 guard let self, self.state == .firstDown else { return }
                 self.state = .holdRecording
+                self.installKeyDownMonitor()
                 self.onStart?()
             }
             holdTimer = work
@@ -191,6 +233,7 @@ final class HotkeyManager {
 
         case .holdRecording:
             // Released after hold — stop recording
+            removeKeyDownMonitor()
             state = .idle
             onStop?()
 
@@ -219,6 +262,7 @@ final class HotkeyManager {
 
         case .holdRecording:
             // Stop recording if modifiers get mixed
+            removeKeyDownMonitor()
             state = .idle
             onStop?()
 

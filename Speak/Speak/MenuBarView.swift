@@ -11,14 +11,24 @@ struct MenuBarView: View {
 
     var body: some View {
         Group {
-            if appState.isRecording {
+            if appState.isDismissedPreview {
+                Button("Paste Transcription") {
+                    Task { await coordinator.pasteFromPreview() }
+                }
+                .keyboardShortcut(.return)
+
+                Button("Dismiss") {
+                    coordinator.dismissPreview()
+                }
+                .keyboardShortcut(.escape)
+            } else if appState.isRecording {
                 Button("Stop Dictation") {
                     Task { await coordinator.confirm() }
                 }
                 .keyboardShortcut(.return)
 
                 Button("Cancel") {
-                    Task { await coordinator.cancel() }
+                    Task { await coordinator.stopWithoutPaste() }
                 }
                 .keyboardShortcut(.escape)
             } else {

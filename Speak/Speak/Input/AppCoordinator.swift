@@ -17,6 +17,8 @@ final class AppCoordinator {
     private var capturedVocabulary: ScreenVocabulary?
     private var appState: AppState?
     private var historyStore: HistoryStore?
+    private var previewDismissTimer: DispatchWorkItem?
+    private var previewKeyMonitor: Any?
 
     /// Set up the coordinator with the shared app state. Call once at app launch.
     func setUp(appState: AppState, historyStore: HistoryStore) {
@@ -44,7 +46,12 @@ final class AppCoordinator {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
-                await self?.cancel()
+                guard let self, let appState = self.appState else { return }
+                if appState.isDismissedPreview {
+                    self.dismissPreview()
+                } else if appState.isRecording {
+                    await self.stopWithoutPaste()
+                }
             }
         }
 
@@ -54,7 +61,12 @@ final class AppCoordinator {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
-                await self?.confirm()
+                guard let self, let appState = self.appState else { return }
+                if appState.isDismissedPreview {
+                    await self.pasteFromPreview()
+                } else if appState.isRecording {
+                    await self.confirm()
+                }
             }
         }
 
@@ -87,6 +99,11 @@ final class AppCoordinator {
     /// Start a dictation session.
     func start() async {
         guard let appState, !appState.isRecording else { return }
+
+        // Dismiss any active preview before starting a new recording
+        if appState.isDismissedPreview {
+            dismissPreview()
+        }
 
         // Pre-check permissions before showing the overlay
         guard AudioCaptureManager.permissionGranted else {
@@ -227,6 +244,112 @@ final class AppCoordinator {
         capturedVocabulary = nil
     }
 
+    /// Stop recording and show a preview without pasting.
+    func stopWithoutPaste() async {
+        guard let appState, appState.isRecording else { return }
+
+        // Reset hotkey state
+        hotkeyManager.resetState()
+
+        // Stop transcription
+        await transcriptionEngine.stopSession()
+        appState.isRecording = false
+
+        let rawText = appState.displayText
+        var text = rawText
+
+        // Run post-processing pipeline if we have text
+        if !text.isEmpty {
+            configureFilters()
+
+            if !textProcessor.filters.isEmpty {
+                appState.isPostProcessing = true
+
+                let locale = UserDefaults.standard.string(forKey: "locale")
+                    .flatMap { Locale(identifier: $0) } ?? Locale.current
+
+                let context = ProcessingContext(
+                    surroundingText: capturedContext,
+                    screenVocabulary: capturedVocabulary,
+                    locale: locale
+                )
+
+                text = await textProcessor.process(text, context: context)
+                appState.isPostProcessing = false
+            }
+        }
+
+        // Save to history
+        if !text.isEmpty {
+            historyStore?.add(HistoryEntry(
+                rawText: rawText,
+                processedText: text,
+                sourceAppName: previousApp?.localizedName,
+                sourceAppBundleID: previousApp?.bundleIdentifier
+            ))
+        }
+
+        // Enter preview state — overlay stays visible
+        appState.isDismissedPreview = true
+        appState.previewText = text
+
+        // Give focus back to the previous app
+        previousApp?.activate()
+
+        // Install global key monitor for Escape/Return during preview
+        installPreviewKeyMonitor()
+
+        // Auto-dismiss after 8 seconds
+        let work = DispatchWorkItem { [weak self] in
+            Task { @MainActor in
+                self?.dismissPreview()
+            }
+        }
+        previewDismissTimer = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 8, execute: work)
+    }
+
+    /// Paste the preview text and dismiss the overlay.
+    func pasteFromPreview() async {
+        guard let appState, appState.isDismissedPreview else { return }
+
+        let text = appState.previewText
+        removePreviewMonitors()
+
+        // Hide overlay and reset state
+        overlayManager.hide()
+        appState.reset()
+
+        // Paste if we have text
+        if !text.isEmpty {
+            let autoPaste = UserDefaults.standard.bool(forKey: "autoPaste")
+            if autoPaste {
+                await PasteService.paste(text, into: previousApp)
+            } else {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(text, forType: .string)
+                previousApp?.activate()
+            }
+        }
+
+        previousApp = nil
+        capturedContext = nil
+        capturedVocabulary = nil
+    }
+
+    /// Dismiss the preview without pasting.
+    func dismissPreview() {
+        guard let appState else { return }
+
+        removePreviewMonitors()
+        overlayManager.hide()
+        appState.reset()
+
+        previousApp = nil
+        capturedContext = nil
+        capturedVocabulary = nil
+    }
+
     /// Paste the most recent history entry into the current app.
     func pasteLastFromHistory() async {
         guard let appState, !appState.isRecording,
@@ -236,6 +359,32 @@ final class AppCoordinator {
     }
 
     // MARK: - Private
+
+    /// Install a global key monitor for Escape/Return during preview.
+    private func installPreviewKeyMonitor() {
+        guard previewKeyMonitor == nil else { return }
+
+        previewKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            Task { @MainActor in
+                guard let self else { return }
+                if event.keyCode == 53 { // Escape
+                    self.dismissPreview()
+                } else if event.keyCode == 36 { // Return
+                    await self.pasteFromPreview()
+                }
+            }
+        }
+    }
+
+    /// Remove preview-related monitors and timers.
+    private func removePreviewMonitors() {
+        previewDismissTimer?.cancel()
+        previewDismissTimer = nil
+        if let previewKeyMonitor {
+            NSEvent.removeMonitor(previewKeyMonitor)
+        }
+        previewKeyMonitor = nil
+    }
 
     /// Configure the text processing filters based on current user preferences.
     private func configureFilters() {
