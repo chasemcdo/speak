@@ -14,7 +14,7 @@ const plexMono = IBM_Plex_Mono({
   weight: ["400", "500"],
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_DOCS_BASE_URL ?? "https://speak.app";
+const siteUrl = process.env.NEXT_PUBLIC_DOCS_BASE_URL ?? "https://getspeak.vercel.app";
 
 export const metadata: Metadata = {
   title: {

@@ -7,5 +7,5 @@ export const siteConfig = {
   releasesUrl:
     process.env.NEXT_PUBLIC_RELEASES_URL ??
     "https://github.com/chasemcdo/speak/releases",
-  docsBaseUrl: process.env.NEXT_PUBLIC_DOCS_BASE_URL ?? "https://speak.app",
+  docsBaseUrl: process.env.NEXT_PUBLIC_DOCS_BASE_URL ?? "https://getspeak.vercel.app",
 };
