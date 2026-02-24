@@ -46,6 +46,23 @@ cd Speak
 swift build
 ```
 
+## Website
+
+A simple Next.js landing/docs site lives in [`site`](site).
+
+```bash
+cd site
+pnpm install
+pnpm dev
+```
+
+Build for production:
+
+```bash
+cd site
+pnpm build
+```
+
 ## Status
 
 Early planning phase. See [ARCHITECTURE.md](ARCHITECTURE.md) and [ROADMAP.md](ROADMAP.md) for details.
