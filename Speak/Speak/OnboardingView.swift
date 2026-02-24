@@ -80,7 +80,7 @@ struct OnboardingView: View {
         .task {
             // Poll for permission changes (e.g., user grants via System Settings
             // or the callback arrives after the initial check)
-            while !allGranted {
+            while !allGranted && !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1))
                 micGranted = AudioCaptureManager.permissionGranted
                 speechGranted = ModelManager.authorizationGranted

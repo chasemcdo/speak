@@ -85,7 +85,7 @@ struct PermissionRecoveryView: View {
         .frame(width: 400)
         .task {
             // Poll for permission restoration
-            while !allGranted {
+            while !allGranted && !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1))
                 micGranted = AudioCaptureManager.permissionGranted
                 accessibilityGranted = PasteService.accessibilityGranted
