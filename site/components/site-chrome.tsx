@@ -23,7 +23,7 @@ export function SiteChrome({ children }: SiteChromeProps) {
       <footer className="site-footer">
         <div className="site-container footer-row">
           <p>Speak is free, open source, and designed for macOS.</p>
-          <p>MIT License</p>
+          <p>GNU GPL v3</p>
         </div>
       </footer>
     </div>
