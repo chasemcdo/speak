@@ -78,9 +78,12 @@ struct OnboardingView: View {
         .padding(32)
         .frame(width: 400)
         .task {
-            // Poll for accessibility since it doesn't have a callback
-            while !accessibilityGranted {
+            // Poll for permission changes (e.g., user grants via System Settings
+            // or the callback arrives after the initial check)
+            while !allGranted {
                 try? await Task.sleep(for: .seconds(1))
+                micGranted = AudioCaptureManager.permissionGranted
+                speechGranted = ModelManager.authorizationGranted
                 accessibilityGranted = PasteService.accessibilityGranted
             }
         }

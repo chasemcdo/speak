@@ -17,8 +17,9 @@ let package = Package(
                 .product(name: "Sparkle", package: "Sparkle"),
             ],
             path: "Speak",
+            exclude: ["Info.plist", "Speak.entitlements"],
             resources: [
-                .process("Assets.xcassets")
+                .process("Assets.xcassets"),
             ],
             swiftSettings: [
                 .define("SPEAK_APP")
@@ -30,6 +31,7 @@ let package = Package(
                 .linkedFramework("CoreGraphics"),
                 .linkedFramework("ServiceManagement"),
                 .linkedFramework("FoundationModels"),
+                .unsafeFlags(["-Xlinker", "-sectcreate", "-Xlinker", "__TEXT", "-Xlinker", "__info_plist", "-Xlinker", "Speak/Info.plist"]),
             ]
         )
     ]

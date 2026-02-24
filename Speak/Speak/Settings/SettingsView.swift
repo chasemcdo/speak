@@ -5,7 +5,7 @@ import FoundationModels
 import Sparkle
 
 struct SettingsView: View {
-    let updater: SPUUpdater
+    let updater: SPUUpdater?
     @Environment(AppState.self) private var appState
     @AppStorage("locale") private var localeIdentifier = Locale.current.identifier
     @AppStorage("autoPaste") private var autoPaste = true
@@ -83,15 +83,17 @@ struct SettingsView: View {
                     }
             }
 
-            Section("Updates") {
-                Toggle("Automatically check for updates", isOn: $automaticallyChecksForUpdates)
-                    .onChange(of: automaticallyChecksForUpdates) { _, newValue in
-                        updater.automaticallyChecksForUpdates = newValue
-                    }
-                Toggle("Automatically download updates", isOn: $automaticallyDownloadsUpdates)
-                    .onChange(of: automaticallyDownloadsUpdates) { _, newValue in
-                        updater.automaticallyDownloadsUpdates = newValue
-                    }
+            if let updater {
+                Section("Updates") {
+                    Toggle("Automatically check for updates", isOn: $automaticallyChecksForUpdates)
+                        .onChange(of: automaticallyChecksForUpdates) { _, newValue in
+                            updater.automaticallyChecksForUpdates = newValue
+                        }
+                    Toggle("Automatically download updates", isOn: $automaticallyDownloadsUpdates)
+                        .onChange(of: automaticallyDownloadsUpdates) { _, newValue in
+                            updater.automaticallyDownloadsUpdates = newValue
+                        }
+                }
             }
 
             Section("Permissions") {
@@ -115,8 +117,10 @@ struct SettingsView: View {
         .formStyle(.grouped)
         .frame(width: 420, height: 520)
         .onAppear {
-            automaticallyChecksForUpdates = updater.automaticallyChecksForUpdates
-            automaticallyDownloadsUpdates = updater.automaticallyDownloadsUpdates
+            if let updater {
+                automaticallyChecksForUpdates = updater.automaticallyChecksForUpdates
+                automaticallyDownloadsUpdates = updater.automaticallyDownloadsUpdates
+            }
         }
         .task {
             await loadSupportedLocales()

@@ -26,7 +26,7 @@ struct PermissionRecoveryView: View {
                     .font(.title2)
                     .fontWeight(.semibold)
 
-                Text("Some permissions need to be re-enabled.\nOpen System Settings to restore them.")
+                Text("Some permissions need to be re-enabled.")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -38,24 +38,33 @@ struct PermissionRecoveryView: View {
                     PermissionRecoveryRow(
                         title: "Microphone",
                         description: "Required to hear your voice",
+                        canRequestDirectly: AudioCaptureManager.permissionNotDetermined,
                         settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
-                    )
+                    ) {
+                        let manager = AudioCaptureManager()
+                        micGranted = await manager.requestPermission()
+                    }
                 }
 
                 if !speechGranted {
                     PermissionRecoveryRow(
                         title: "Speech Recognition",
                         description: "Required for on-device transcription",
+                        canRequestDirectly: ModelManager.authorizationNotDetermined,
                         settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_SpeechRecognition"
-                    )
+                    ) {
+                        let manager = ModelManager()
+                        speechGranted = await manager.requestAuthorization()
+                    }
                 }
 
                 if !accessibilityGranted {
                     PermissionRecoveryRow(
                         title: "Accessibility",
                         description: "Required to paste text into other apps",
+                        canRequestDirectly: false,
                         settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
-                    )
+                    ) { }
                 }
             }
 
@@ -67,7 +76,7 @@ struct PermissionRecoveryView: View {
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
             } else {
-                Text("Re-enable the permissions above to continue")
+                Text("Grant the permissions above to continue")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -91,7 +100,9 @@ struct PermissionRecoveryView: View {
 private struct PermissionRecoveryRow: View {
     let title: String
     let description: String
+    let canRequestDirectly: Bool
     let settingsURL: String
+    let requestAction: () async -> Void
 
     var body: some View {
         HStack(spacing: 12) {
@@ -109,13 +120,21 @@ private struct PermissionRecoveryRow: View {
 
             Spacer()
 
-            Button("Open Settings") {
-                if let url = URL(string: settingsURL) {
-                    NSWorkspace.shared.open(url)
+            if canRequestDirectly {
+                Button("Enable") {
+                    Task { await requestAction() }
                 }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            } else {
+                Button("Open Settings") {
+                    if let url = URL(string: settingsURL) {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
             }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)

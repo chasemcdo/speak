@@ -2,7 +2,7 @@ import SwiftUI
 import Sparkle
 
 struct MenuBarView: View {
-    let updater: SPUUpdater
+    let updater: SPUUpdater?
     @Environment(AppState.self) private var appState
     @Environment(AppCoordinator.self) private var coordinator
     @Environment(HistoryStore.self) private var historyStore
@@ -53,7 +53,9 @@ struct MenuBarView: View {
                 Divider()
             }
 
-            CheckForUpdatesView(updater: updater)
+            if let updater {
+                CheckForUpdatesView(updater: updater)
+            }
 
             SettingsLink {
                 Text("Settings...")

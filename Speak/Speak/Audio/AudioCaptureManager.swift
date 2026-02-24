@@ -25,6 +25,10 @@ final class AudioCaptureManager: @unchecked Sendable {
         AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
     }
 
+    static var permissionNotDetermined: Bool {
+        AVCaptureDevice.authorizationStatus(for: .audio) == .notDetermined
+    }
+
     // MARK: - Input validation
 
     /// Validate that an audio input device is available and has a usable format.
@@ -54,7 +58,8 @@ final class AudioCaptureManager: @unchecked Sendable {
         }
 
         if inputFormat.sampleRate != bestFormat.sampleRate ||
-           inputFormat.channelCount != bestFormat.channelCount {
+           inputFormat.channelCount != bestFormat.channelCount ||
+           inputFormat.commonFormat != bestFormat.commonFormat {
             guard let conv = AVAudioConverter(from: inputFormat, to: bestFormat) else {
                 throw AudioCaptureError.formatConversionFailed
             }
