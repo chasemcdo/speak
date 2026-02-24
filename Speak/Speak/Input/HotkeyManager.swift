@@ -155,8 +155,9 @@ final class HotkeyManager {
     }
 
     /// Handle a keyDown event. Returns `true` if the event was consumed.
+    /// Internal for testability — called by keyDown monitors.
     @discardableResult
-    private func handleKeyDown(_ event: NSEvent) -> Bool {
+    func handleKeyDown(_ event: NSEvent) -> Bool {
         guard event.keyCode == 0x31, state == .holdRecording else { return false }
         state = .toggleRecording
         removeKeyDownMonitor()
@@ -165,7 +166,8 @@ final class HotkeyManager {
 
     // MARK: - Event handling
 
-    private func handleFlagsChanged(_ event: NSEvent) {
+    /// Internal for testability — called by flagsChanged monitors.
+    func handleFlagsChanged(_ event: NSEvent) {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let hotkey = TranscriptionHotkey.current
         let keyIsDown = flags.contains(hotkey.modifierFlag) && flags.subtracting(hotkey.modifierFlag).isEmpty

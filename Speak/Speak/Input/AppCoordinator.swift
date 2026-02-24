@@ -347,7 +347,7 @@ final class AppCoordinator {
         if !text.isEmpty {
             let autoPaste = UserDefaults.standard.bool(forKey: "autoPaste")
             if autoPaste {
-                await PasteService.paste(text, into: previousApp)
+                await pasteService.paste(text, into: previousApp)
             } else {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(text, forType: .string)

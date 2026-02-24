@@ -68,4 +68,42 @@ struct AppStateTests {
         state.updateVolatileText("typing...")
         #expect(state.volatileText == "typing...")
     }
+
+    // MARK: - Preview state
+
+    @Test @MainActor func previewStateDefaultsToFalse() {
+        let state = AppState()
+        #expect(state.isDismissedPreview == false)
+        #expect(state.previewText == "")
+    }
+
+    @Test @MainActor func resetClearsPreviewState() {
+        let state = AppState()
+        state.isDismissedPreview = true
+        state.previewText = "Hello world"
+
+        state.reset()
+
+        #expect(state.isDismissedPreview == false)
+        #expect(state.previewText == "")
+    }
+
+    @Test @MainActor func resetClearsAllStateIncludingPreview() {
+        let state = AppState()
+        state.isRecording = true
+        state.finalizedText = "Hello"
+        state.volatileText = "world"
+        state.error = "Some error"
+        state.isDismissedPreview = true
+        state.previewText = "Preview text"
+
+        state.reset()
+
+        #expect(state.isRecording == false)
+        #expect(state.finalizedText == "")
+        #expect(state.volatileText == "")
+        #expect(state.error == nil)
+        #expect(state.isDismissedPreview == false)
+        #expect(state.previewText == "")
+    }
 }
