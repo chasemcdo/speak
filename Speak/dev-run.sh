@@ -35,8 +35,12 @@ if [ -d "$BUNDLE_RESOURCE" ]; then
 fi
 
 # Re-codesign the .app bundle so macOS TCC recognises it for permission prompts.
-# The cp above invalidates the original SPM ad-hoc signature.
-codesign --force --sign - --deep --entitlements Speak/Speak.entitlements "$BUILD_DIR/Speak Dev.app"
+# The cp above invalidates the original SPM ad-hoc signature. The designated
+# requirement pins TCC permissions to the bundle ID so they persist across rebuilds.
+codesign --force --sign - --deep \
+    --entitlements Speak/Speak.entitlements \
+    -r="designated => identifier \"com.speak.app.dev\"" \
+    "$BUILD_DIR/Speak Dev.app"
 
 # Kill any existing instance (use absolute path to avoid matching unrelated processes)
 APP_PATH="$(cd "$BUILD_DIR" && pwd)/Speak Dev.app"
