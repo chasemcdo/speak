@@ -20,6 +20,7 @@ let package = Package(
             exclude: ["Info.plist", "Speak.entitlements"],
             resources: [
                 .process("Assets.xcassets"),
+                .process("Sounds"),
             ],
             swiftSettings: [
                 .define("SPEAK_APP")
@@ -32,6 +33,11 @@ let package = Package(
                 .linkedFramework("ServiceManagement"),
                 .linkedFramework("FoundationModels"),
             ]
-        )
+        ),
+        .testTarget(
+            name: "SpeakTests",
+            dependencies: ["Speak"],
+            path: "Tests/SpeakTests"
+        ),
     ]
 )

@@ -15,6 +15,8 @@ final class TranscriptionEngine {
     private(set) var isRunning = false
     private var isSettingUp = false
 
+    var levelMonitor: AudioLevelMonitor?
+
     // MARK: - Session lifecycle
 
     /// Start a transcription session. Streams results into the provided AppState.
@@ -57,8 +59,10 @@ final class TranscriptionEngine {
         let analyzer = SpeechAnalyzer(modules: [transcriber])
         self.analyzer = analyzer
 
-        // 5. Start audio capture
+        // 5. Wire level monitor and start audio capture
+        audioCapture.levelMonitor = levelMonitor
         let audioStream = try audioCapture.startCapture()
+        levelMonitor?.startMonitoring()
 
         // Steps 6-8 depend on audio capture being active. If any fail,
         // clean up the capture to avoid a leaked tap/engine.
@@ -94,7 +98,8 @@ final class TranscriptionEngine {
                 }
             }
         } catch {
-            // Clean up the audio capture that was started in step 5
+            // Clean up the monitor and audio capture that were started in step 5
+            levelMonitor?.stopMonitoring()
             audioCapture.stopCapture()
             throw error
         }
@@ -107,7 +112,8 @@ final class TranscriptionEngine {
     func stopSession() async {
         guard isRunning else { return }
 
-        // Stop audio capture first
+        // Stop level monitoring and audio capture
+        levelMonitor?.stopMonitoring()
         audioCapture.stopCapture()
 
         // Finalize the analyzer — this flushes remaining results

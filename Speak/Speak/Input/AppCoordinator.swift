@@ -5,18 +5,42 @@ import Observation
 @MainActor
 @Observable
 final class AppCoordinator {
-    private let transcriptionEngine = TranscriptionEngine()
-    private let overlayManager = OverlayManager()
-    private let hotkeyManager = HotkeyManager()
-    private let historyHotkeyManager = HistoryHotkeyManager()
+    private var transcriptionEngine: any Transcribing
+    private let overlayManager: any OverlayPresenting
+    private let hotkeyManager: any HotkeyManaging
+    private let historyHotkeyManager: any HistoryHotkeyManaging
     private let textProcessor = TextProcessor()
-    private let contextReader = ContextReader()
+    private let contextReader: any ContextReading
+    private let pasteService: any Pasting
+    private let checkMicPermission: @MainActor () -> Bool
+    private let checkSpeechAuth: @MainActor () -> Bool
+
+    init(
+        transcriptionEngine: any Transcribing = TranscriptionEngine(),
+        overlayManager: any OverlayPresenting = OverlayManager(),
+        hotkeyManager: any HotkeyManaging = HotkeyManager(),
+        historyHotkeyManager: any HistoryHotkeyManaging = HistoryHotkeyManager(),
+        contextReader: any ContextReading = ContextReader(),
+        pasteService: any Pasting = PasteServiceAdapter(),
+        checkMicPermission: @escaping @MainActor () -> Bool = { AudioCaptureManager.permissionGranted },
+        checkSpeechAuth: @escaping @MainActor () -> Bool = { ModelManager.authorizationGranted }
+    ) {
+        self.transcriptionEngine = transcriptionEngine
+        self.overlayManager = overlayManager
+        self.hotkeyManager = hotkeyManager
+        self.historyHotkeyManager = historyHotkeyManager
+        self.contextReader = contextReader
+        self.pasteService = pasteService
+        self.checkMicPermission = checkMicPermission
+        self.checkSpeechAuth = checkSpeechAuth
+    }
 
     private var previousApp: NSRunningApplication?
     private var capturedContext: String?
     private var capturedVocabulary: ScreenVocabulary?
     private var appState: AppState?
     private var historyStore: HistoryStore?
+    private var audioLevelMonitor: AudioLevelMonitor?
 
     /// Set up the coordinator with the shared app state. Call once at app launch.
     func setUp(appState: AppState, historyStore: HistoryStore) {
@@ -89,11 +113,11 @@ final class AppCoordinator {
         guard let appState, !appState.isRecording else { return }
 
         // Pre-check permissions before showing the overlay
-        guard AudioCaptureManager.permissionGranted else {
+        guard checkMicPermission() else {
             appState.error = AudioCaptureError.microphonePermissionDenied.localizedDescription
             return
         }
-        guard ModelManager.authorizationGranted else {
+        guard checkSpeechAuth() else {
             appState.error = TranscriptionError.notAuthorized.localizedDescription
             return
         }
@@ -115,6 +139,12 @@ final class AppCoordinator {
         // Show the overlay
         overlayManager.show(appState: appState)
 
+        // Set up audio level monitor for waveform visualization
+        let monitor = AudioLevelMonitor()
+        audioLevelMonitor = monitor
+        transcriptionEngine.levelMonitor = monitor
+        appState.audioLevel = monitor
+
         // Start transcription
         let locale = UserDefaults.standard.string(forKey: "locale")
             .flatMap { Locale(identifier: $0) } ?? Locale.current
@@ -130,8 +160,13 @@ final class AppCoordinator {
             previousApp = nil
             capturedContext = nil
             capturedVocabulary = nil
+            audioLevelMonitor = nil
+            appState.audioLevel = nil
+            transcriptionEngine.levelMonitor = nil
             return
         }
+
+        SoundFeedback.playStartSound()
 
         // Prewarm LLM in parallel with recording if enabled
         if UserDefaults.standard.bool(forKey: "llmRewrite") {
@@ -145,12 +180,17 @@ final class AppCoordinator {
     func confirm() async {
         guard let appState, appState.isRecording else { return }
 
+        SoundFeedback.playStopSound()
+
         // Reset hotkey state in case recording was stopped via keyboard/menu
         hotkeyManager.resetState()
 
         // Stop transcription
         await transcriptionEngine.stopSession()
         appState.isRecording = false
+        audioLevelMonitor = nil
+        appState.audioLevel = nil
+        transcriptionEngine.levelMonitor = nil
 
         let rawText = appState.displayText
         var text = rawText
@@ -194,7 +234,7 @@ final class AppCoordinator {
         if !text.isEmpty {
             let autoPaste = UserDefaults.standard.bool(forKey: "autoPaste")
             if autoPaste {
-                await PasteService.paste(text, into: previousApp)
+                await pasteService.paste(text, into: previousApp)
             } else {
                 // Just leave it on the clipboard
                 NSPasteboard.general.clearContents()
@@ -217,6 +257,9 @@ final class AppCoordinator {
         hotkeyManager.resetState()
 
         await transcriptionEngine.stopSession()
+        audioLevelMonitor = nil
+        appState.audioLevel = nil
+        transcriptionEngine.levelMonitor = nil
         appState.reset()
         overlayManager.hide()
 
@@ -232,7 +275,7 @@ final class AppCoordinator {
         guard let appState, !appState.isRecording,
               let entry = historyStore?.mostRecent else { return }
         let currentApp = NSWorkspace.shared.frontmostApplication
-        await PasteService.paste(entry.processedText, into: currentApp)
+        await pasteService.paste(entry.processedText, into: currentApp)
     }
 
     // MARK: - Private

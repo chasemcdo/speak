@@ -76,4 +76,4 @@ Early planning phase. See [ARCHITECTURE.md](ARCHITECTURE.md) and [ROADMAP.md](RO
 
 ## License
 
-MIT
+GNU General Public License v3 (GPLv3)

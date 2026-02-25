@@ -4,6 +4,7 @@
 #   make release     Build release binary via SPM
 #   make app         Build a release .app bundle via xcodebuild
 #   make dmg         Package the .app into a DMG
+#   make test        Run unit tests via SPM
 #   make check       Build, then validate .app bundle (used by CI)
 #   make clean       Remove build artifacts
 
@@ -16,7 +17,7 @@ APP_PATH     := $(BUILD_DIR)/$(APP_NAME).app
 DMG_PATH     := $(BUILD_DIR)/$(APP_NAME).dmg
 VERSION      := $(shell /usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" Speak/Speak/Info.plist 2>/dev/null || echo "0.1.0")
 
-.PHONY: build release app dmg check clean
+.PHONY: build release test app dmg check clean
 
 # --- SPM (for development) ---
 
@@ -25,6 +26,9 @@ build:
 
 release:
 	cd Speak && swift build -c release
+
+test:
+	cd Speak && swift test
 
 # --- xcodebuild (for distribution) ---
 
