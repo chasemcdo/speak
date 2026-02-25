@@ -13,6 +13,7 @@ final class AppState {
     var permissionsGranted = false
     var isPreviewing = false
     var previewText = ""
+    var audioLevel: AudioLevelMonitor?
 
     var displayText: String {
         finalizedText + volatileText

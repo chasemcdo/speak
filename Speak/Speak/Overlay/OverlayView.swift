@@ -28,6 +28,9 @@ struct OverlayView: View {
             if appState.isPostProcessing {
                 ProcessingIndicator()
                     .padding(.top, 4)
+            } else if let monitor = appState.audioLevel {
+                AudioWaveformView(barLevels: monitor.barLevels)
+                    .padding(.top, 4)
             } else {
                 RecordingDot()
                     .padding(.top, 4)

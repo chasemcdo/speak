@@ -6,6 +6,7 @@ import Testing
 
 @MainActor
 private final class MockTranscriber: Transcribing {
+    var levelMonitor: AudioLevelMonitor?
     var startSessionCalled = false
     var stopSessionCalled = false
     var shouldThrow = false
@@ -242,5 +243,100 @@ struct PipelineIntegrationTests {
         #expect(overlay.hideCalled)
         #expect(appState.error != nil)
         #expect(!appState.isRecording)
+    }
+
+    // MARK: - Audio level monitor wiring
+
+    @Test @MainActor
+    func startWiresAudioLevelMonitor() async {
+        configureDefaults()
+
+        let transcriber = MockTranscriber()
+        let overlay = MockOverlay()
+        let paster = MockPaster()
+        let appState = AppState()
+        let historyStore = HistoryStore()
+
+        let coordinator = makeCoordinator(
+            transcriber: transcriber, overlay: overlay, paster: paster
+        )
+        coordinator.setUp(appState: appState, historyStore: historyStore)
+
+        await coordinator.start()
+
+        // After start, both appState and transcriber should have the monitor
+        #expect(appState.audioLevel != nil)
+        #expect(transcriber.levelMonitor != nil)
+        // They should be the same instance
+        #expect(appState.audioLevel === transcriber.levelMonitor)
+    }
+
+    @Test @MainActor
+    func confirmClearsAudioLevelMonitor() async {
+        configureDefaults()
+
+        let transcriber = MockTranscriber()
+        let overlay = MockOverlay()
+        let paster = MockPaster()
+        let appState = AppState()
+        let historyStore = HistoryStore()
+
+        let coordinator = makeCoordinator(
+            transcriber: transcriber, overlay: overlay, paster: paster
+        )
+        coordinator.setUp(appState: appState, historyStore: historyStore)
+
+        await coordinator.start()
+        #expect(appState.audioLevel != nil)
+
+        await coordinator.confirm()
+        #expect(appState.audioLevel == nil)
+        #expect(transcriber.levelMonitor == nil)
+    }
+
+    @Test @MainActor
+    func cancelClearsAudioLevelMonitor() async {
+        configureDefaults()
+
+        let transcriber = MockTranscriber()
+        let overlay = MockOverlay()
+        let paster = MockPaster()
+        let appState = AppState()
+        let historyStore = HistoryStore()
+
+        let coordinator = makeCoordinator(
+            transcriber: transcriber, overlay: overlay, paster: paster
+        )
+        coordinator.setUp(appState: appState, historyStore: historyStore)
+
+        await coordinator.start()
+        #expect(appState.audioLevel != nil)
+
+        await coordinator.cancel()
+        #expect(appState.audioLevel == nil)
+        #expect(transcriber.levelMonitor == nil)
+    }
+
+    @Test @MainActor
+    func transcriptionErrorClearsAudioLevelMonitor() async {
+        configureDefaults()
+
+        let transcriber = MockTranscriber()
+        transcriber.shouldThrow = true
+        let overlay = MockOverlay()
+        let paster = MockPaster()
+        let appState = AppState()
+        let historyStore = HistoryStore()
+
+        let coordinator = makeCoordinator(
+            transcriber: transcriber, overlay: overlay, paster: paster
+        )
+        coordinator.setUp(appState: appState, historyStore: historyStore)
+
+        await coordinator.start()
+
+        // Monitor should be cleaned up after transcription error
+        #expect(appState.audioLevel == nil)
+        #expect(transcriber.levelMonitor == nil)
     }
 }

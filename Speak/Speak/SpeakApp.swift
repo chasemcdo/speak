@@ -30,7 +30,7 @@ struct SpeakApp: App {
                 .environment(coordinator)
                 .environment(historyStore)
         } label: {
-            Image(systemName: appState.isRecording ? "mic.fill" : "mic")
+            Image("MenuBarIcon")
                 .task {
                     coordinator.setUp(appState: appState, historyStore: historyStore)
 

@@ -7,6 +7,8 @@ final class AudioCaptureManager: @unchecked Sendable {
     private var converter: AVAudioConverter?
     private var targetFormat: AVAudioFormat?
 
+    var levelMonitor: AudioLevelMonitor?
+
     var isCapturing: Bool {
         audioEngine.isRunning
     }
@@ -91,6 +93,8 @@ final class AudioCaptureManager: @unchecked Sendable {
             format: inputFormat
         ) { [weak self] buffer, _ in
             guard let self else { return }
+
+            self.levelMonitor?.updateRMS(from: buffer)
 
             if let converter = self.converter, let targetFormat = self.targetFormat {
                 guard let converted = self.convertBuffer(buffer, using: converter, to: targetFormat) else {

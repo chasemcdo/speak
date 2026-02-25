@@ -5,7 +5,7 @@ import Observation
 @MainActor
 @Observable
 final class AppCoordinator {
-    private let transcriptionEngine: any Transcribing
+    private var transcriptionEngine: any Transcribing
     private let overlayManager: any OverlayPresenting
     private let hotkeyManager: any HotkeyManaging
     private let historyHotkeyManager: any HistoryHotkeyManaging
@@ -42,6 +42,7 @@ final class AppCoordinator {
     private var historyStore: HistoryStore?
     private var previewDismissTimer: DispatchWorkItem?
     private var previewKeyMonitor: Any?
+    private var audioLevelMonitor: AudioLevelMonitor?
 
     /// Set up the coordinator with the shared app state. Call once at app launch.
     func setUp(appState: AppState, historyStore: HistoryStore) {
@@ -155,6 +156,12 @@ final class AppCoordinator {
         // Show the overlay
         overlayManager.show(appState: appState)
 
+        // Set up audio level monitor for waveform visualization
+        let monitor = AudioLevelMonitor()
+        audioLevelMonitor = monitor
+        transcriptionEngine.levelMonitor = monitor
+        appState.audioLevel = monitor
+
         // Start transcription
         let locale = UserDefaults.standard.string(forKey: "locale")
             .flatMap { Locale(identifier: $0) } ?? Locale.current
@@ -170,8 +177,13 @@ final class AppCoordinator {
             previousApp = nil
             capturedContext = nil
             capturedVocabulary = nil
+            audioLevelMonitor = nil
+            appState.audioLevel = nil
+            transcriptionEngine.levelMonitor = nil
             return
         }
+
+        SoundFeedback.playStartSound()
 
         // Prewarm LLM in parallel with recording if enabled
         if UserDefaults.standard.bool(forKey: "llmRewrite") {
@@ -217,6 +229,9 @@ final class AppCoordinator {
         hotkeyManager.resetState()
 
         await transcriptionEngine.stopSession()
+        audioLevelMonitor = nil
+        appState.audioLevel = nil
+        transcriptionEngine.levelMonitor = nil
         appState.reset()
         overlayManager.hide()
 
@@ -307,10 +322,14 @@ final class AppCoordinator {
     /// Stop transcription, run post-processing, and save to history.
     /// Returns the processed text.
     private func stopAndProcess() async -> String {
+        SoundFeedback.playStopSound()
         hotkeyManager.resetState()
 
         await transcriptionEngine.stopSession()
         appState?.isRecording = false
+        audioLevelMonitor = nil
+        appState?.audioLevel = nil
+        transcriptionEngine.levelMonitor = nil
 
         let rawText = appState?.displayText ?? ""
         var text = rawText
