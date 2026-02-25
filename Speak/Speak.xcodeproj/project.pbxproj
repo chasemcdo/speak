@@ -236,6 +236,7 @@
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Speak needs microphone access to transcribe your voice.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Speak uses on-device speech recognition to transcribe your voice.";
 				MARKETING_VERSION = 0.1.0;
+				OTHER_CODE_SIGN_FLAGS = "--requirement='designated => identifier \"com.speak.app.dev\"'";
 				PRODUCT_BUNDLE_IDENTIFIER = com.speak.app.dev;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
