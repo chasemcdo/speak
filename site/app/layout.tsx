@@ -22,12 +22,12 @@ export const metadata: Metadata = {
     template: "%s | Speak",
   },
   description:
-    "Speak is a free, open-source macOS dictation app powered by Apple's on-device speech engine.",
+    "Speak is a free, open-source native macOS dictation app powered by Apple's on-device SpeechAnalyzer. No cloud, no subscription — just fast, private voice-to-text.",
   metadataBase: new URL(siteUrl),
   openGraph: {
     title: "Speak",
     description:
-      "A free macOS dictation app that works on-device with a fast, clean workflow.",
+      "A free, native macOS dictation app. Powered by Apple's on-device speech engine — no cloud, no Whisper, no subscription.",
     url: "/",
     siteName: "Speak",
     type: "website",
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Speak",
     description:
-      "A free macOS dictation app powered by on-device transcription.",
+      "Free native macOS dictation powered by Apple's on-device SpeechAnalyzer. No cloud, no subscription.",
   },
 };
 
