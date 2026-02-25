@@ -6,7 +6,7 @@ const features = [
   {
     title: "Local-first speech pipeline",
     description:
-      "Audio, decoding, and post-processing stay on your machine using Apple's modern speech stack.",
+      "Powered by Apple's SpeechAnalyzer and FoundationModels. Audio capture, transcription, and text cleanup all run on-device.",
   },
   {
     title: "Global hotkey control loop",
@@ -31,8 +31,8 @@ export default function Home() {
       <section className="hero">
         <div className="site-container hero-grid">
           <div>
-            <p className="eyebrow">macOS Dictation</p>
-            <h1>Voice-to-text for developers who care about local-first tools.</h1>
+            <p className="eyebrow">Native macOS App</p>
+            <h1>Native macOS dictation that never leaves your machine.</h1>
             <p className="hero-copy">
               Speak wraps Apple&apos;s on-device speech APIs in a fast command-loop:
               hold <code>fn</code>, dictate, release, and your text lands where
@@ -40,7 +40,7 @@ export default function Home() {
             </p>
             <div className="cta-row">
               <a className="button button-primary" href={siteConfig.latestDmgUrl}>
-                Download Latest Release
+                Download for Mac
               </a>
               <a className="button button-secondary" href={siteConfig.githubRepo}>
                 View Source
@@ -96,13 +96,40 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="under-the-hood-section">
+        <div className="site-container">
+          <h2>Under the hood</h2>
+          <div className="under-the-hood-card">
+            <ul className="under-the-hood-list">
+              <li>
+                <strong>SpeechAnalyzer</strong> — Apple&apos;s on-device
+                speech-to-text engine (no Whisper, no cloud transcription)
+              </li>
+              <li>
+                <strong>FoundationModels</strong> — Apple&apos;s on-device LLM
+                for context-aware text cleanup
+              </li>
+              <li>
+                <strong>Accessibility APIs</strong> — reads surrounding text for
+                spelling and formatting context
+              </li>
+            </ul>
+            <p className="under-the-hood-note">
+              Most dictation tools send audio to cloud APIs. Speak runs entirely
+              on your Mac — no network required, no data leaves the device.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <section className="faq-section">
         <div className="site-container faq-grid">
           <article className="faq-card">
             <h3>Will audio be uploaded?</h3>
             <p>
-              No. Speak is built around Apple&apos;s local speech APIs and is
-              designed to run on-device.
+              No. Speak uses Apple&apos;s SpeechAnalyzer for transcription and
+              FoundationModels for text processing — both run entirely on your
+              Mac. No audio or text is sent to any server.
             </p>
           </article>
           <article className="faq-card">
@@ -122,7 +149,7 @@ export default function Home() {
       </section>
       <section className="platform-strip">
         <div className="site-container strip-row">
-          <p>Built for engineers shipping in terminals, editors, and browser tabs.</p>
+          <p>Built for engineers, writers, and anyone who needs fast, private dictation across any app.</p>
           <Link href="/docs/quickstart">Read setup docs</Link>
         </div>
       </section>
