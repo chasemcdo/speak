@@ -1,11 +1,21 @@
 import AppKit
 
 enum SoundFeedback {
+    private static let startSound: NSSound? = {
+        guard let url = Bundle.module.url(forResource: "record-start", withExtension: "aif") else { return nil }
+        return NSSound(contentsOf: url, byReference: false)
+    }()
+
+    private static let stopSound: NSSound? = {
+        guard let url = Bundle.module.url(forResource: "record-stop", withExtension: "aif") else { return nil }
+        return NSSound(contentsOf: url, byReference: false)
+    }()
+
     static func playStartSound() {
-        NSSound(named: "record-start")?.play()
+        startSound?.play()
     }
 
     static func playStopSound() {
-        NSSound(named: "record-stop")?.play()
+        stopSound?.play()
     }
 }
