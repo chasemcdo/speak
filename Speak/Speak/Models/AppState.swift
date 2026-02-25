@@ -11,6 +11,7 @@ final class AppState {
     var isModelDownloading = false
     var isPostProcessing = false
     var permissionsGranted = false
+    var audioLevel: AudioLevelMonitor?
 
     var displayText: String {
         finalizedText + volatileText

@@ -20,6 +20,7 @@ let package = Package(
             exclude: ["Info.plist", "Speak.entitlements"],
             resources: [
                 .process("Assets.xcassets"),
+                .process("Sounds"),
             ],
             swiftSettings: [
                 .define("SPEAK_APP")

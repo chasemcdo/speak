@@ -4,6 +4,7 @@ import AppKit
 
 @MainActor
 protocol Transcribing {
+    var levelMonitor: AudioLevelMonitor? { get set }
     func startSession(appState: AppState, locale: Locale) async throws
     func stopSession() async
 }
