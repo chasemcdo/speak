@@ -36,7 +36,7 @@ fi
 
 # Re-codesign the .app bundle so macOS TCC recognises it for permission prompts.
 # The cp above invalidates the original SPM ad-hoc signature.
-codesign --force --sign - --deep "$BUILD_DIR/Speak Dev.app"
+codesign --force --sign - --deep --entitlements Speak/Speak.entitlements "$BUILD_DIR/Speak Dev.app"
 
 # Kill any existing instance (use absolute path to avoid matching unrelated processes)
 APP_PATH="$(cd "$BUILD_DIR" && pwd)/Speak Dev.app"
