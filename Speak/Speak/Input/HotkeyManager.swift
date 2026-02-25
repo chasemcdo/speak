@@ -1,5 +1,6 @@
 import AppKit
 import Carbon
+import CoreGraphics
 
 /// The modifier key used to toggle dictation.
 enum TranscriptionHotkey: String, CaseIterable {
@@ -51,6 +52,8 @@ final class HotkeyManager {
     private var localMonitor: Any?
     private var keyDownGlobalMonitor: Any?
     private var keyDownLocalMonitor: Any?
+    private var eventTap: CFMachPort?
+    private var eventTapRunLoopSource: CFRunLoopSource?
     private var onStart: (() -> Void)?
     private var onStop: (() -> Void)?
 
@@ -128,22 +131,74 @@ final class HotkeyManager {
 
     // MARK: - Spacebar hold-to-persist
 
-    /// Install keyDown monitors to detect spacebar during hold recording.
+    /// Install a monitor to detect spacebar during hold recording.
+    /// Uses a CGEventTap when Accessibility permission is available so the space
+    /// keystroke can be suppressed before it reaches the foreground app. Falls back
+    /// to NSEvent monitors otherwise (state transition works, but the space leaks).
     private func installKeyDownMonitor() {
-        guard keyDownGlobalMonitor == nil else { return }
+        guard eventTap == nil, keyDownGlobalMonitor == nil else { return }
 
-        keyDownGlobalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            self?.handleKeyDown(event)
-        }
+        let eventMask: CGEventMask = 1 << CGEventType.keyDown.rawValue
+        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
 
-        keyDownLocalMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            let consumed = self?.handleKeyDown(event) ?? false
-            return consumed ? nil : event
+        if let tap = CGEvent.tapCreate(
+            tap: .cgSessionEventTap,
+            place: .headInsertEventTap,
+            options: .defaultTap,
+            eventsOfInterest: eventMask,
+            callback: { _, type, event, userInfo -> Unmanaged<CGEvent>? in
+                guard let userInfo else { return Unmanaged.passUnretained(event) }
+                let manager = Unmanaged<HotkeyManager>.fromOpaque(userInfo).takeUnretainedValue()
+
+                // Re-enable if the system disabled the tap due to timeout
+                if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+                    if let tap = manager.eventTap {
+                        CGEvent.tapEnable(tap: tap, enable: true)
+                    }
+                    return Unmanaged.passUnretained(event)
+                }
+
+                guard type == .keyDown else { return Unmanaged.passUnretained(event) }
+
+                // Suppress spacebar during hold recording
+                if event.getIntegerValueField(.keyboardEventKeycode) == 0x31,
+                   manager.state == .holdRecording {
+                    manager.state = .toggleRecording
+                    return nil
+                }
+
+                return Unmanaged.passUnretained(event)
+            },
+            userInfo: selfPtr
+        ) {
+            eventTap = tap
+            let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
+            eventTapRunLoopSource = source
+            CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+            CGEvent.tapEnable(tap: tap, enable: true)
+        } else {
+            // Fallback: NSEvent monitors detect the space but cannot suppress it
+            keyDownGlobalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                self?.handleKeyDown(event)
+            }
+            keyDownLocalMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                let consumed = self?.handleKeyDown(event) ?? false
+                return consumed ? nil : event
+            }
         }
     }
 
-    /// Remove the keyDown monitors.
+    /// Remove the keyDown monitors (event tap and/or NSEvent monitors).
     private func removeKeyDownMonitor() {
+        if let eventTap {
+            CGEvent.tapEnable(tap: eventTap, enable: false)
+            if let eventTapRunLoopSource {
+                CFRunLoopRemoveSource(CFRunLoopGetMain(), eventTapRunLoopSource, .commonModes)
+            }
+        }
+        eventTap = nil
+        eventTapRunLoopSource = nil
+
         if let keyDownGlobalMonitor {
             NSEvent.removeMonitor(keyDownGlobalMonitor)
         }

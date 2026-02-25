@@ -74,7 +74,7 @@ private final class MockHistoryHotkey: HistoryHotkeyManaging {
 
 // MARK: - Helpers
 
-@Suite("Preview Flow")
+@Suite("Preview Flow", .serialized)
 struct PreviewFlowTests {
 
     private func configureDefaults() {

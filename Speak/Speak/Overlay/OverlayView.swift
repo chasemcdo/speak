@@ -91,7 +91,9 @@ struct OverlayView: View {
 
                 Spacer()
 
-                Text("\u{23CE} paste  \u{238B} dismiss")
+                Text(appState.previewText.isEmpty
+                    ? "\u{238B} dismiss"
+                    : "\u{23CE} paste  \u{238B} dismiss")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
