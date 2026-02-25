@@ -42,8 +42,10 @@ codesign --force --sign - --deep \
     -r="designated => identifier \"com.speak.app.dev\"" \
     "$BUILD_DIR/Speak Dev.app"
 
-# Kill any existing instance (use absolute path to avoid matching unrelated processes)
+# Kill any running Speak instances (dev and prod conflict at runtime over hotkeys,
+# microphone, etc.)
 APP_PATH="$(cd "$BUILD_DIR" && pwd)/Speak Dev.app"
+pkill -xf ".*/Speak\.app/Contents/MacOS/Speak" 2>/dev/null || true
 pkill -f "$APP_PATH/Contents/MacOS/Speak" 2>/dev/null || true
 sleep 0.5
 
