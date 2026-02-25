@@ -10,7 +10,7 @@ struct SpeakApp: App {
     @Environment(\.openWindow) private var openWindow
 
     let updaterController: SPUStandardUpdaterController? = {
-        guard Bundle.main.bundleIdentifier != nil else { return nil }
+        guard Bundle.main.bundleIdentifier == "com.speak.app" else { return nil }
         return SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
     }()
 
