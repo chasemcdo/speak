@@ -45,10 +45,6 @@ identifier_name:
     - id
     - fn
 
-large_tuple:
-  warning: 3
-  error: 4
-
 # Opt-in rules
 opt_in_rules:
   - empty_count
@@ -72,3 +68,4 @@ disabled_rules:
   - trailing_comma
   - todo
   - force_cast
+  - large_tuple
