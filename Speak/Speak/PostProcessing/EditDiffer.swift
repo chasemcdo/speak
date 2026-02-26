@@ -52,11 +52,11 @@ enum EditDiffer {
                 to: removal, in: insertions, excluding: usedInsertions
             ) else { continue }
 
-            usedInsertions.insert(matchIndex)
             let orig = removal.element
             let repl = insertion.element
 
             if isNoise(original: orig, replacement: repl) { continue }
+            usedInsertions.insert(matchIndex)
             replacements.append(WordReplacement(original: orig, replacement: repl))
         }
 

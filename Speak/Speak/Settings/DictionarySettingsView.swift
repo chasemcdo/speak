@@ -56,26 +56,24 @@ struct DictionarySettingsView: View {
                         Text("No words added yet.")
                             .foregroundStyle(.secondary)
                     } else {
-                        List {
-                            ForEach(dictionaryStore.entries) { entry in
-                                HStack {
-                                    Text(entry.phrase)
-                                    Spacer()
-                                    Text(entry.source == .learned ? "Learned" : "Manual")
-                                        .font(.caption)
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 2)
-                                        .background(
-                                            entry.source == .learned
-                                                ? Color.blue.opacity(0.15)
-                                                : Color.gray.opacity(0.15)
-                                        )
-                                        .clipShape(Capsule())
-                                }
+                        ForEach(dictionaryStore.entries) { entry in
+                            HStack {
+                                Text(entry.phrase)
+                                Spacer()
+                                Text(entry.source == .learned ? "Learned" : "Manual")
+                                    .font(.caption)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(
+                                        entry.source == .learned
+                                            ? Color.blue.opacity(0.15)
+                                            : Color.gray.opacity(0.15)
+                                    )
+                                    .clipShape(Capsule())
                             }
-                            .onDelete { offsets in
-                                dictionaryStore.remove(at: offsets)
-                            }
+                        }
+                        .onDelete { offsets in
+                            dictionaryStore.remove(at: offsets)
                         }
                     }
                 }
