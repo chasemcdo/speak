@@ -211,6 +211,7 @@ final class AppCoordinator {
             }
         } else {
             overlayManager.hide()
+            appState.reset()
         }
 
         previousApp = nil
@@ -430,6 +431,9 @@ final class AppCoordinator {
     /// Show the paste-failed hint overlay, put text on clipboard, and auto-dismiss after 4 seconds.
     private func showPasteFailedHint(text: String) {
         guard let appState else { return }
+
+        pasteFailedHintTimer?.cancel()
+        pasteFailedHintTimer = nil
 
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)

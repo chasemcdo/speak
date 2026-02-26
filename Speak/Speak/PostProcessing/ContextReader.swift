@@ -110,13 +110,17 @@ final class ContextReader {
 
         let focused = focusedRef as! AXUIElement
 
-        // Check if the focused element has a value attribute (indicates an editable field)
-        var valueRef: CFTypeRef?
-        return AXUIElementCopyAttributeValue(
+        // Check if the focused element has a settable value attribute (indicates an editable field).
+        // Read-only elements like checkboxes and static text expose AXValue but it's not settable.
+        var isSettable = DarwinBoolean(false)
+        guard AXUIElementIsAttributeSettable(
             focused,
             kAXValueAttribute as CFString,
-            &valueRef
-        ) == .success
+            &isSettable
+        ) == .success else {
+            return false
+        }
+        return isSettable.boolValue
     }
 
     // MARK: - AX helpers
