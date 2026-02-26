@@ -3,13 +3,13 @@
     <channel>
         <title>Speak</title>
         <item>
-            <title>0.0.10</title>
-            <pubDate>Thu, 26 Feb 2026 02:23:36 +0000</pubDate>
-            <sparkle:version>0.0.10</sparkle:version>
-            <sparkle:shortVersionString>0.0.10</sparkle:shortVersionString>
+            <title>0.0.11</title>
+            <pubDate>Thu, 26 Feb 2026 06:51:47 +0000</pubDate>
+            <sparkle:version>0.0.11</sparkle:version>
+            <sparkle:shortVersionString>0.0.11</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>10.13</sparkle:minimumSystemVersion>
             <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <enclosure url="https://github.com/chasemcdo/speak/releases/download/v0.0.10/Speak.zip" length="1502537" type="application/octet-stream" sparkle:edSignature="196sK5Cr+gACqUw0qhjfuaqS5J9KH/0Fc/sfzHXRtpH+jZn9Lb1WM++It0LfeAO51JCORqT5xbnKopKCyRVbAw=="/>
+            <enclosure url="https://github.com/chasemcdo/speak/releases/download/v0.0.11/Speak.zip" length="1367240" type="application/octet-stream" sparkle:edSignature="5FeyFS+NpgbNo7IxCTSHlmgTSvrfoyYRCgdLaITETbzb4Q176td5wp/1J2KrJDkbYk24eEPT6MAdaFeA590ABA=="/>
         </item>
     </channel>
 </rss>
