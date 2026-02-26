@@ -10,8 +10,11 @@ struct SpeakApp: App {
     @Environment(\.openWindow) private var openWindow
 
     let updaterController: SPUStandardUpdaterController? = {
-        guard Bundle.main.bundleIdentifier != nil else { return nil }
+        #if DEBUG
+        return nil
+        #else
         return SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+        #endif
     }()
 
     init() {
@@ -30,7 +33,7 @@ struct SpeakApp: App {
                 .environment(coordinator)
                 .environment(historyStore)
         } label: {
-            Image("MenuBarIcon")
+            Image("MenuBarIcon", bundle: .module)
                 .task {
                     coordinator.setUp(appState: appState, historyStore: historyStore)
 

@@ -1,12 +1,16 @@
 # Speak
 
-An open-source, free macOS dictation app that wraps Apple's on-device SpeechAnalyzer API in a polished, Aqua Voice / Wispr Flow-style UX.
+![Platform: macOS 26+](https://img.shields.io/badge/platform-macOS_26%2B-blue)
+![License: GPLv3](https://img.shields.io/badge/license-GPLv3-green)
+![Built with: Swift](https://img.shields.io/badge/built_with-Swift-orange)
+
+> Speak is a 100% local, native macOS dictation app built on Apple's SpeechAnalyzer and FoundationModels. Hold a hotkey, dictate, release — your text lands in whatever app you're working in. Free, open source, no cloud.
 
 ## Why
 
-Apple shipped a powerful on-device speech-to-text engine with macOS 26 (`SpeechAnalyzer`), but their built-in dictation UX is minimal. Commercial alternatives like Aqua Voice ($8/mo) and Wispr Flow ($8/mo) charge a subscription and rely on cloud processing.
+Apple shipped a powerful on-device speech-to-text engine with macOS 26 — **SpeechAnalyzer** — but their built-in dictation UX is minimal. On top of that, **FoundationModels** enables on-device LLM-powered text cleanup without any cloud dependency. Commercial alternatives like Aqua Voice ($8/mo) and Wispr Flow ($8/mo) charge a subscription and rely on cloud processing.
 
-Speak aims to bridge that gap: **the accuracy of Apple's on-device model, wrapped in a modern dictation UX, 100% free and open source.**
+Speak aims to bridge that gap: **the accuracy of Apple's SpeechAnalyzer for transcription and FoundationModels for intelligent text cleanup, wrapped in a modern dictation UX, 100% free and open source.**
 
 ## Core idea
 
@@ -65,7 +69,10 @@ pnpm build
 
 ## Status
 
-Early planning phase. See [ARCHITECTURE.md](ARCHITECTURE.md) and [ROADMAP.md](ROADMAP.md) for details.
+Active development. See [ARCHITECTURE.md](ARCHITECTURE.md) and [ROADMAP.md](ROADMAP.md) for details.
+
+<!-- GitHub Topics: Consider adding these via the GitHub UI for discoverability:
+     macos, swift, swiftui, dictation, speech-recognition, on-device-ai, apple-speechanalyzer, open-source -->
 
 ## Requirements
 

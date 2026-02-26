@@ -386,12 +386,52 @@ h3 {
 }
 
 .feature-section,
+.under-the-hood-section,
 .faq-section,
 .docs-home,
 .docs-section,
 .privacy-section {
   padding: 28px 0 48px;
   overflow-x: hidden;
+}
+
+.under-the-hood-section h2 {
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+}
+
+.under-the-hood-card {
+  margin-top: 18px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: linear-gradient(160deg, rgba(17, 28, 45, 0.93) 0%, rgba(12, 21, 37, 0.95) 100%);
+  box-shadow: var(--shadow);
+  padding: 18px 20px;
+}
+
+.under-the-hood-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.under-the-hood-list li {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.under-the-hood-list strong {
+  color: var(--text);
+}
+
+.under-the-hood-note {
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.95rem;
 }
 
 .feature-section h2 {
