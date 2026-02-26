@@ -224,7 +224,8 @@ final class AppCoordinator {
                 let autoPaste = UserDefaults.standard.bool(forKey: "autoPaste")
                 if autoPaste {
                     await pasteService.paste(text, into: previousApp)
-                    if UserDefaults.standard.bool(forKey: "autoLearnDictionary") {
+                    if UserDefaults.standard.bool(forKey: "autoLearnDictionary"),
+                       dictionaryStore != nil {
                         scheduleEditDetection(pastedText: text, into: previousApp)
                     }
                 } else {
@@ -305,7 +306,8 @@ final class AppCoordinator {
                 let autoPaste = UserDefaults.standard.bool(forKey: "autoPaste")
                 if autoPaste {
                     await pasteService.paste(text, into: previousApp)
-                    if UserDefaults.standard.bool(forKey: "autoLearnDictionary") {
+                    if UserDefaults.standard.bool(forKey: "autoLearnDictionary"),
+                       dictionaryStore != nil {
                         scheduleEditDetection(pastedText: text, into: previousApp)
                     }
                 } else {
