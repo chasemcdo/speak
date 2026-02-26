@@ -95,10 +95,35 @@ jobs:
           # Add rpath so the binary can find Sparkle.framework in Contents/Frameworks/
           install_name_tool -add_rpath @executable_path/../Frameworks "$APP/Contents/MacOS/Speak"
 
-          # Code sign with stable identity (or ad-hoc fallback)
-          codesign --force --deep \
+          # Code sign inside-out (innermost first) to preserve Sparkle's
+          # XPC service signatures. --deep re-signs nested bundles and breaks
+          # Sparkle's installer/downloader XPC services, causing crashes after update.
+
+          # 1. Sign XPC services (innermost bundles)
+          for xpc in "$APP"/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices/*.xpc; do
+            codesign --force --sign "$SIGNING_IDENTITY" "$xpc"
+          done
+
+          # 2. Sign the Updater helper app
+          codesign --force --sign "$SIGNING_IDENTITY" \
+            "$APP/Contents/Frameworks/Sparkle.framework/Versions/B/Updater.app"
+
+          # 3. Sign the standalone Autoupdate helper binary
+          codesign --force --sign "$SIGNING_IDENTITY" \
+            "$APP/Contents/Frameworks/Sparkle.framework/Versions/B/Autoupdate"
+
+          # 4. Sign Sparkle.framework itself
+          codesign --force --sign "$SIGNING_IDENTITY" \
+            "$APP/Contents/Frameworks/Sparkle.framework"
+
+          # 5. Sign the main app with entitlements + designated requirement
+          #    The designated requirement preserves TCC permissions (microphone,
+          #    accessibility) across updates by tying them to the bundle ID
+          #    rather than the per-build cdhash.
+          codesign --force \
             --sign "$SIGNING_IDENTITY" \
             --entitlements Speak/Speak/Speak.entitlements \
+            -r='designated => identifier "com.speak.app"' \
             "$APP"
 
           echo "Signed with identity: $SIGNING_IDENTITY"
