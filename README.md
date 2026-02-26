@@ -41,6 +41,7 @@ git clone https://github.com/chasemcdo/speak.git
 cd speak
 make app       # builds build/Speak.app
 make dmg       # packages into build/Speak.dmg (optional)
+make tidy      # formats and lints source code
 ```
 
 Or with Swift Package Manager for development:

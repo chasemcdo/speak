@@ -58,6 +58,10 @@ private final class MockContext: ContextReading {
     func readScreenVocabulary(from app: NSRunningApplication?) -> ScreenVocabulary? {
         nil
     }
+
+    func hasFocusedTextField(in app: NSRunningApplication?) -> Bool {
+        true
+    }
 }
 
 private final class MockHotkey: HotkeyManaging {

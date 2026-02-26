@@ -13,6 +13,7 @@ final class AppState {
     var permissionsGranted = false
     var isPreviewing = false
     var previewText = ""
+    var pasteFailedHint = false
     var audioLevel: AudioLevelMonitor?
 
     var displayText: String {
@@ -30,6 +31,7 @@ final class AppState {
         error = nil
         isPreviewing = false
         previewText = ""
+        pasteFailedHint = false
     }
 
     func appendFinalizedText(_ text: String) {
