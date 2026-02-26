@@ -91,7 +91,7 @@ jobs:
               --compile "$BUNDLE_RESOURCE" \
               --platform macosx \
               --minimum-deployment-target 26.0 \
-              --output-partial-info-plist /dev/null 2>/dev/null
+              --output-partial-info-plist /dev/null
             rm -rf "$XCASSETS"
           fi
 
