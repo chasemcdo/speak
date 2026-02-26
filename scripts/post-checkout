@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# post-checkout: copy .env into new worktrees
+#
+# Git passes three args:
+#   $1  previous HEAD
+#   $2  new HEAD
+#   $3  1 = branch checkout, 0 = file checkout
+#
+# Install: make hooks
+
+# Only run on branch checkouts (worktree add counts as one)
+[ "$3" = "1" ] || exit 0
+
+# Only run when we're inside a linked worktree
+git_dir=$(git rev-parse --git-dir)
+[[ "$git_dir" == *"/worktrees/"* ]] || exit 0
+
+# Locate the main repo root (first entry in worktree list)
+main_root=$(git worktree list --porcelain | awk '/^worktree/ { print $2; exit }')
+env_src="$main_root/.env"
+
+[ -f "$env_src" ] || exit 0
+[ -f ".env" ] && exit 0  # don't overwrite an existing .env
+
+cp "$env_src" .env
+echo "post-checkout: copied .env from main worktree"
