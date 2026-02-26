@@ -11,6 +11,8 @@ final class AppState {
     var isModelDownloading = false
     var isPostProcessing = false
     var permissionsGranted = false
+    var isPreviewing = false
+    var previewText = ""
     var audioLevel: AudioLevelMonitor?
 
     var displayText: String {
@@ -26,6 +28,8 @@ final class AppState {
         finalizedText = ""
         volatileText = ""
         error = nil
+        isPreviewing = false
+        previewText = ""
     }
 
     func appendFinalizedText(_ text: String) {
