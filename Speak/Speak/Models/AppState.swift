@@ -14,6 +14,7 @@ final class AppState {
     var isPreviewing = false
     var previewText = ""
     var pasteFailedHint = false
+    var suggestedWord: DictionarySuggestion?
     var audioLevel: AudioLevelMonitor?
 
     var displayText: String {
@@ -32,6 +33,7 @@ final class AppState {
         isPreviewing = false
         previewText = ""
         pasteFailedHint = false
+        suggestedWord = nil
     }
 
     func appendFinalizedText(_ text: String) {

@@ -6,13 +6,9 @@ import Testing
 struct DictionaryStoreTests {
     @MainActor
     private func freshStore() -> DictionaryStore {
-        let store = DictionaryStore()
-        store.clearAll()
-        // Also clear suggestions by dismissing all
-        for suggestion in store.suggestions {
-            store.dismissSuggestion(suggestion)
-        }
-        return store
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("SpeakTests-\(UUID().uuidString)", isDirectory: true)
+        return DictionaryStore(storageDirectory: dir)
     }
 
     // MARK: - Codable round-trip

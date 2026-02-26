@@ -47,7 +47,9 @@ final class AppCoordinator {
     private var audioLevelMonitor: AudioLevelMonitor?
     private var cancelObserver: Any?
     private var confirmObserver: Any?
+    private var suggestionAcceptedObserver: Any?
     private var pasteFailedHintTimer: DispatchWorkItem?
+    private var suggestionTimer: DispatchWorkItem?
 
     /// Set up the coordinator with the shared app state. Call once at app launch.
     func setUp(appState: AppState, historyStore: HistoryStore, dictionaryStore: DictionaryStore? = nil) {
@@ -77,7 +79,9 @@ final class AppCoordinator {
         ) { [weak self] _ in
             Task { @MainActor in
                 guard let self, let appState = self.appState else { return }
-                if appState.pasteFailedHint {
+                if appState.suggestedWord != nil {
+                    self.dismissSuggestionOverlay()
+                } else if appState.pasteFailedHint {
                     self.dismissPasteFailedHint()
                 } else if appState.isPreviewing {
                     self.dismissPreview()
@@ -99,6 +103,16 @@ final class AppCoordinator {
                 } else if appState.isRecording {
                     await self.confirm()
                 }
+            }
+        }
+
+        suggestionAcceptedObserver = NotificationCenter.default.addObserver(
+            forName: .overlaySuggestionAccepted,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.acceptSuggestionOverlay()
             }
         }
 
@@ -132,7 +146,10 @@ final class AppCoordinator {
     func start() async {
         guard let appState, !appState.isRecording else { return }
 
-        // Dismiss any active preview before starting a new recording
+        // Dismiss any active suggestion or preview before starting a new recording
+        if appState.suggestedWord != nil {
+            dismissSuggestionOverlay()
+        }
         if appState.isPreviewing {
             dismissPreview()
         }
@@ -447,11 +464,19 @@ final class AppCoordinator {
             try? await Task.sleep(for: .seconds(3))
             guard let currentText = reader.readContext(from: app) else { return }
             let candidates = EditDiffer.findReplacements(original: pastedText, edited: currentText)
+            var firstSuggestion: DictionarySuggestion?
             for candidate in candidates {
-                store?.addSuggestion(DictionarySuggestion(
+                let suggestion = DictionarySuggestion(
                     phrase: candidate.replacement,
                     original: candidate.original
-                ))
+                )
+                store?.addSuggestion(suggestion)
+                if firstSuggestion == nil {
+                    firstSuggestion = suggestion
+                }
+            }
+            if let suggestion = firstSuggestion {
+                self.showSuggestionOverlay(suggestion)
             }
         }
     }
@@ -491,6 +516,41 @@ final class AppCoordinator {
         previousApp = nil
         capturedContext = nil
         capturedVocabulary = nil
+    }
+
+    /// Show the suggestion overlay for a detected correction. Auto-dismisses after 6 seconds.
+    private func showSuggestionOverlay(_ suggestion: DictionarySuggestion) {
+        guard let appState else { return }
+        suggestionTimer?.cancel()
+        appState.suggestedWord = suggestion
+        overlayManager.show(appState: appState)
+
+        let work = DispatchWorkItem { [weak self] in
+            Task { @MainActor in self?.dismissSuggestionOverlay() }
+        }
+        suggestionTimer = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6, execute: work)
+    }
+
+    /// Dismiss the suggestion overlay without accepting.
+    private func dismissSuggestionOverlay() {
+        guard let appState, appState.suggestedWord != nil else { return }
+        suggestionTimer?.cancel()
+        suggestionTimer = nil
+        overlayManager.hide()
+        appState.suggestedWord = nil
+    }
+
+    /// Accept the current suggestion, add to dictionary, and dismiss.
+    private func acceptSuggestionOverlay() {
+        guard let appState, let suggestion = appState.suggestedWord else { return }
+        dictionaryStore?.acceptSuggestion(suggestion)
+        dismissSuggestionOverlay()
+    }
+
+    /// Testable entry point: surface a suggestion in the overlay.
+    func handleSuggestion(_ suggestion: DictionarySuggestion) {
+        showSuggestionOverlay(suggestion)
     }
 
     /// Configure the text processing filters based on current user preferences.

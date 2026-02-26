@@ -5,7 +5,9 @@ struct OverlayView: View {
 
     var body: some View {
         Group {
-            if appState.pasteFailedHint {
+            if let suggestion = appState.suggestedWord {
+                suggestionContent(suggestion)
+            } else if appState.pasteFailedHint {
                 pasteFailedHintContent
             } else if appState.isPreviewing {
                 previewContent
@@ -110,6 +112,45 @@ struct OverlayView: View {
                 Text(appState.previewText.isEmpty
                     ? "\u{238B} dismiss"
                     : "\u{23CE} paste  \u{238B} dismiss")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+    }
+
+    private func suggestionContent(_ suggestion: DictionarySuggestion) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 4) {
+                Text(suggestion.phrase)
+                    .bold()
+                Text("was transcribed as")
+                    .foregroundStyle(.secondary)
+                Text(suggestion.original)
+                    .foregroundStyle(.secondary)
+                    .monospaced()
+            }
+            .font(.body)
+
+            HStack(spacing: 8) {
+                Button {
+                    NotificationCenter.default.post(name: .overlaySuggestionAccepted, object: nil)
+                } label: {
+                    Text("Add")
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+
+                Button {
+                    NotificationCenter.default.post(name: .overlayCancelRequested, object: nil)
+                } label: {
+                    Text("Dismiss")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
+                Spacer()
+
+                Text("\u{23CE} add  \u{238B} dismiss")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }

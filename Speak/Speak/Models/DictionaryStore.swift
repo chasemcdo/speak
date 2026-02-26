@@ -29,21 +29,23 @@ final class DictionaryStore {
     private static let maxEntries = 500
     private static let maxSuggestions = 50
 
-    private static var entriesFileURL: URL {
+    private let entriesFileURL: URL
+    private let suggestionsFileURL: URL
+
+    private static var defaultStorageDirectory: URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         let dir = appSupport.appendingPathComponent("Speak", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        return dir.appendingPathComponent("dictionary.json")
+        return dir
     }
 
-    private static var suggestionsFileURL: URL {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let dir = appSupport.appendingPathComponent("Speak", isDirectory: true)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        return dir.appendingPathComponent("suggestions.json")
-    }
-
-    init() {
+    init(storageDirectory: URL? = nil) {
+        let dir = storageDirectory ?? Self.defaultStorageDirectory
+        if let storageDirectory {
+            try? FileManager.default.createDirectory(at: storageDirectory, withIntermediateDirectories: true)
+        }
+        entriesFileURL = dir.appendingPathComponent("dictionary.json")
+        suggestionsFileURL = dir.appendingPathComponent("suggestions.json")
         loadEntries()
         loadSuggestions()
     }
@@ -101,22 +103,22 @@ final class DictionaryStore {
     // MARK: - Persistence
 
     private func loadEntries() {
-        guard let data = try? Data(contentsOf: Self.entriesFileURL) else { return }
+        guard let data = try? Data(contentsOf: entriesFileURL) else { return }
         entries = (try? JSONDecoder().decode([DictionaryEntry].self, from: data)) ?? []
     }
 
     private func saveEntries() {
         guard let data = try? JSONEncoder().encode(entries) else { return }
-        try? data.write(to: Self.entriesFileURL, options: .atomic)
+        try? data.write(to: entriesFileURL, options: .atomic)
     }
 
     private func loadSuggestions() {
-        guard let data = try? Data(contentsOf: Self.suggestionsFileURL) else { return }
+        guard let data = try? Data(contentsOf: suggestionsFileURL) else { return }
         suggestions = (try? JSONDecoder().decode([DictionarySuggestion].self, from: data)) ?? []
     }
 
     private func saveSuggestions() {
         guard let data = try? JSONEncoder().encode(suggestions) else { return }
-        try? data.write(to: Self.suggestionsFileURL, options: .atomic)
+        try? data.write(to: suggestionsFileURL, options: .atomic)
     }
 }

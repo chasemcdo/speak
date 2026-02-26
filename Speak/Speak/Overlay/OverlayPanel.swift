@@ -2,7 +2,10 @@ import AppKit
 import SwiftUI
 
 final class OverlayPanel: NSPanel {
-    init(contentView: some View) {
+    weak var appState: AppState?
+
+    init(contentView: some View, appState: AppState? = nil) {
+        self.appState = appState
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: 420, height: 120),
             styleMask: [.nonactivatingPanel, .fullSizeContentView, .borderless],
@@ -41,10 +44,14 @@ final class OverlayPanel: NSPanel {
         NotificationCenter.default.post(name: .overlayCancelRequested, object: nil)
     }
 
-    /// Allow Return key to confirm
+    /// Allow Return key to confirm or accept suggestion
     override func keyDown(with event: NSEvent) {
         if event.keyCode == 36 { // Return
-            NotificationCenter.default.post(name: .overlayConfirmRequested, object: nil)
+            if appState?.suggestedWord != nil {
+                NotificationCenter.default.post(name: .overlaySuggestionAccepted, object: nil)
+            } else {
+                NotificationCenter.default.post(name: .overlayConfirmRequested, object: nil)
+            }
         } else {
             super.keyDown(with: event)
         }
@@ -62,4 +69,5 @@ final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
 extension Notification.Name {
     static let overlayCancelRequested = Notification.Name("overlayCancelRequested")
     static let overlayConfirmRequested = Notification.Name("overlayConfirmRequested")
+    static let overlaySuggestionAccepted = Notification.Name("overlaySuggestionAccepted")
 }
