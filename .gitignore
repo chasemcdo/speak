@@ -8,5 +8,8 @@ xcuserdata/
 .swiftpm/
 Package.resolved
 
+# Build artifacts
+build/
+
 # macOS
 .DS_Store

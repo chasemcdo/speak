@@ -83,6 +83,18 @@ jobs:
             [ -d "$bundle" ] && cp -R "$bundle" "$APP/Contents/Resources/"
           done
 
+          # SPM doesn't compile .xcassets into Assets.car — do it manually with actool
+          BUNDLE_RESOURCE="$APP/Contents/Resources/Speak_Speak.bundle"
+          XCASSETS="$BUNDLE_RESOURCE/Assets.xcassets"
+          if [ -d "$XCASSETS" ]; then
+            xcrun actool "$XCASSETS" \
+              --compile "$BUNDLE_RESOURCE" \
+              --platform macosx \
+              --minimum-deployment-target 26.0 \
+              --output-partial-info-plist /dev/null 2>/dev/null
+            rm -rf "$XCASSETS"
+          fi
+
           # Embed Sparkle.framework from SPM build artifacts
           SPARKLE_FRAMEWORK=$(find Speak/.build/artifacts -name "Sparkle.framework" -path "*/macos-*" -type d | head -1)
           if [ -n "$SPARKLE_FRAMEWORK" ]; then

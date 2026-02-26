@@ -33,7 +33,7 @@ struct SpeakApp: App {
                 .environment(coordinator)
                 .environment(historyStore)
         } label: {
-            Image("MenuBarIcon", bundle: .module)
+            Image("MenuBarIcon", bundle: .appModule)
                 .task {
                     coordinator.setUp(appState: appState, historyStore: historyStore)
 
