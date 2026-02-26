@@ -123,7 +123,7 @@ jobs:
           codesign --force \
             --sign "$SIGNING_IDENTITY" \
             --entitlements Speak/Speak/Speak.entitlements \
-            --requirements='designated => identifier "com.speak.app"' \
+            -r='designated => identifier "com.speak.app"' \
             "$APP"
 
           echo "Signed with identity: $SIGNING_IDENTITY"
