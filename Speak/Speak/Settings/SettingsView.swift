@@ -1,8 +1,8 @@
-import SwiftUI
-import Speech
-import ServiceManagement
 import FoundationModels
+import ServiceManagement
 import Sparkle
+import Speech
+import SwiftUI
 
 struct SettingsView: View {
     let updater: SPUUpdater?
@@ -43,7 +43,9 @@ struct SettingsView: View {
                 }
 
                 Toggle("Auto-paste into active app", isOn: $autoPaste)
-                    .help("When enabled, text is automatically pasted into the focused app. When disabled, text is copied to the clipboard.")
+                    .help(
+                        "When enabled, text is automatically pasted into the focused app. When disabled, text is copied to the clipboard."
+                    )
             }
 
             Section("Post-Processing") {
@@ -54,7 +56,9 @@ struct SettingsView: View {
                     .help("Auto-capitalize sentences and clean up punctuation.")
 
                 Toggle("AI-powered formatting", isOn: $llmRewrite)
-                    .help("Use Apple Intelligence to clean up grammar, format lists, add paragraphs, and match your writing style.")
+                    .help(
+                        "Use Apple Intelligence to clean up grammar, format lists, add paragraphs, and match your writing style."
+                    )
                     .disabled(!llmAvailable)
 
                 Toggle("Screen context", isOn: $screenContext)
@@ -111,7 +115,7 @@ struct SettingsView: View {
                     granted: accessibilityGranted,
                     canRequestDirectly: false,
                     settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
-                ) { }
+                ) {}
                 PermissionRow(
                     title: "Speech Recognition",
                     granted: speechGranted,

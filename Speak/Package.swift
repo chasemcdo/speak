@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "Speak",
     platforms: [
-        .macOS(.v26)
+        .macOS(.v26),
     ],
     dependencies: [
         .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.0.0"),
@@ -23,7 +23,7 @@ let package = Package(
                 .process("Sounds"),
             ],
             swiftSettings: [
-                .define("SPEAK_APP")
+                .define("SPEAK_APP"),
             ],
             linkerSettings: [
                 .linkedFramework("Speech"),

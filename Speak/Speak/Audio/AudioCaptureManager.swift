@@ -60,8 +60,8 @@ final class AudioCaptureManager: @unchecked Sendable {
         }
 
         if inputFormat.sampleRate != bestFormat.sampleRate ||
-           inputFormat.channelCount != bestFormat.channelCount ||
-           inputFormat.commonFormat != bestFormat.commonFormat {
+            inputFormat.channelCount != bestFormat.channelCount ||
+            inputFormat.commonFormat != bestFormat.commonFormat {
             guard let conv = AVAudioConverter(from: inputFormat, to: bestFormat) else {
                 throw AudioCaptureError.formatConversionFailed
             }
@@ -155,7 +155,7 @@ final class AudioCaptureManager: @unchecked Sendable {
     }
 }
 
-// Reference type to safely pass mutable state into @Sendable converter closure
+/// Reference type to safely pass mutable state into @Sendable converter closure
 private final class ConversionState: @unchecked Sendable {
     let buffer: AVAudioPCMBuffer
     var didProvideData = false

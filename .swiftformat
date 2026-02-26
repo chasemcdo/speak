@@ -1,0 +1,36 @@
+# SwiftFormat configuration
+
+# Indentation
+--indent 4
+--indentcase false
+--ifdef indent
+--xcodeindentation disabled
+
+# Whitespace
+--trimwhitespace always
+--stripunusedargs closure-only
+
+# Wrapping
+--maxwidth 120
+--wraparguments preserve
+--wrapparameters preserve
+--wrapcollections preserve
+--wrapconditions preserve
+
+# Braces
+--allman false
+
+# Misc
+--self remove
+--importgrouping alpha
+--semicolons never
+--commas always
+--decimalgrouping 3,6
+--exponentcase lowercase
+--header ignore
+--lifecycle
+--organizetypes class,struct,enum,extension
+
+# Disabled rules — avoid fights with Xcode auto-indent and SwiftLint
+--disable wrapMultilineStatementBraces
+--disable blankLineAfterImports

@@ -104,9 +104,11 @@ struct OverlayView: View {
     }
 
     private var transcriptionText: some View {
-        Text("\(Text(appState.finalizedText).foregroundStyle(.primary))\(Text(appState.volatileText).foregroundStyle(.secondary))")
-            .font(.body)
-            .lineLimit(8)
+        Text(
+            "\(Text(appState.finalizedText).foregroundStyle(.primary))\(Text(appState.volatileText).foregroundStyle(.secondary))"
+        )
+        .font(.body)
+        .lineLimit(8)
     }
 }
 
@@ -123,7 +125,7 @@ struct RecordingDot: View {
             .opacity(isPulsing ? 0.7 : 1.0)
             .animation(
                 .easeInOut(duration: 0.8)
-                .repeatForever(autoreverses: true),
+                    .repeatForever(autoreverses: true),
                 value: isPulsing
             )
             .onAppear { isPulsing = true }
@@ -142,7 +144,7 @@ struct ProcessingIndicator: View {
             .opacity(isAnimating ? 0.4 : 1.0)
             .animation(
                 .easeInOut(duration: 0.5)
-                .repeatForever(autoreverses: true),
+                    .repeatForever(autoreverses: true),
                 value: isAnimating
             )
             .onAppear { isAnimating = true }

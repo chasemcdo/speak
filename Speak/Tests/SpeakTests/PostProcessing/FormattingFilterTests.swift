@@ -1,5 +1,5 @@
-import Testing
 @testable import Speak
+import Testing
 
 private let filter = FormattingFilter()
 private let ctx = ProcessingContext(locale: .current)
@@ -10,7 +10,6 @@ private func formatted(_ text: String) async throws -> String {
 
 @Suite("FormattingFilter")
 struct FormattingFilterTests {
-
     // -- Sentence capitalization --
 
     @Test func capitalizesFirstCharacter() async throws {

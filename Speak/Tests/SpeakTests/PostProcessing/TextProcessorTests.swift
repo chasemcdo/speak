@@ -1,5 +1,5 @@
-import Testing
 @testable import Speak
+import Testing
 
 /// A filter that uppercases all text (for testing).
 private struct UppercaseFilter: TextFilter {
@@ -28,7 +28,6 @@ private let ctx = ProcessingContext(locale: .current)
 
 @Suite("TextProcessor")
 struct TextProcessorTests {
-
     @Test @MainActor func chainsFiltersInOrder() async {
         let processor = TextProcessor()
         processor.addFilter(UppercaseFilter())

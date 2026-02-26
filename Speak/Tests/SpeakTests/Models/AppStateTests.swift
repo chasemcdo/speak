@@ -1,9 +1,8 @@
-import Testing
 @testable import Speak
+import Testing
 
 @Suite("AppState")
 struct AppStateTests {
-
     @Test @MainActor func displayTextCombinesFinalizedAndVolatile() {
         let state = AppState()
         state.finalizedText = "Hello "
@@ -91,5 +90,4 @@ struct AppStateTests {
         #expect(state.isPreviewing == false)
         #expect(state.previewText == "")
     }
-
 }

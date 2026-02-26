@@ -1,5 +1,5 @@
-import SwiftUI
 import Sparkle
+import SwiftUI
 
 struct MenuBarView: View {
     let updater: SPUUpdater?
@@ -83,7 +83,7 @@ struct MenuBarView: View {
 private extension String {
     /// Single-line truncated label suitable for a menu item.
     var menuLabel: String {
-        let flat = self.replacingOccurrences(of: "\n", with: " ")
+        let flat = replacingOccurrences(of: "\n", with: " ")
         if flat.count <= 50 { return flat }
         return String(flat.prefix(50)) + "…"
     }

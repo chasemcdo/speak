@@ -1,6 +1,6 @@
 import AppKit
-import Testing
 @testable import Speak
+import Testing
 
 // MARK: - Mocks
 
@@ -51,8 +51,13 @@ private final class MockPaster: Pasting {
 
 @MainActor
 private final class MockContext: ContextReading {
-    func readContext(from app: NSRunningApplication?) -> String? { nil }
-    func readScreenVocabulary(from app: NSRunningApplication?) -> ScreenVocabulary? { nil }
+    func readContext(from app: NSRunningApplication?) -> String? {
+        nil
+    }
+
+    func readScreenVocabulary(from app: NSRunningApplication?) -> ScreenVocabulary? {
+        nil
+    }
 }
 
 private final class MockHotkey: HotkeyManaging {
@@ -68,7 +73,6 @@ private final class MockHistoryHotkey: HistoryHotkeyManaging {
 
 @Suite("Pipeline Integration")
 struct PipelineIntegrationTests {
-
     private func configureDefaults() {
         let defaults = UserDefaults.standard
         defaults.set(true, forKey: "removeFillerWords")
