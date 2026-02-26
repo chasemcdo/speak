@@ -10,11 +10,9 @@ private final class MockTranscriber: Transcribing {
     var startSessionCalled = false
     var stopSessionCalled = false
     var shouldThrow = false
-    var receivedCustomPhrases: [String] = []
 
-    func startSession(appState: AppState, locale: Locale, customPhrases: [String] = []) async throws {
+    func startSession(appState: AppState, locale: Locale) async throws {
         startSessionCalled = true
-        receivedCustomPhrases = customPhrases
         if shouldThrow {
             throw TranscriptionError.notAuthorized
         }

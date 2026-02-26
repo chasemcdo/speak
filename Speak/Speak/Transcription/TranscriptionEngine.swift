@@ -20,7 +20,7 @@ final class TranscriptionEngine {
     // MARK: - Session lifecycle
 
     /// Start a transcription session. Streams results into the provided AppState.
-    func startSession(appState: AppState, locale: Locale, customPhrases: [String] = []) async throws {
+    func startSession(appState: AppState, locale: Locale) async throws {
         guard !isRunning, !isSettingUp else { return }
         isSettingUp = true
         defer { isSettingUp = false }
@@ -58,13 +58,6 @@ final class TranscriptionEngine {
         // 4. Create the analyzer
         let analyzer = SpeechAnalyzer(modules: [transcriber])
         self.analyzer = analyzer
-
-        // 4a. Set custom dictionary context
-        if !customPhrases.isEmpty {
-            let context = AnalysisContext()
-            context.contextualStrings[.general] = customPhrases
-            try await analyzer.setContext(context)
-        }
 
         // 5. Wire level monitor and start audio capture
         audioCapture.levelMonitor = levelMonitor

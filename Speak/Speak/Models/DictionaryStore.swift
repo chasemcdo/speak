@@ -50,10 +50,6 @@ final class DictionaryStore {
         loadSuggestions()
     }
 
-    var phrases: [String] {
-        entries.map(\.phrase)
-    }
-
     // MARK: - Entries
 
     func add(_ phrase: String, source: DictionaryEntry.Source = .manual) {

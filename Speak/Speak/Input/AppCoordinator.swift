@@ -181,8 +181,7 @@ final class AppCoordinator {
             .flatMap { Locale(identifier: $0) } ?? Locale.current
 
         do {
-            let phrases = dictionaryStore?.phrases ?? []
-            try await transcriptionEngine.startSession(appState: appState, locale: locale, customPhrases: phrases)
+            try await transcriptionEngine.startSession(appState: appState, locale: locale)
         } catch {
             appState.error = error.localizedDescription
             appState.isRecording = false
@@ -561,6 +560,10 @@ final class AppCoordinator {
 
         if defaults.bool(forKey: "removeFillerWords") {
             textProcessor.addFilter(FillerWordFilter())
+        }
+
+        if let phrases = dictionaryStore?.entries.map(\.phrase), !phrases.isEmpty {
+            textProcessor.addFilter(DictionaryReplacementFilter(phrases: phrases))
         }
 
         if defaults.bool(forKey: "autoFormat") {

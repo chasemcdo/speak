@@ -10,11 +10,9 @@ private final class MockTranscriber: Transcribing {
     var startSessionCalled = false
     var stopSessionCalled = false
     var shouldThrow = false
-    var receivedCustomPhrases: [String] = []
 
-    func startSession(appState: AppState, locale: Locale, customPhrases: [String] = []) async throws {
+    func startSession(appState: AppState, locale: Locale) async throws {
         startSessionCalled = true
-        receivedCustomPhrases = customPhrases
         if shouldThrow {
             throw TranscriptionError.notAuthorized
         }
@@ -261,10 +259,10 @@ struct PipelineIntegrationTests {
         #expect(!appState.isRecording)
     }
 
-    // MARK: - Dictionary phrases
+    // MARK: - Dictionary replacement
 
     @Test @MainActor
-    func dictionaryPhrasesPassedToTranscriber() async {
+    func dictionaryReplacementAppliedDuringPipeline() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -273,8 +271,7 @@ struct PipelineIntegrationTests {
         let appState = AppState()
         let historyStore = HistoryStore()
         let dictionaryStore = DictionaryStore()
-        dictionaryStore.add("Kubernetes")
-        dictionaryStore.add("gRPC")
+        dictionaryStore.add("Decoda")
 
         let coordinator = makeCoordinator(
             transcriber: transcriber, overlay: overlay, paster: paster
@@ -282,52 +279,12 @@ struct PipelineIntegrationTests {
         coordinator.setUp(appState: appState, historyStore: historyStore, dictionaryStore: dictionaryStore)
 
         await coordinator.start()
+        appState.appendFinalizedText("I talked to Dakota about it.")
 
-        #expect(transcriber.receivedCustomPhrases.contains("Kubernetes"))
-        #expect(transcriber.receivedCustomPhrases.contains("gRPC"))
-    }
+        await coordinator.confirm()
 
-    @Test @MainActor
-    func emptyDictionaryPassesEmptyPhrases() async {
-        configureDefaults()
-
-        let transcriber = MockTranscriber()
-        let overlay = MockOverlay()
-        let paster = MockPaster()
-        let appState = AppState()
-        let historyStore = HistoryStore()
-        let dictionaryStore = DictionaryStore()
-        dictionaryStore.clearAll()
-
-        let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster
-        )
-        coordinator.setUp(appState: appState, historyStore: historyStore, dictionaryStore: dictionaryStore)
-
-        await coordinator.start()
-
-        #expect(transcriber.receivedCustomPhrases.isEmpty)
-    }
-
-    @Test @MainActor
-    func noDictionaryStorePassesEmptyPhrases() async {
-        configureDefaults()
-
-        let transcriber = MockTranscriber()
-        let overlay = MockOverlay()
-        let paster = MockPaster()
-        let appState = AppState()
-        let historyStore = HistoryStore()
-
-        let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster
-        )
-        // setUp without dictionaryStore (uses default nil)
-        coordinator.setUp(appState: appState, historyStore: historyStore)
-
-        await coordinator.start()
-
-        #expect(transcriber.receivedCustomPhrases.isEmpty)
+        #expect(paster.pastedText?.contains("Decoda") == true)
+        #expect(paster.pastedText?.contains("Dakota") != true)
     }
 
     // MARK: - Audio level monitor wiring

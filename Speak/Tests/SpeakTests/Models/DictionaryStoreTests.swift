@@ -134,18 +134,6 @@ struct DictionaryStoreTests {
         #expect(store.suggestions.isEmpty)
     }
 
-    // MARK: - Phrases computed property
-
-    @Test @MainActor
-    func phrasesReturnsAllEntryPhrases() {
-        let store = freshStore()
-        store.add("Alpha")
-        store.add("Beta")
-        #expect(store.phrases.count == 2)
-        #expect(store.phrases.contains("Alpha"))
-        #expect(store.phrases.contains("Beta"))
-    }
-
     // MARK: - Max entries cap
 
     @Test @MainActor
