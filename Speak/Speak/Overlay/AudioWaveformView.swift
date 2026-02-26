@@ -9,12 +9,12 @@ struct AudioWaveformView: View {
     private let minHeight: CGFloat = 2
     private let maxHeight: CGFloat = 14
 
-    // Bell curve envelope: center bar tallest, edges shorter
+    /// Bell curve envelope: center bar tallest, edges shorter
     private let barScales: [CGFloat] = [0.5, 0.8, 1.0, 0.8, 0.5]
 
     var body: some View {
         HStack(spacing: spacing) {
-            ForEach(0..<barCount, id: \.self) { index in
+            ForEach(0 ..< barCount, id: \.self) { index in
                 let level = index < barLevels.count ? CGFloat(barLevels[index]) : 0
                 let normalized = min(level / 0.015, 1.0)
                 let scaled = normalized * barScales[index]

@@ -36,12 +36,12 @@ final class OverlayPanel: NSPanel {
         setFrameOrigin(NSPoint(x: x, y: y))
     }
 
-    // Allow Escape key to cancel
+    /// Allow Escape key to cancel
     override func cancelOperation(_ sender: Any?) {
         NotificationCenter.default.post(name: .overlayCancelRequested, object: nil)
     }
 
-    // Allow Return key to confirm
+    /// Allow Return key to confirm
     override func keyDown(with event: NSEvent) {
         if event.keyCode == 36 { // Return
             NotificationCenter.default.post(name: .overlayConfirmRequested, object: nil)
@@ -54,7 +54,9 @@ final class OverlayPanel: NSPanel {
 /// NSHostingView subclass that accepts the first mouse click, allowing buttons
 /// in the non-activating panel to respond without requiring a prior click to focus.
 final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
-    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+        true
+    }
 }
 
 extension Notification.Name {

@@ -1,6 +1,6 @@
 import AppKit
-import Testing
 @testable import Speak
+import Testing
 
 // MARK: - Mocks
 
@@ -53,8 +53,13 @@ private final class MockPaster: Pasting {
 
 @MainActor
 private final class MockContext: ContextReading {
-    func readContext(from app: NSRunningApplication?) -> String? { nil }
-    func readScreenVocabulary(from app: NSRunningApplication?) -> ScreenVocabulary? { nil }
+    func readContext(from app: NSRunningApplication?) -> String? {
+        nil
+    }
+
+    func readScreenVocabulary(from app: NSRunningApplication?) -> ScreenVocabulary? {
+        nil
+    }
 }
 
 private final class MockHotkey: HotkeyManaging {
@@ -77,7 +82,6 @@ private final class MockHistoryHotkey: HistoryHotkeyManaging {
 
 @Suite("Preview Flow", .serialized)
 struct PreviewFlowTests {
-
     private func configureDefaults() {
         let defaults = UserDefaults.standard
         defaults.set(false, forKey: "removeFillerWords")
@@ -136,7 +140,7 @@ struct PreviewFlowTests {
 
         await coordinator.start()
         appState.appendFinalizedText("Hello world")
-        overlay.hideCalled = false  // Reset after show
+        overlay.hideCalled = false // Reset after show
 
         await coordinator.stopWithoutPaste()
 
@@ -266,7 +270,7 @@ struct PreviewFlowTests {
     }
 
     @Test @MainActor
-    func dismissPreviewIsNoOpWithoutAppState() async {
+    func dismissPreviewIsNoOpWithoutAppState() {
         configureDefaults()
         // Coordinator without setUp — appState is nil
         let coordinator = AppCoordinator(

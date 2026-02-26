@@ -1,5 +1,5 @@
-import Testing
 @testable import Speak
+import Testing
 
 private let filter = FillerWordFilter()
 private let ctx = ProcessingContext(locale: .current)
@@ -12,7 +12,6 @@ private func filtered(_ text: String) async throws -> String {
 
 @Suite("FillerWordFilter")
 struct FillerWordFilterTests {
-
     // -- Multi-word fillers --
 
     @Test func removesSoYeah() async throws {

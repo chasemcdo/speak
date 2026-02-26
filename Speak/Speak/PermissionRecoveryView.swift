@@ -68,7 +68,7 @@ struct PermissionRecoveryView: View {
                         description: "Required to paste text into other apps",
                         canRequestDirectly: false,
                         settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
-                    ) { }
+                    ) {}
                 }
             }
 

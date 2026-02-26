@@ -17,7 +17,7 @@ APP_PATH     := $(BUILD_DIR)/$(APP_NAME).app
 DMG_PATH     := $(BUILD_DIR)/$(APP_NAME).dmg
 VERSION      := $(shell /usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" Speak/Speak/Info.plist 2>/dev/null || echo "0.1.0")
 
-.PHONY: build release test app dmg check clean
+.PHONY: build release test app dmg check clean format lint
 
 # --- SPM (for development) ---
 
@@ -83,6 +83,14 @@ check: app
 			|| { echo "FAIL: $$fw not linked"; exit 1; }; \
 	done; \
 	echo "── All checks passed"
+
+# --- Formatting & Linting ---
+
+format:
+	swiftformat Speak/
+
+lint:
+	swiftlint lint Speak/Speak/ Speak/Tests/
 
 # --- Cleanup ---
 

@@ -21,7 +21,7 @@ enum PasteService {
         if let app {
             app.activate()
             // Wait for the app to actually become frontmost
-            for _ in 0..<10 {
+            for _ in 0 ..< 10 {
                 try? await Task.sleep(for: .milliseconds(50))
                 if app.isActive { break }
             }

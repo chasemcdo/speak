@@ -153,7 +153,7 @@ final class ContextReader {
                 kAXTabGroupRole as String,
                 kAXButtonRole as String,
                 kAXGroupRole as String,
-                nil // also check elements with unknown roles
+                nil, // also check elements with unknown roles
             ]
 
             if interestingRoles.contains(role) {

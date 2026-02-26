@@ -1,6 +1,6 @@
 import AppKit
-import Testing
 @testable import Speak
+import Testing
 
 /// Helper to create synthetic flagsChanged events for testing.
 private func flagsChangedEvent(modifierFlags: NSEvent.ModifierFlags) -> NSEvent? {
@@ -19,7 +19,8 @@ private func flagsChangedEvent(modifierFlags: NSEvent.ModifierFlags) -> NSEvent?
 }
 
 /// Helper to create synthetic keyDown events for testing.
-private func keyDownEvent(keyCode: UInt16, characters: String = "", modifierFlags: NSEvent.ModifierFlags = []) -> NSEvent? {
+private func keyDownEvent(keyCode: UInt16, characters: String = "",
+                          modifierFlags: NSEvent.ModifierFlags = []) -> NSEvent? {
     NSEvent.keyEvent(
         with: .keyDown,
         location: .zero,
@@ -36,7 +37,6 @@ private func keyDownEvent(keyCode: UInt16, characters: String = "", modifierFlag
 
 @Suite("HotkeyManager", .serialized)
 struct HotkeyManagerTests {
-
     // MARK: - Basic hold flow
 
     @Test @MainActor
@@ -165,7 +165,7 @@ struct HotkeyManagerTests {
     }
 
     @Test @MainActor
-    func spacebarInToggleRecordingIsNotConsumed() async {
+    func spacebarInToggleRecordingIsNotConsumed() {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()
@@ -197,7 +197,7 @@ struct HotkeyManagerTests {
     // MARK: - Double-tap still works (no regression)
 
     @Test @MainActor
-    func doubleTapTriggersStartAndSubsequentTapStops() async {
+    func doubleTapTriggersStartAndSubsequentTapStops() {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()

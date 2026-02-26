@@ -1,10 +1,9 @@
 @preconcurrency import AVFoundation
-import Testing
 @testable import Speak
+import Testing
 
 @Suite("AudioLevelMonitor")
 struct AudioLevelMonitorTests {
-
     // MARK: - Helpers
 
     /// Create an AVAudioPCMBuffer filled with a constant amplitude value.
@@ -13,7 +12,7 @@ struct AudioLevelMonitorTests {
         let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount)!
         buffer.frameLength = frameCount
         let samples = buffer.floatChannelData![0]
-        for i in 0..<Int(frameCount) {
+        for i in 0 ..< Int(frameCount) {
             samples[i] = amplitude
         }
         return buffer
@@ -89,7 +88,7 @@ struct AudioLevelMonitorTests {
         monitor.updateRMS(from: makeBuffer(amplitude: 0.5))
 
         // Simulate several ticks
-        for _ in 0..<6 {
+        for _ in 0 ..< 6 {
             monitor.tick()
         }
 
@@ -117,7 +116,7 @@ struct AudioLevelMonitorTests {
         let monitor = AudioLevelMonitor()
 
         monitor.updateRMS(from: makeBuffer(amplitude: 0.5))
-        for _ in 0..<20 {
+        for _ in 0 ..< 20 {
             monitor.tick()
         }
 
@@ -161,11 +160,11 @@ struct AudioLevelMonitorTests {
     }
 
     @Test @MainActor
-    func updateRMSWithZeroFrameLengthIsIgnored() {
+    func updateRMSWithZeroFrameLengthIsIgnored() throws {
         let monitor = AudioLevelMonitor()
 
-        let format = AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1)!
-        let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 1024)!
+        let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1))
+        let buffer = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 1024))
         buffer.frameLength = 0
 
         monitor.updateRMS(from: buffer)

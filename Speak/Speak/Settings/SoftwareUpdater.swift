@@ -1,5 +1,5 @@
-import SwiftUI
 import Sparkle
+import SwiftUI
 
 struct CheckForUpdatesView: View {
     let updater: SPUUpdater

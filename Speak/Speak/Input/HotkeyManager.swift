@@ -229,13 +229,13 @@ final class HotkeyManager {
         let keyIsUp = !flags.contains(hotkey.modifierFlag)
         let otherModifiers = flags.contains(hotkey.modifierFlag) && !flags.subtracting(hotkey.modifierFlag).isEmpty
 
-        if keyIsDown && !hotkeyDown {
+        if keyIsDown, !hotkeyDown {
             hotkeyDown = true
             handleHotkeyPressed()
-        } else if keyIsUp && hotkeyDown {
+        } else if keyIsUp, hotkeyDown {
             hotkeyDown = false
             handleHotkeyReleased()
-        } else if otherModifiers && hotkeyDown {
+        } else if otherModifiers, hotkeyDown {
             // Another modifier added while hotkey was held — cancel current gesture
             hotkeyDown = false
             handleOtherModifier()

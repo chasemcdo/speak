@@ -1,5 +1,5 @@
-import SwiftUI
 import Sparkle
+import SwiftUI
 
 @main
 struct SpeakApp: App {
@@ -11,9 +11,9 @@ struct SpeakApp: App {
 
     let updaterController: SPUStandardUpdaterController? = {
         #if DEBUG
-        return nil
+            return nil
         #else
-        return SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+            return SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
         #endif
     }()
 

@@ -26,6 +26,16 @@ jobs:
           xcodebuild -version
           swift --version
 
+      # Formatting & linting (run before build to catch issues early)
+      - name: Install SwiftFormat & SwiftLint
+        run: brew install swiftformat swiftlint
+
+      - name: Check formatting
+        run: swiftformat --lint Speak/
+
+      - name: Lint
+        run: swiftlint lint Speak/Speak/ Speak/Tests/
+
       # Run unit tests
       - name: Run tests
         run: cd Speak && swift test
