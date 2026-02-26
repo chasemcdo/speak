@@ -324,12 +324,8 @@ final class AppCoordinator {
     /// Stop transcription, run post-processing, and save to history.
     /// Returns the processed text.
     private func stopAndProcess() async -> String {
-        // Capture the paste target at stop time (the user may have switched apps during recording)
+        // Snapshot the paste target immediately so it can't change during async stop.
         previousApp = NSWorkspace.shared.frontmostApplication
-        capturedContext = contextReader.readContext(from: previousApp)
-        if UserDefaults.standard.bool(forKey: "screenContext") {
-            capturedVocabulary = contextReader.readScreenVocabulary(from: previousApp)
-        }
 
         SoundFeedback.playStopSound()
         hotkeyManager.resetState()
@@ -340,6 +336,12 @@ final class AppCoordinator {
         audioLevelMonitor = nil
         appState?.audioLevel = nil
         transcriptionEngine.levelMonitor = nil
+
+        // Read AX context after audio capture has stopped to avoid delaying it.
+        capturedContext = contextReader.readContext(from: previousApp)
+        if UserDefaults.standard.bool(forKey: "screenContext") {
+            capturedVocabulary = contextReader.readScreenVocabulary(from: previousApp)
+        }
 
         let rawText = appState?.displayText ?? ""
         var text = rawText
