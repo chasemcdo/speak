@@ -93,6 +93,36 @@ final class ContextReader {
         return vocab.isEmpty ? nil : vocab
     }
 
+    /// Check whether the given app has a focused text field (one that exposes a writable value attribute).
+    func hasFocusedTextField(in app: NSRunningApplication?) -> Bool {
+        guard let app else { return false }
+
+        let appElement = AXUIElementCreateApplication(app.processIdentifier)
+
+        var focusedRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            appElement,
+            kAXFocusedUIElementAttribute as CFString,
+            &focusedRef
+        ) == .success else {
+            return false
+        }
+
+        let focused = focusedRef as! AXUIElement
+
+        // Check if the focused element has a settable value attribute (indicates an editable field).
+        // Read-only elements like checkboxes and static text expose AXValue but it's not settable.
+        var isSettable = DarwinBoolean(false)
+        guard AXUIElementIsAttributeSettable(
+            focused,
+            kAXValueAttribute as CFString,
+            &isSettable
+        ) == .success else {
+            return false
+        }
+        return isSettable.boolValue
+    }
+
     // MARK: - AX helpers
 
     private func axFocusedWindow(of app: AXUIElement) -> AXUIElement? {

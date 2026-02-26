@@ -41,6 +41,7 @@ struct PasteServiceAdapter: Pasting {
 protocol ContextReading {
     func readContext(from app: NSRunningApplication?) -> String?
     func readScreenVocabulary(from app: NSRunningApplication?) -> ScreenVocabulary?
+    func hasFocusedTextField(in app: NSRunningApplication?) -> Bool
 }
 
 extension ContextReader: ContextReading {}

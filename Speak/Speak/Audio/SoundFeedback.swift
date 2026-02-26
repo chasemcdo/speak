@@ -18,4 +18,8 @@ enum SoundFeedback {
     static func playStopSound() {
         stopSound?.play()
     }
+
+    static func playPasteFailedSound() {
+        NSSound(named: "Funk")?.play()
+    }
 }
