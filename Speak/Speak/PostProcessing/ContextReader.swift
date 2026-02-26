@@ -93,6 +93,32 @@ final class ContextReader {
         return vocab.isEmpty ? nil : vocab
     }
 
+    /// Check whether the given app has a focused text field (one that exposes a writable value attribute).
+    func hasFocusedTextField(in app: NSRunningApplication?) -> Bool {
+        guard let app else { return false }
+
+        let appElement = AXUIElementCreateApplication(app.processIdentifier)
+
+        var focusedRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            appElement,
+            kAXFocusedUIElementAttribute as CFString,
+            &focusedRef
+        ) == .success else {
+            return false
+        }
+
+        let focused = focusedRef as! AXUIElement
+
+        // Check if the focused element has a value attribute (indicates an editable field)
+        var valueRef: CFTypeRef?
+        return AXUIElementCopyAttributeValue(
+            focused,
+            kAXValueAttribute as CFString,
+            &valueRef
+        ) == .success
+    }
+
     // MARK: - AX helpers
 
     private func axFocusedWindow(of app: AXUIElement) -> AXUIElement? {

@@ -53,12 +53,18 @@ private final class MockPaster: Pasting {
 
 @MainActor
 private final class MockContext: ContextReading {
+    var hasFocusedTextFieldResult = true
+
     func readContext(from app: NSRunningApplication?) -> String? {
         nil
     }
 
     func readScreenVocabulary(from app: NSRunningApplication?) -> ScreenVocabulary? {
         nil
+    }
+
+    func hasFocusedTextField(in app: NSRunningApplication?) -> Bool {
+        hasFocusedTextFieldResult
     }
 }
 

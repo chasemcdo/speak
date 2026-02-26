@@ -5,7 +5,9 @@ struct OverlayView: View {
 
     var body: some View {
         Group {
-            if appState.isPreviewing {
+            if appState.pasteFailedHint {
+                pasteFailedHintContent
+            } else if appState.isPreviewing {
                 previewContent
             } else {
                 recordingContent
@@ -59,6 +61,17 @@ struct OverlayView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var pasteFailedHintContent: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("No text field selected")
+                .font(.body)
+                .foregroundStyle(.secondary)
+            Text("Press \u{2303}\u{2318}V to paste later.")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
         }
     }
 
