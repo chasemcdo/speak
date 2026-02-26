@@ -32,6 +32,7 @@ struct DictionaryReplacementFilter: TextFilter {
     }
 
     private func bestMatch(for word: String, in phrases: [String]) -> String? {
+        guard word.count >= 3 else { return nil }
         var best: (phrase: String, similarity: Double)?
         for phrase in phrases {
             if word.lowercased() == phrase.lowercased() { return nil }

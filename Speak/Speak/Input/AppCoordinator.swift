@@ -50,6 +50,7 @@ final class AppCoordinator {
     private var suggestionAcceptedObserver: Any?
     private var pasteFailedHintTimer: DispatchWorkItem?
     private var suggestionTimer: DispatchWorkItem?
+    private var editDetectionTask: Task<Void, Never>?
 
     /// Set up the coordinator with the shared app state. Call once at app launch.
     func setUp(appState: AppState, historyStore: HistoryStore, dictionaryStore: DictionaryStore? = nil) {
@@ -145,6 +146,10 @@ final class AppCoordinator {
     /// Start a dictation session.
     func start() async {
         guard let appState, !appState.isRecording else { return }
+
+        // Cancel any pending edit detection from a prior session
+        editDetectionTask?.cancel()
+        editDetectionTask = nil
 
         // Dismiss any active suggestion or preview before starting a new recording
         if appState.suggestedWord != nil {
@@ -459,8 +464,10 @@ final class AppCoordinator {
     private func scheduleEditDetection(pastedText: String, into app: NSRunningApplication?) {
         let reader = contextReader
         let store = dictionaryStore
-        Task {
+        editDetectionTask?.cancel()
+        editDetectionTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(3))
+            guard !Task.isCancelled else { return }
             guard let currentText = reader.readContext(from: app) else { return }
             let candidates = EditDiffer.findReplacements(original: pastedText, edited: currentText)
             var firstSuggestion: DictionarySuggestion?
@@ -474,8 +481,9 @@ final class AppCoordinator {
                     firstSuggestion = suggestion
                 }
             }
+            guard !Task.isCancelled else { return }
             if let suggestion = firstSuggestion {
-                self.showSuggestionOverlay(suggestion)
+                self?.showSuggestionOverlay(suggestion)
             }
         }
     }

@@ -388,6 +388,7 @@ struct PipelineIntegrationTests {
     func suggestionShownAfterEditDetection() {
         configureDefaults()
         UserDefaults.standard.set(true, forKey: "autoLearnDictionary")
+        defer { UserDefaults.standard.set(false, forKey: "autoLearnDictionary") }
 
         let transcriber = MockTranscriber()
         let overlay = MockOverlay()

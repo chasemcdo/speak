@@ -30,10 +30,12 @@ enum StringSimilarity {
     }
 
     static func similarity(_ lhs: String, _ rhs: String) -> Double {
-        let maxLen = max(lhs.count, rhs.count)
+        let lhsLower = lhs.lowercased()
+        let rhsLower = rhs.lowercased()
+        let maxLen = max(lhsLower.count, rhsLower.count)
         guard maxLen > 0 else { return 1.0 }
-        let dist = levenshtein(lhs.lowercased(), rhs.lowercased())
-        return 1.0 - Double(dist) / Double(maxLen)
+        let dist = levenshtein(lhsLower, rhsLower)
+        return max(0.0, 1.0 - Double(dist) / Double(maxLen))
     }
 
     static func isSimilar(_ lhs: String, _ rhs: String, threshold: Double = 0.4) -> Bool {
