@@ -83,6 +83,22 @@ jobs:
             [ -d "$bundle" ] && cp -R "$bundle" "$APP/Contents/Resources/"
           done
 
+          # Generate .icns from asset catalog PNGs for CFBundleIconFile
+          ICON_BASE=Speak/Speak/Assets.xcassets/AppIcon.appiconset
+          ICONSET=$(mktemp -d)/AppIcon.iconset
+          mkdir -p "$ICONSET"
+          cp "$ICON_BASE/app_icon_16.png"   "$ICONSET/icon_16x16.png"
+          cp "$ICON_BASE/app_icon_32.png"   "$ICONSET/icon_16x16@2x.png"
+          cp "$ICON_BASE/app_icon_32.png"   "$ICONSET/icon_32x32.png"
+          cp "$ICON_BASE/app_icon_64.png"   "$ICONSET/icon_32x32@2x.png"
+          cp "$ICON_BASE/app_icon_128.png"  "$ICONSET/icon_128x128.png"
+          cp "$ICON_BASE/app_icon_256.png"  "$ICONSET/icon_128x128@2x.png"
+          cp "$ICON_BASE/app_icon_256.png"  "$ICONSET/icon_256x256.png"
+          cp "$ICON_BASE/app_icon_512.png"  "$ICONSET/icon_256x256@2x.png"
+          cp "$ICON_BASE/app_icon_512.png"  "$ICONSET/icon_512x512.png"
+          cp "$ICON_BASE/app_icon_1024.png" "$ICONSET/icon_512x512@2x.png"
+          iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
+
           # Embed Sparkle.framework from SPM build artifacts
           SPARKLE_FRAMEWORK=$(find Speak/.build/artifacts -name "Sparkle.framework" -path "*/macos-*" -type d | head -1)
           if [ -n "$SPARKLE_FRAMEWORK" ]; then
