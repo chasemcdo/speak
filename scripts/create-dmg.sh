@@ -52,7 +52,6 @@ hdiutil create \
 # --- 4. Mount read-write DMG ---
 echo "==> Mounting DMG..."
 MOUNT_OUTPUT="$(hdiutil attach "$RW_DMG" -readwrite -noverify -noautoopen)"
-DEVICE="$(echo "$MOUNT_OUTPUT" | grep '^/dev/' | tail -1 | awk '{print $1}')"
 MOUNT_POINT="$(echo "$MOUNT_OUTPUT" | grep '^/dev/' | tail -1 | awk -F'\t' '{print $NF}' | sed 's/^ *//')"
 
 echo "   Mounted at: $MOUNT_POINT"
