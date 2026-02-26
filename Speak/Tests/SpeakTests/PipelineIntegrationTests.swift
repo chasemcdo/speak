@@ -347,5 +347,4 @@ struct PipelineIntegrationTests {
         #expect(appState.audioLevel == nil)
         #expect(transcriber.levelMonitor == nil)
     }
-
 }
