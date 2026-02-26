@@ -38,7 +38,10 @@ fi
 
 # Re-codesign the .app bundle so macOS TCC recognises it for permission prompts.
 # The cp above invalidates the original SPM ad-hoc signature.
-codesign --force --sign - --deep "$BUILD_DIR/Speak.app"
+# Include entitlements so the microphone and other capabilities work.
+codesign --force --sign - --deep \
+    --entitlements Speak/Speak.entitlements \
+    "$BUILD_DIR/Speak.app"
 
 # Kill any running Speak instances (both from this build path and other locations)
 APP_PATH="$(cd "$BUILD_DIR" && pwd)/Speak.app"
