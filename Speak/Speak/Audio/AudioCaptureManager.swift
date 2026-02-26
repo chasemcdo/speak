@@ -1,6 +1,15 @@
 @preconcurrency import AVFoundation
 import Speech
 
+/// Abstraction over the ducking configuration on an audio input node so tests can
+/// verify the configuration without requiring audio hardware.
+protocol AudioInputDuckingConfiguring {
+    var voiceProcessingOtherAudioDuckingConfiguration: AVAudioVoiceProcessingOtherAudioDuckingConfiguration { get set }
+    func setVoiceProcessingEnabled(_ enabled: Bool) throws
+}
+
+extension AVAudioInputNode: AudioInputDuckingConfiguring {}
+
 final class AudioCaptureManager: @unchecked Sendable {
     private let audioEngine = AVAudioEngine()
     private var continuation: AsyncStream<AVAudioPCMBuffer>.Continuation?
@@ -73,6 +82,20 @@ final class AudioCaptureManager: @unchecked Sendable {
         }
     }
 
+    // MARK: - Ducking
+
+    /// Configure the input node to minimize ducking of other audio (e.g. music).
+    /// Voice processing must be enabled for the ducking configuration to take effect;
+    /// once enabled we set the ducking level to minimum so other apps stay at full volume.
+    static func disableDucking(on inputNode: AudioInputDuckingConfiguring) throws {
+        var node = inputNode
+        try node.setVoiceProcessingEnabled(true)
+        node.voiceProcessingOtherAudioDuckingConfiguration = .init(
+            enableAdvancedDucking: true,
+            duckingLevel: .min
+        )
+    }
+
     // MARK: - Capture
 
     func startCapture() throws -> AsyncStream<AVAudioPCMBuffer> {
@@ -86,6 +109,9 @@ final class AudioCaptureManager: @unchecked Sendable {
         // Remove any stale tap from a prior failed session to prevent
         // "tap already installed" crash on re-start.
         audioEngine.inputNode.removeTap(onBus: 0)
+
+        // Minimize ducking of other audio while the microphone is active.
+        try Self.disableDucking(on: audioEngine.inputNode)
 
         audioEngine.inputNode.installTap(
             onBus: 0,
