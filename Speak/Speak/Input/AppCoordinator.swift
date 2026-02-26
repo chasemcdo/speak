@@ -40,6 +40,7 @@ final class AppCoordinator {
     private var capturedVocabulary: ScreenVocabulary?
     private var appState: AppState?
     private var historyStore: HistoryStore?
+    private var dictionaryStore: DictionaryStore?
     private var previewDismissTimer: DispatchWorkItem?
     private var recordingKeyMonitor: Any?
     private var previewKeyMonitor: Any?
@@ -48,9 +49,10 @@ final class AppCoordinator {
     private var confirmObserver: Any?
 
     /// Set up the coordinator with the shared app state. Call once at app launch.
-    func setUp(appState: AppState, historyStore: HistoryStore) {
+    func setUp(appState: AppState, historyStore: HistoryStore, dictionaryStore: DictionaryStore? = nil) {
         self.appState = appState
         self.historyStore = historyStore
+        self.dictionaryStore = dictionaryStore
 
         // Register the global hotkey (double-tap to toggle on, hold to transcribe)
         hotkeyManager.register(
@@ -170,7 +172,8 @@ final class AppCoordinator {
             .flatMap { Locale(identifier: $0) } ?? Locale.current
 
         do {
-            try await transcriptionEngine.startSession(appState: appState, locale: locale)
+            let phrases = dictionaryStore?.phrases ?? []
+            try await transcriptionEngine.startSession(appState: appState, locale: locale, customPhrases: phrases)
         } catch {
             appState.error = error.localizedDescription
             appState.isRecording = false
@@ -211,6 +214,9 @@ final class AppCoordinator {
             let autoPaste = UserDefaults.standard.bool(forKey: "autoPaste")
             if autoPaste {
                 await pasteService.paste(text, into: previousApp)
+                if UserDefaults.standard.bool(forKey: "autoLearnDictionary") {
+                    scheduleEditDetection(pastedText: text, into: previousApp)
+                }
             } else {
                 // Just leave it on the clipboard
                 NSPasteboard.general.clearContents()
@@ -289,6 +295,9 @@ final class AppCoordinator {
             let autoPaste = UserDefaults.standard.bool(forKey: "autoPaste")
             if autoPaste {
                 await pasteService.paste(text, into: previousApp)
+                if UserDefaults.standard.bool(forKey: "autoLearnDictionary") {
+                    scheduleEditDetection(pastedText: text, into: previousApp)
+                }
             } else {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(text, forType: .string)
@@ -422,6 +431,23 @@ final class AppCoordinator {
             NSEvent.removeMonitor(previewKeyMonitor)
         }
         previewKeyMonitor = nil
+    }
+
+    /// Schedule a delayed read of the target app's text field to detect user corrections.
+    private func scheduleEditDetection(pastedText: String, into app: NSRunningApplication?) {
+        let reader = contextReader
+        let store = dictionaryStore
+        Task {
+            try? await Task.sleep(for: .seconds(3))
+            guard let currentText = reader.readContext(from: app) else { return }
+            let candidates = EditDiffer.findReplacements(original: pastedText, edited: currentText)
+            for candidate in candidates {
+                store?.addSuggestion(DictionarySuggestion(
+                    phrase: candidate.replacement,
+                    original: candidate.original
+                ))
+            }
+        }
     }
 
     /// Configure the text processing filters based on current user preferences.

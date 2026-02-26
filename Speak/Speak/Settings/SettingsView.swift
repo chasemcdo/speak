@@ -15,6 +15,10 @@ struct SettingsView: View {
     @AppStorage("autoFormat") private var autoFormat = true
     @AppStorage("llmRewrite") private var llmRewrite = false
     @AppStorage("screenContext") private var screenContext = false
+    @AppStorage("autoLearnDictionary") private var autoLearnDictionary = false
+
+    @Environment(DictionaryStore.self) private var dictionaryStore
+    @State private var showDictionarySheet = false
 
     @State private var automaticallyChecksForUpdates = false
     @State private var automaticallyDownloadsUpdates = false
@@ -46,6 +50,19 @@ struct SettingsView: View {
                     .help(
                         "When enabled, text is automatically pasted into the focused app. When disabled, text is copied to the clipboard."
                     )
+            }
+
+            Section("Dictionary") {
+                Button("Manage Dictionary...") { showDictionarySheet = true }
+                Toggle("Auto-learn from corrections", isOn: $autoLearnDictionary)
+                    .help("""
+                    When you edit text after pasting, Speak detects \
+                    corrections and suggests them as dictionary entries.
+                    """)
+            }
+            .sheet(isPresented: $showDictionarySheet) {
+                DictionarySettingsView()
+                    .environment(dictionaryStore)
             }
 
             Section("Post-Processing") {
@@ -128,7 +145,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 420, height: 520)
+        .frame(width: 420, height: 600)
         .onAppear {
             if let updater {
                 automaticallyChecksForUpdates = updater.automaticallyChecksForUpdates
