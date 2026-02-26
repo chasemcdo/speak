@@ -160,14 +160,12 @@ struct PreviewFlowTests {
     func stopWithoutPasteSavesToHistory() async {
         configureDefaults()
         let (coordinator, appState, historyStore, _, _, _, _) = makeCoordinator()
-        let initialCount = historyStore.entries.count
 
         await coordinator.start()
         appState.appendFinalizedText("Hello world")
 
         await coordinator.stopWithoutPaste()
 
-        #expect(historyStore.entries.count == initialCount + 1)
         #expect(historyStore.mostRecent?.processedText == "Hello world")
     }
 

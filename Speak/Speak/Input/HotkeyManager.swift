@@ -299,6 +299,12 @@ final class HotkeyManager {
             // recording continues in toggle mode.
             state = .toggleRecording
 
+        case .toggleRecording:
+            // fn released while in toggle mode (after hold→space transition) —
+            // recording continues, but clean up the keyDown monitor since we
+            // no longer need to detect spacebar.
+            removeKeyDownMonitor()
+
         case .toggleTapDown:
             // Release after tapping to stop toggle-mode recording
             state = .idle

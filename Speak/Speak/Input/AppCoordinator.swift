@@ -41,8 +41,11 @@ final class AppCoordinator {
     private var appState: AppState?
     private var historyStore: HistoryStore?
     private var previewDismissTimer: DispatchWorkItem?
+    private var recordingKeyMonitor: Any?
     private var previewKeyMonitor: Any?
     private var audioLevelMonitor: AudioLevelMonitor?
+    private var cancelObserver: Any?
+    private var confirmObserver: Any?
 
     /// Set up the coordinator with the shared app state. Call once at app launch.
     func setUp(appState: AppState, historyStore: HistoryStore) {
@@ -64,7 +67,7 @@ final class AppCoordinator {
         )
 
         // Listen for overlay cancel/confirm from keyboard events in the panel
-        NotificationCenter.default.addObserver(
+        cancelObserver = NotificationCenter.default.addObserver(
             forName: .overlayCancelRequested,
             object: nil,
             queue: .main
@@ -79,7 +82,7 @@ final class AppCoordinator {
             }
         }
 
-        NotificationCenter.default.addObserver(
+        confirmObserver = NotificationCenter.default.addObserver(
             forName: .overlayConfirmRequested,
             object: nil,
             queue: .main
@@ -184,6 +187,7 @@ final class AppCoordinator {
         }
 
         SoundFeedback.playStartSound()
+        installRecordingKeyMonitor()
 
         // Prewarm LLM in parallel with recording if enabled
         if UserDefaults.standard.bool(forKey: "llmRewrite") {
@@ -227,6 +231,7 @@ final class AppCoordinator {
 
         // Reset hotkey state in case recording was stopped via keyboard/menu
         hotkeyManager.resetState()
+        removeRecordingKeyMonitor()
 
         await transcriptionEngine.stopSession()
         audioLevelMonitor = nil
@@ -324,6 +329,7 @@ final class AppCoordinator {
     private func stopAndProcess() async -> String {
         SoundFeedback.playStopSound()
         hotkeyManager.resetState()
+        removeRecordingKeyMonitor()
 
         await transcriptionEngine.stopSession()
         appState?.isRecording = false
@@ -364,6 +370,32 @@ final class AppCoordinator {
         }
 
         return text
+    }
+
+    /// Install a global key monitor for Escape/Return during recording.
+    /// The overlay panel is non-activating so it never receives keyboard events;
+    /// this monitor catches them from the foreground app instead.
+    private func installRecordingKeyMonitor() {
+        guard recordingKeyMonitor == nil else { return }
+
+        recordingKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            Task { @MainActor in
+                guard let self, let appState = self.appState, appState.isRecording else { return }
+                if event.keyCode == 53 { // Escape
+                    await self.stopWithoutPaste()
+                } else if event.keyCode == 36 { // Return
+                    await self.confirm()
+                }
+            }
+        }
+    }
+
+    /// Remove the recording key monitor.
+    private func removeRecordingKeyMonitor() {
+        if let recordingKeyMonitor {
+            NSEvent.removeMonitor(recordingKeyMonitor)
+        }
+        recordingKeyMonitor = nil
     }
 
     /// Install a global key monitor for Escape/Return during preview.
