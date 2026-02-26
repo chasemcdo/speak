@@ -47,6 +47,7 @@ final class AppCoordinator {
     private var audioLevelMonitor: AudioLevelMonitor?
     private var cancelObserver: Any?
     private var confirmObserver: Any?
+    private var pasteFailedHintTimer: DispatchWorkItem?
 
     /// Set up the coordinator with the shared app state. Call once at app launch.
     func setUp(appState: AppState, historyStore: HistoryStore, dictionaryStore: DictionaryStore? = nil) {
@@ -76,7 +77,9 @@ final class AppCoordinator {
         ) { [weak self] _ in
             Task { @MainActor in
                 guard let self, let appState = self.appState else { return }
-                if appState.isPreviewing {
+                if appState.pasteFailedHint {
+                    self.dismissPasteFailedHint()
+                } else if appState.isPreviewing {
                     self.dismissPreview()
                 } else if appState.isRecording {
                     await self.stopWithoutPaste()
@@ -144,17 +147,6 @@ final class AppCoordinator {
             return
         }
 
-        // Remember which app had focus
-        previousApp = NSWorkspace.shared.frontmostApplication
-
-        // Capture context from the focused text field before we steal focus
-        capturedContext = contextReader.readContext(from: previousApp)
-
-        // Capture screen vocabulary (names, filenames, terms) if enabled
-        if UserDefaults.standard.bool(forKey: "screenContext") {
-            capturedVocabulary = contextReader.readScreenVocabulary(from: previousApp)
-        }
-
         // Reset state
         appState.reset()
 
@@ -179,10 +171,6 @@ final class AppCoordinator {
             appState.isRecording = false
             // Dismiss the overlay so the user isn't stuck on a broken session
             overlayManager.hide()
-            previousApp?.activate()
-            previousApp = nil
-            capturedContext = nil
-            capturedVocabulary = nil
             audioLevelMonitor = nil
             appState.audioLevel = nil
             transcriptionEngine.levelMonitor = nil
@@ -206,24 +194,30 @@ final class AppCoordinator {
 
         let text = await stopAndProcess()
 
-        // Hide overlay
-        overlayManager.hide()
-
         // Paste if we have text
         if !text.isEmpty {
-            let autoPaste = UserDefaults.standard.bool(forKey: "autoPaste")
-            if autoPaste {
-                await pasteService.paste(text, into: previousApp)
-                if UserDefaults.standard.bool(forKey: "autoLearnDictionary") {
-                    scheduleEditDetection(pastedText: text, into: previousApp)
+            if contextReader.hasFocusedTextField(in: previousApp) {
+                // Hide overlay and paste normally
+                overlayManager.hide()
+
+                let autoPaste = UserDefaults.standard.bool(forKey: "autoPaste")
+                if autoPaste {
+                    await pasteService.paste(text, into: previousApp)
+                    if UserDefaults.standard.bool(forKey: "autoLearnDictionary") {
+                        scheduleEditDetection(pastedText: text, into: previousApp)
+                    }
+                } else {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(text, forType: .string)
+                    previousApp?.activate()
                 }
             } else {
-                // Just leave it on the clipboard
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(text, forType: .string)
-                // Re-activate the previous app
-                previousApp?.activate()
+                showPasteFailedHint(text: text)
+                return
             }
+        } else {
+            overlayManager.hide()
+            appState.reset()
         }
 
         previousApp = nil
@@ -245,12 +239,6 @@ final class AppCoordinator {
         transcriptionEngine.levelMonitor = nil
         appState.reset()
         overlayManager.hide()
-
-        // Re-activate the previous app
-        previousApp?.activate()
-        previousApp = nil
-        capturedContext = nil
-        capturedVocabulary = nil
     }
 
     /// Stop recording and show a preview without pasting.
@@ -286,23 +274,32 @@ final class AppCoordinator {
         let text = appState.previewText
         removePreviewMonitors()
 
-        // Hide overlay and reset state
-        overlayManager.hide()
-        appState.reset()
-
         // Paste if we have text
         if !text.isEmpty {
-            let autoPaste = UserDefaults.standard.bool(forKey: "autoPaste")
-            if autoPaste {
-                await pasteService.paste(text, into: previousApp)
-                if UserDefaults.standard.bool(forKey: "autoLearnDictionary") {
-                    scheduleEditDetection(pastedText: text, into: previousApp)
+            if contextReader.hasFocusedTextField(in: previousApp) {
+                // Hide overlay and reset state
+                overlayManager.hide()
+                appState.reset()
+
+                let autoPaste = UserDefaults.standard.bool(forKey: "autoPaste")
+                if autoPaste {
+                    await pasteService.paste(text, into: previousApp)
+                    if UserDefaults.standard.bool(forKey: "autoLearnDictionary") {
+                        scheduleEditDetection(pastedText: text, into: previousApp)
+                    }
+                } else {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(text, forType: .string)
+                    previousApp?.activate()
                 }
             } else {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(text, forType: .string)
-                previousApp?.activate()
+                appState.reset()
+                showPasteFailedHint(text: text)
+                return
             }
+        } else {
+            overlayManager.hide()
+            appState.reset()
         }
 
         previousApp = nil
@@ -336,6 +333,9 @@ final class AppCoordinator {
     /// Stop transcription, run post-processing, and save to history.
     /// Returns the processed text.
     private func stopAndProcess() async -> String {
+        // Snapshot the paste target immediately so it can't change during async stop.
+        previousApp = NSWorkspace.shared.frontmostApplication
+
         SoundFeedback.playStopSound()
         hotkeyManager.resetState()
         removeRecordingKeyMonitor()
@@ -345,6 +345,12 @@ final class AppCoordinator {
         audioLevelMonitor = nil
         appState?.audioLevel = nil
         transcriptionEngine.levelMonitor = nil
+
+        // Read AX context after audio capture has stopped to avoid delaying it.
+        capturedContext = contextReader.readContext(from: previousApp)
+        if UserDefaults.standard.bool(forKey: "screenContext") {
+            capturedVocabulary = contextReader.readScreenVocabulary(from: previousApp)
+        }
 
         let rawText = appState?.displayText ?? ""
         var text = rawText
@@ -448,6 +454,43 @@ final class AppCoordinator {
                 ))
             }
         }
+    }
+
+    /// Show the paste-failed hint overlay, put text on clipboard, and auto-dismiss after 4 seconds.
+    private func showPasteFailedHint(text: String) {
+        guard let appState else { return }
+
+        pasteFailedHintTimer?.cancel()
+        pasteFailedHintTimer = nil
+
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        SoundFeedback.playPasteFailedSound()
+
+        appState.pasteFailedHint = true
+        overlayManager.show(appState: appState)
+
+        let work = DispatchWorkItem { [weak self] in
+            Task { @MainActor in
+                self?.dismissPasteFailedHint()
+            }
+        }
+        pasteFailedHintTimer = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4, execute: work)
+    }
+
+    /// Dismiss the paste-failed hint overlay.
+    private func dismissPasteFailedHint() {
+        guard let appState, appState.pasteFailedHint else { return }
+
+        pasteFailedHintTimer?.cancel()
+        pasteFailedHintTimer = nil
+        overlayManager.hide()
+        appState.reset()
+
+        previousApp = nil
+        capturedContext = nil
+        capturedVocabulary = nil
     }
 
     /// Configure the text processing filters based on current user preferences.

@@ -72,6 +72,17 @@ struct AppStateTests {
         #expect(state.volatileText == "typing...")
     }
 
+    // MARK: - Paste-failed hint
+
+    @Test @MainActor func resetClearsPasteFailedHint() {
+        let state = AppState()
+        state.pasteFailedHint = true
+
+        state.reset()
+
+        #expect(state.pasteFailedHint == false)
+    }
+
     // MARK: - Preview state
 
     @Test @MainActor func previewStateDefaultsToFalse() {
