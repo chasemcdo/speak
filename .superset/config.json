@@ -1,0 +1,6 @@
+{
+  "setup": [
+    "[ -f .env ] && source .env"
+  ],
+  "teardown": []
+}
