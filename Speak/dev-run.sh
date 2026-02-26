@@ -9,10 +9,15 @@ cd "$(dirname "$0")"
 swift build -c debug
 
 BUILD_DIR=".build/debug"
-APP_DIR="$BUILD_DIR/Speak.app/Contents"
+APP_DIR="$BUILD_DIR/Speak Dev.app/Contents"
 mkdir -p "$APP_DIR/MacOS"
 cp "$BUILD_DIR/Speak" "$APP_DIR/MacOS/Speak"
 cp Speak/Info.plist "$APP_DIR/Info.plist"
+
+# Override bundle ID and display name so dev builds get independent TCC permissions
+/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.speak.app.dev" "$APP_DIR/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleName Speak Dev" "$APP_DIR/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Speak Dev" "$APP_DIR/Info.plist"
 
 # Symlink Sparkle.framework so @loader_path resolution works
 SPARKLE_FW="$BUILD_DIR/Sparkle.framework"
@@ -37,14 +42,16 @@ if [ -d "$XCASSETS" ]; then
 fi
 
 # Re-codesign the .app bundle so macOS TCC recognises it for permission prompts.
-# The cp above invalidates the original SPM ad-hoc signature.
-# Include entitlements so the microphone and other capabilities work.
+# The cp above invalidates the original SPM ad-hoc signature. The designated
+# requirement pins TCC permissions to the bundle ID so they persist across rebuilds.
 codesign --force --sign - --deep \
     --entitlements Speak/Speak.entitlements \
-    "$BUILD_DIR/Speak.app"
+    -r="designated => identifier \"com.speak.app.dev\"" \
+    "$BUILD_DIR/Speak Dev.app"
 
-# Kill any running Speak instances (both from this build path and other locations)
-APP_PATH="$(cd "$BUILD_DIR" && pwd)/Speak.app"
+# Kill any running Speak instances (dev and prod conflict at runtime over hotkeys,
+# microphone, etc.)
+APP_PATH="$(cd "$BUILD_DIR" && pwd)/Speak Dev.app"
 pkill -x "Speak" 2>/dev/null || true
 sleep 0.5
 
