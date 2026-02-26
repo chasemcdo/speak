@@ -22,20 +22,27 @@ if [ ! -d "$SPARKLE_FW" ]; then
 fi
 ln -sfh "../../../Sparkle.framework" "$APP_DIR/MacOS/Sparkle.framework"
 
-# Copy the bundled resources SPM generates (Assets.xcassets, etc.)
+# SPM doesn't compile .xcassets into Assets.car — do it manually with actool,
+# in-place in the SPM resource bundle. The generated Bundle.module accessor
+# falls back to this path when the .app-relative lookup fails.
 BUNDLE_RESOURCE="$BUILD_DIR/Speak_Speak.bundle"
-if [ -d "$BUNDLE_RESOURCE" ]; then
-    mkdir -p "$APP_DIR/Resources"
-    cp -R "$BUNDLE_RESOURCE" "$APP_DIR/Resources/"
+XCASSETS="$BUNDLE_RESOURCE/Assets.xcassets"
+if [ -d "$XCASSETS" ]; then
+    xcrun actool "$XCASSETS" \
+        --compile "$BUNDLE_RESOURCE" \
+        --platform macosx \
+        --minimum-deployment-target 26.0 \
+        --output-partial-info-plist /dev/null 2>/dev/null
+    rm -rf "$XCASSETS"
 fi
 
 # Re-codesign the .app bundle so macOS TCC recognises it for permission prompts.
 # The cp above invalidates the original SPM ad-hoc signature.
 codesign --force --sign - --deep "$BUILD_DIR/Speak.app"
 
-# Kill any existing instance (use absolute path to avoid matching unrelated processes)
+# Kill any running Speak instances (both from this build path and other locations)
 APP_PATH="$(cd "$BUILD_DIR" && pwd)/Speak.app"
-pkill -f "$APP_PATH/Contents/MacOS/Speak" 2>/dev/null || true
+pkill -x "Speak" 2>/dev/null || true
 sleep 0.5
 
 # Launch via `open -n` with absolute path. -n forces a new instance so Launch
