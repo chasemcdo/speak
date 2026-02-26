@@ -8,12 +8,8 @@ xcuserdata/
 !*.xcodeproj/
 
 # Swift Package Manager
-.build/
 .swiftpm/
 Package.resolved
-
-# Build artifacts
-build/
 
 # macOS
 .DS_Store
