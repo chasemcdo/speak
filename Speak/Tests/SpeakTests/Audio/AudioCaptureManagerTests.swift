@@ -1,69 +1,116 @@
 @preconcurrency import AVFoundation
+import CoreMedia
 @testable import Speak
 import Testing
 
-@Suite("AudioCaptureManager – Ducking")
-struct AudioCaptureManagerDuckingTests {
-    // MARK: - Mock
+@Suite("AudioCaptureManager – CMSampleBuffer conversion")
+struct AudioCaptureManagerSampleBufferTests {
+    /// Create a CMSampleBuffer filled with a known sine-wave pattern so we can
+    /// verify that `toPCMBuffer()` faithfully copies all samples.
+    @Test
+    func toPCMBufferConvertsAllSamples() throws {
+        let sampleRate: Double = 48_000
+        let frameCount: Int = 1024
+        let channels: UInt32 = 1
 
-    private final class MockInputNode: AudioInputDuckingConfiguring {
-        var voiceProcessingOtherAudioDuckingConfiguration = AVAudioVoiceProcessingOtherAudioDuckingConfiguration()
-        var voiceProcessingEnabled = false
-        var shouldThrow = false
+        // Build an AudioStreamBasicDescription for Float32, non-interleaved mono.
+        var asbd = AudioStreamBasicDescription(
+            mSampleRate: sampleRate,
+            mFormatID: kAudioFormatLinearPCM,
+            mFormatFlags: kAudioFormatFlagIsFloat | kAudioFormatFlagIsNonInterleaved,
+            mBytesPerPacket: 4,
+            mFramesPerPacket: 1,
+            mBytesPerFrame: 4,
+            mChannelsPerFrame: channels,
+            mBitsPerChannel: 32,
+            mReserved: 0
+        )
 
-        func setVoiceProcessingEnabled(_ enabled: Bool) throws {
-            if shouldThrow { throw AudioCaptureError.formatConversionFailed }
-            voiceProcessingEnabled = enabled
+        let formatDesc = try {
+            var desc: CMAudioFormatDescription?
+            let status = CMAudioFormatDescriptionCreate(
+                allocator: kCFAllocatorDefault,
+                asbd: &asbd,
+                layoutSize: 0,
+                layout: nil,
+                magicCookieSize: 0,
+                magicCookie: nil,
+                extensions: nil,
+                formatDescriptionOut: &desc
+            )
+            guard status == noErr, let desc else {
+                throw AudioCaptureError.invalidAudioFormat
+            }
+            return desc
+        }()
+
+        // Fill sample data with a recognisable pattern (index / frameCount).
+        var samples = [Float](repeating: 0, count: frameCount)
+        for i in 0 ..< frameCount {
+            samples[i] = Float(i) / Float(frameCount)
         }
-    }
 
-    // MARK: - disableDucking
+        let sampleBuffer: CMSampleBuffer = try samples.withUnsafeBytes { rawBuf in
+            let blockBuffer = try {
+                var bb: CMBlockBuffer?
+                let status = CMBlockBufferCreateWithMemoryBlock(
+                    allocator: kCFAllocatorDefault,
+                    memoryBlock: nil,
+                    blockLength: rawBuf.count,
+                    blockAllocator: kCFAllocatorDefault,
+                    customBlockSource: nil,
+                    offsetToData: 0,
+                    dataLength: rawBuf.count,
+                    flags: 0,
+                    blockBufferOut: &bb
+                )
+                guard status == noErr, let bb else {
+                    throw AudioCaptureError.invalidAudioFormat
+                }
+                return bb
+            }()
 
-    @Test
-    func disableDuckingEnablesVoiceProcessing() throws {
-        let node = MockInputNode()
+            let replaceStatus = CMBlockBufferReplaceDataBytes(
+                with: rawBuf.baseAddress!,
+                blockBuffer: blockBuffer,
+                offsetIntoDestination: 0,
+                dataLength: rawBuf.count
+            )
+            guard replaceStatus == noErr else {
+                throw AudioCaptureError.invalidAudioFormat
+            }
 
-        try AudioCaptureManager.disableDucking(on: node)
-
-        #expect(node.voiceProcessingEnabled)
-    }
-
-    @Test
-    func disableDuckingEnablesAdvancedDucking() throws {
-        let node = MockInputNode()
-
-        try AudioCaptureManager.disableDucking(on: node)
-
-        #expect(node.voiceProcessingOtherAudioDuckingConfiguration.enableAdvancedDucking.boolValue)
-    }
-
-    @Test
-    func disableDuckingSetsDuckingLevelToMin() throws {
-        let node = MockInputNode()
-
-        try AudioCaptureManager.disableDucking(on: node)
-
-        #expect(node.voiceProcessingOtherAudioDuckingConfiguration.duckingLevel == .min)
-    }
-
-    @Test
-    func disableDuckingPropagatesVoiceProcessingError() {
-        let node = MockInputNode()
-        node.shouldThrow = true
-
-        #expect(throws: AudioCaptureError.self) {
-            try AudioCaptureManager.disableDucking(on: node)
+            var sb: CMSampleBuffer?
+            let sbStatus = CMAudioSampleBufferCreateReadyWithPacketDescriptions(
+                allocator: kCFAllocatorDefault,
+                dataBuffer: blockBuffer,
+                formatDescription: formatDesc,
+                sampleCount: frameCount,
+                presentationTimeStamp: .zero,
+                packetDescriptions: nil,
+                sampleBufferOut: &sb
+            )
+            guard sbStatus == noErr, let sb else {
+                throw AudioCaptureError.invalidAudioFormat
+            }
+            return sb
         }
-    }
 
-    @Test
-    func disableDuckingDoesNotSetConfigWhenVoiceProcessingFails() {
-        let node = MockInputNode()
-        node.shouldThrow = true
+        // Convert and verify.
+        let pcm = sampleBuffer.toPCMBuffer()
+        let pcmBuffer = try #require(pcm, "toPCMBuffer() returned nil")
 
-        try? AudioCaptureManager.disableDucking(on: node)
+        #expect(Int(pcmBuffer.frameLength) == frameCount)
+        #expect(pcmBuffer.format.sampleRate == sampleRate)
+        #expect(pcmBuffer.format.channelCount == channels)
 
-        // Config should remain at default since setVoiceProcessingEnabled threw
-        #expect(node.voiceProcessingOtherAudioDuckingConfiguration.duckingLevel == .default)
+        let channelData = try #require(pcmBuffer.floatChannelData, "Expected Float32 channel data")
+        for i in 0 ..< frameCount {
+            let expected = Float(i) / Float(frameCount)
+            #expect(
+                abs(channelData[0][i] - expected) < 1e-6,
+                "Sample \(i): got \(channelData[0][i]), expected \(expected)"
+            )
+        }
     }
 }

@@ -1,25 +1,19 @@
 @preconcurrency import AVFoundation
+import CoreMedia
 import Speech
 
-/// Abstraction over the ducking configuration on an audio input node so tests can
-/// verify the configuration without requiring audio hardware.
-protocol AudioInputDuckingConfiguring {
-    var voiceProcessingOtherAudioDuckingConfiguration: AVAudioVoiceProcessingOtherAudioDuckingConfiguration { get set }
-    func setVoiceProcessingEnabled(_ enabled: Bool) throws
-}
-
-extension AVAudioInputNode: AudioInputDuckingConfiguring {}
-
 final class AudioCaptureManager: @unchecked Sendable {
-    private let audioEngine = AVAudioEngine()
-    private var continuation: AsyncStream<AVAudioPCMBuffer>.Continuation?
-    private var converter: AVAudioConverter?
-    private var targetFormat: AVAudioFormat?
+    private let captureSession = AVCaptureSession()
+    private let outputDelegate = CaptureOutputDelegate()
+    private let captureQueue = DispatchQueue(label: "com.speak.audio-capture", qos: .userInteractive)
 
-    var levelMonitor: AudioLevelMonitor?
+    var levelMonitor: AudioLevelMonitor? {
+        get { outputDelegate.levelMonitor }
+        set { outputDelegate.levelMonitor = newValue }
+    }
 
     var isCapturing: Bool {
-        audioEngine.isRunning
+        captureSession.isRunning
     }
 
     // MARK: - Permissions
@@ -42,18 +36,12 @@ final class AudioCaptureManager: @unchecked Sendable {
 
     // MARK: - Input validation
 
-    /// Validate that an audio input device is available and has a usable format.
-    /// Accessing `audioEngine.inputNode` with no audio device throws an unrecoverable
-    /// NSException, so we check via AVCaptureDevice first.
-    private func validateAudioInput() throws -> AVAudioFormat {
-        guard AVCaptureDevice.default(for: .audio) != nil else {
+    /// Validate that an audio input device is available.
+    private func validateAudioInput() throws -> AVCaptureDevice {
+        guard let device = AVCaptureDevice.default(for: .audio) else {
             throw AudioCaptureError.noAudioInputDevice
         }
-        let inputFormat = audioEngine.inputNode.outputFormat(forBus: 0)
-        guard inputFormat.sampleRate > 0 else {
-            throw AudioCaptureError.invalidAudioFormat
-        }
-        return inputFormat
+        return device
     }
 
     // MARK: - Format negotiation
@@ -61,91 +49,114 @@ final class AudioCaptureManager: @unchecked Sendable {
     /// Determine the best audio format compatible with the given transcriber module.
     /// Call this before startCapture to set up format conversion.
     func prepareFormat(compatibleWith module: SpeechTranscriber) async throws {
-        let inputFormat = try validateAudioInput()
+        _ = try validateAudioInput()
         guard let bestFormat = await SpeechAnalyzer.bestAvailableAudioFormat(
             compatibleWith: [module]
         ) else {
             throw AudioCaptureError.formatConversionFailed
         }
-
-        if inputFormat.sampleRate != bestFormat.sampleRate ||
-            inputFormat.channelCount != bestFormat.channelCount ||
-            inputFormat.commonFormat != bestFormat.commonFormat {
-            guard let conv = AVAudioConverter(from: inputFormat, to: bestFormat) else {
-                throw AudioCaptureError.formatConversionFailed
-            }
-            converter = conv
-            targetFormat = bestFormat
-        } else {
-            converter = nil
-            targetFormat = nil
-        }
-    }
-
-    // MARK: - Ducking
-
-    /// Configure the input node to minimize ducking of other audio (e.g. music).
-    /// Voice processing must be enabled for the ducking configuration to take effect;
-    /// once enabled we set the ducking level to minimum so other apps stay at full volume.
-    static func disableDucking(on inputNode: AudioInputDuckingConfiguring) throws {
-        var node = inputNode
-        try node.setVoiceProcessingEnabled(true)
-        node.voiceProcessingOtherAudioDuckingConfiguration = .init(
-            enableAdvancedDucking: true,
-            duckingLevel: .min
-        )
+        outputDelegate.targetFormat = bestFormat
     }
 
     // MARK: - Capture
 
     func startCapture() throws -> AsyncStream<AVAudioPCMBuffer> {
+        let device = try validateAudioInput()
+
         let (stream, continuation) = AsyncStream<AVAudioPCMBuffer>.makeStream(
             bufferingPolicy: .bufferingNewest(10)
         )
-        self.continuation = continuation
+        outputDelegate.continuation = continuation
+        outputDelegate.converter = nil
 
-        let inputFormat = try validateAudioInput()
+        captureSession.beginConfiguration()
 
-        // Remove any stale tap from a prior failed session to prevent
-        // "tap already installed" crash on re-start.
-        audioEngine.inputNode.removeTap(onBus: 0)
+        // Remove stale inputs/outputs from a prior session.
+        for input in captureSession.inputs { captureSession.removeInput(input) }
+        for output in captureSession.outputs { captureSession.removeOutput(output) }
 
-        // Minimize ducking of other audio while the microphone is active.
-        try Self.disableDucking(on: audioEngine.inputNode)
-
-        audioEngine.inputNode.installTap(
-            onBus: 0,
-            bufferSize: 4096,
-            format: inputFormat
-        ) { [weak self] buffer, _ in
-            guard let self else { return }
-
-            self.levelMonitor?.updateRMS(from: buffer)
-
-            if let converter = self.converter, let targetFormat = self.targetFormat {
-                guard let converted = self.convertBuffer(buffer, using: converter, to: targetFormat) else {
-                    return
-                }
-                self.continuation?.yield(converted)
-            } else {
-                self.continuation?.yield(buffer)
-            }
+        let input = try AVCaptureDeviceInput(device: device)
+        guard captureSession.canAddInput(input) else {
+            captureSession.commitConfiguration()
+            throw AudioCaptureError.noAudioInputDevice
         }
+        captureSession.addInput(input)
 
-        audioEngine.prepare()
-        try audioEngine.start()
+        let output = AVCaptureAudioDataOutput()
+        output.audioSettings = [
+            AVFormatIDKey: kAudioFormatLinearPCM,
+            AVLinearPCMIsFloatKey: true,
+            AVLinearPCMBitDepthKey: 32,
+            AVLinearPCMIsNonInterleaved: true,
+        ]
+        output.setSampleBufferDelegate(outputDelegate, queue: captureQueue)
+        guard captureSession.canAddOutput(output) else {
+            captureSession.commitConfiguration()
+            throw AudioCaptureError.invalidAudioFormat
+        }
+        captureSession.addOutput(output)
+
+        captureSession.commitConfiguration()
+
+        // Apple docs: don't call startRunning() on main thread.
+        captureQueue.async { [captureSession] in
+            captureSession.startRunning()
+        }
 
         return stream
     }
 
     func stopCapture() {
-        audioEngine.inputNode.removeTap(onBus: 0)
-        audioEngine.stop()
-        continuation?.finish()
-        continuation = nil
+        captureSession.stopRunning()
+        outputDelegate.continuation?.finish()
+        outputDelegate.continuation = nil
+        outputDelegate.converter = nil
     }
+}
 
-    // MARK: - Format conversion
+// MARK: - CaptureOutputDelegate
+
+private final class CaptureOutputDelegate: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate,
+    @unchecked Sendable
+{
+    var continuation: AsyncStream<AVAudioPCMBuffer>.Continuation?
+    var converter: AVAudioConverter?
+    var targetFormat: AVAudioFormat?
+    var levelMonitor: AudioLevelMonitor?
+
+    func captureOutput(
+        _ output: AVCaptureOutput,
+        didOutput sampleBuffer: CMSampleBuffer,
+        from connection: AVCaptureConnection
+    ) {
+        guard let rawBuffer = sampleBuffer.toPCMBuffer() else { return }
+
+        levelMonitor?.updateRMS(from: rawBuffer)
+
+        guard let targetFormat else {
+            continuation?.yield(rawBuffer)
+            return
+        }
+
+        // Lazily create converter on first buffer when the capture format is known.
+        if converter == nil {
+            if rawBuffer.format.sampleRate == targetFormat.sampleRate,
+               rawBuffer.format.channelCount == targetFormat.channelCount,
+               rawBuffer.format.commonFormat == targetFormat.commonFormat
+            {
+                // Formats match — no conversion needed.
+                continuation?.yield(rawBuffer)
+                return
+            }
+            guard let conv = AVAudioConverter(from: rawBuffer.format, to: targetFormat) else { return }
+            converter = conv
+        }
+
+        guard let converter, let converted = convertBuffer(rawBuffer, using: converter, to: targetFormat) else {
+            return
+        }
+        continuation?.yield(converted)
+    }
 
     private func convertBuffer(
         _ buffer: AVAudioPCMBuffer,
@@ -159,7 +170,6 @@ final class AudioCaptureManager: @unchecked Sendable {
             return nil
         }
 
-        // Use a box to avoid capturing a mutable var in a @Sendable closure
         let state = ConversionState(buffer: buffer)
         let inputBlock: AVAudioConverterInputBlock = { _, outStatus in
             if state.didProvideData {
@@ -181,6 +191,8 @@ final class AudioCaptureManager: @unchecked Sendable {
     }
 }
 
+// MARK: - ConversionState
+
 /// Reference type to safely pass mutable state into @Sendable converter closure
 private final class ConversionState: @unchecked Sendable {
     let buffer: AVAudioPCMBuffer
@@ -190,6 +202,31 @@ private final class ConversionState: @unchecked Sendable {
         self.buffer = buffer
     }
 }
+
+// MARK: - CMSampleBuffer → AVAudioPCMBuffer
+
+extension CMSampleBuffer {
+    func toPCMBuffer() -> AVAudioPCMBuffer? {
+        guard let formatDesc = formatDescription,
+              let asbdPtr = CMAudioFormatDescriptionGetStreamBasicDescription(formatDesc)
+        else { return nil }
+
+        var asbd = asbdPtr.pointee
+        guard let format = AVAudioFormat(streamDescription: &asbd) else { return nil }
+
+        let frameCount = AVAudioFrameCount(CMSampleBufferGetNumSamples(self))
+        guard frameCount > 0,
+              let pcm = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount)
+        else { return nil }
+
+        pcm.frameLength = frameCount
+        let status = CMSampleBufferCopyPCMDataIntoAudioBufferList(
+            self, at: 0, frameCount: Int32(frameCount), into: pcm.mutableAudioBufferList)
+        return status == noErr ? pcm : nil
+    }
+}
+
+// MARK: - Errors
 
 enum AudioCaptureError: LocalizedError {
     case formatConversionFailed
