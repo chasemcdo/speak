@@ -15,7 +15,8 @@ VERSION="${3:-dev}"
 APP_NAME="$(basename "$APP_PATH" .app)"
 VOLUME_NAME="${APP_NAME} ${VERSION}"
 STAGING_DIR="$(mktemp -d)"
-RW_DMG="$(mktemp -u).dmg"
+TMP_DMG_DIR="$(mktemp -d)"
+RW_DMG="$TMP_DMG_DIR/rw.dmg"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BG_PNG="$SCRIPT_DIR/dmg-background.png"
 
@@ -24,15 +25,19 @@ cleanup() {
     if [[ -n "${MOUNT_POINT:-}" ]] && mount | grep -q "$MOUNT_POINT"; then
         hdiutil detach "$MOUNT_POINT" -force 2>/dev/null || true
     fi
-    rm -rf "$STAGING_DIR" "$RW_DMG"
+    rm -rf "$STAGING_DIR" "$TMP_DMG_DIR"
 }
 trap cleanup EXIT
 
 # --- 1. Stage contents ---
 echo "==> Staging DMG contents..."
 cp -R "$APP_PATH" "$STAGING_DIR/"
-# Create a Finder alias (not a symlink) so the Applications folder icon renders
-osascript -e "tell application \"Finder\" to make alias file to POSIX file \"/Applications\" at POSIX file \"$STAGING_DIR\""
+# Create a Finder alias (not a symlink) so the Applications folder icon renders.
+# Fall back to a symlink in headless/CI environments where Finder is unavailable.
+if ! osascript -e "tell application \"Finder\" to make alias file to POSIX file \"/Applications\" at POSIX file \"$STAGING_DIR\""; then
+    echo "WARNING: Could not create Finder alias; falling back to symlink." >&2
+    ln -s /Applications "$STAGING_DIR/Applications"
+fi
 
 # Hidden .background folder for the background image
 mkdir -p "$STAGING_DIR/.background"
@@ -119,7 +124,17 @@ fi
 # --- 6. Finalise ---
 echo "==> Detaching DMG..."
 sync
-hdiutil detach "$MOUNT_POINT"
+DETACH_OK=0
+for attempt in 1 2 3; do
+    if hdiutil detach "$MOUNT_POINT" >/dev/null 2>&1; then
+        DETACH_OK=1
+        break
+    fi
+    sleep 1
+done
+if [[ $DETACH_OK -ne 1 ]]; then
+    hdiutil detach "$MOUNT_POINT" -force
+fi
 unset MOUNT_POINT
 
 echo "==> Converting to compressed read-only DMG..."
