@@ -4,6 +4,7 @@ struct DictionarySettingsView: View {
     @Environment(DictionaryStore.self) private var dictionaryStore
     @Environment(\.dismiss) private var dismiss
     @State private var newWord = ""
+    @State private var showClearConfirmation = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -87,10 +88,16 @@ struct DictionarySettingsView: View {
             }
             ToolbarItem(placement: .destructiveAction) {
                 Button("Clear All") {
-                    dictionaryStore.clearAll()
+                    showClearConfirmation = true
                 }
                 .disabled(dictionaryStore.entries.isEmpty)
             }
+        }
+        .alert("Clear Dictionary?", isPresented: $showClearConfirmation) {
+            Button("Clear All", role: .destructive) { dictionaryStore.clearAll() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will remove all \(dictionaryStore.entries.count) entries. This cannot be undone.")
         }
     }
 
