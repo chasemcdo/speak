@@ -20,7 +20,7 @@ final class OverlayManager {
         let overlayView = OverlayView()
             .environment(appState)
 
-        let panel = OverlayPanel(contentView: overlayView)
+        let panel = OverlayPanel(contentView: overlayView, appState: appState)
         panel.orderFront(nil)
         self.panel = panel
     }

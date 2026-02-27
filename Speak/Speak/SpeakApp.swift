@@ -6,6 +6,7 @@ struct SpeakApp: App {
     @State private var appState = AppState()
     @State private var coordinator = AppCoordinator()
     @State private var historyStore = HistoryStore()
+    @State private var dictionaryStore = DictionaryStore()
     @AppStorage("onboardingComplete") private var onboardingComplete = false
     @Environment(\.openWindow) private var openWindow
 
@@ -23,6 +24,7 @@ struct SpeakApp: App {
             "removeFillerWords": true,
             "autoFormat": true,
             "llmRewrite": false,
+            "autoLearnDictionary": false,
         ])
     }
 
@@ -35,7 +37,7 @@ struct SpeakApp: App {
         } label: {
             Image("MenuBarIcon", bundle: .appModule)
                 .task {
-                    coordinator.setUp(appState: appState, historyStore: historyStore)
+                    coordinator.setUp(appState: appState, historyStore: historyStore, dictionaryStore: dictionaryStore)
 
                     // Let scene registration complete before opening windows
                     try? await Task.sleep(for: .milliseconds(200))
@@ -63,6 +65,7 @@ struct SpeakApp: App {
         Settings {
             SettingsView(updater: updaterController?.updater)
                 .environment(appState)
+                .environment(dictionaryStore)
         }
 
         Window("Welcome to Speak", id: "onboarding") {

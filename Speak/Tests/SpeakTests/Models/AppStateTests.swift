@@ -83,6 +83,22 @@ struct AppStateTests {
         #expect(state.pasteFailedHint == false)
     }
 
+    // MARK: - Suggested word
+
+    @Test @MainActor func suggestedWordDefaultsToNil() {
+        let state = AppState()
+        #expect(state.suggestedWord == nil)
+    }
+
+    @Test @MainActor func resetClearsSuggestedWord() {
+        let state = AppState()
+        state.suggestedWord = DictionarySuggestion(phrase: "gRPC", original: "grpc")
+
+        state.reset()
+
+        #expect(state.suggestedWord == nil)
+    }
+
     // MARK: - Preview state
 
     @Test @MainActor func previewStateDefaultsToFalse() {

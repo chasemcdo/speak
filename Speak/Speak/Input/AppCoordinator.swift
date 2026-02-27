@@ -40,18 +40,23 @@ final class AppCoordinator {
     private var capturedVocabulary: ScreenVocabulary?
     private var appState: AppState?
     private var historyStore: HistoryStore?
+    private var dictionaryStore: DictionaryStore?
     private var previewDismissTimer: DispatchWorkItem?
     private var recordingKeyMonitor: Any?
     private var previewKeyMonitor: Any?
     private var audioLevelMonitor: AudioLevelMonitor?
     private var cancelObserver: Any?
     private var confirmObserver: Any?
+    private var suggestionAcceptedObserver: Any?
     private var pasteFailedHintTimer: DispatchWorkItem?
+    private var suggestionTimer: DispatchWorkItem?
+    private var editDetectionTask: Task<Void, Never>?
 
     /// Set up the coordinator with the shared app state. Call once at app launch.
-    func setUp(appState: AppState, historyStore: HistoryStore) {
+    func setUp(appState: AppState, historyStore: HistoryStore, dictionaryStore: DictionaryStore? = nil) {
         self.appState = appState
         self.historyStore = historyStore
+        self.dictionaryStore = dictionaryStore
 
         // Register the global hotkey (double-tap to toggle on, hold to transcribe)
         hotkeyManager.register(
@@ -75,7 +80,9 @@ final class AppCoordinator {
         ) { [weak self] _ in
             Task { @MainActor in
                 guard let self, let appState = self.appState else { return }
-                if appState.pasteFailedHint {
+                if appState.suggestedWord != nil {
+                    self.dismissSuggestionOverlay()
+                } else if appState.pasteFailedHint {
                     self.dismissPasteFailedHint()
                 } else if appState.isPreviewing {
                     self.dismissPreview()
@@ -97,6 +104,16 @@ final class AppCoordinator {
                 } else if appState.isRecording {
                     await self.confirm()
                 }
+            }
+        }
+
+        suggestionAcceptedObserver = NotificationCenter.default.addObserver(
+            forName: .overlaySuggestionAccepted,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.acceptSuggestionOverlay()
             }
         }
 
@@ -130,7 +147,14 @@ final class AppCoordinator {
     func start() async {
         guard let appState, !appState.isRecording else { return }
 
-        // Dismiss any active preview before starting a new recording
+        // Cancel any pending edit detection from a prior session
+        editDetectionTask?.cancel()
+        editDetectionTask = nil
+
+        // Dismiss any active suggestion or preview before starting a new recording
+        if appState.suggestedWord != nil {
+            dismissSuggestionOverlay()
+        }
         if appState.isPreviewing {
             dismissPreview()
         }
@@ -200,6 +224,10 @@ final class AppCoordinator {
                 let autoPaste = UserDefaults.standard.bool(forKey: "autoPaste")
                 if autoPaste {
                     await pasteService.paste(text, into: previousApp)
+                    if UserDefaults.standard.bool(forKey: "autoLearnDictionary"),
+                       dictionaryStore != nil {
+                        scheduleEditDetection(pastedText: text, into: previousApp)
+                    }
                 } else {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(text, forType: .string)
@@ -278,6 +306,10 @@ final class AppCoordinator {
                 let autoPaste = UserDefaults.standard.bool(forKey: "autoPaste")
                 if autoPaste {
                     await pasteService.paste(text, into: previousApp)
+                    if UserDefaults.standard.bool(forKey: "autoLearnDictionary"),
+                       dictionaryStore != nil {
+                        scheduleEditDetection(pastedText: text, into: previousApp)
+                    }
                 } else {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(text, forType: .string)
@@ -430,6 +462,34 @@ final class AppCoordinator {
         previewKeyMonitor = nil
     }
 
+    /// Schedule a delayed read of the target app's text field to detect user corrections.
+    private func scheduleEditDetection(pastedText: String, into app: NSRunningApplication?) {
+        let reader = contextReader
+        let store = dictionaryStore
+        editDetectionTask?.cancel()
+        editDetectionTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(3))
+            guard !Task.isCancelled else { return }
+            guard let currentText = reader.readContext(from: app) else { return }
+            let candidates = EditDiffer.findReplacements(original: pastedText, edited: currentText)
+            var firstSuggestion: DictionarySuggestion?
+            for candidate in candidates {
+                let suggestion = DictionarySuggestion(
+                    phrase: candidate.replacement,
+                    original: candidate.original
+                )
+                store?.addSuggestion(suggestion)
+                if firstSuggestion == nil {
+                    firstSuggestion = suggestion
+                }
+            }
+            guard !Task.isCancelled else { return }
+            if let suggestion = firstSuggestion {
+                self?.showSuggestionOverlay(suggestion)
+            }
+        }
+    }
+
     /// Show the paste-failed hint overlay, put text on clipboard, and auto-dismiss after 4 seconds.
     private func showPasteFailedHint(text: String) {
         guard let appState else { return }
@@ -467,6 +527,41 @@ final class AppCoordinator {
         capturedVocabulary = nil
     }
 
+    /// Show the suggestion overlay for a detected correction. Auto-dismisses after 6 seconds.
+    private func showSuggestionOverlay(_ suggestion: DictionarySuggestion) {
+        guard let appState else { return }
+        suggestionTimer?.cancel()
+        appState.suggestedWord = suggestion
+        overlayManager.show(appState: appState)
+
+        let work = DispatchWorkItem { [weak self] in
+            Task { @MainActor in self?.dismissSuggestionOverlay() }
+        }
+        suggestionTimer = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6, execute: work)
+    }
+
+    /// Dismiss the suggestion overlay without accepting.
+    private func dismissSuggestionOverlay() {
+        guard let appState, appState.suggestedWord != nil else { return }
+        suggestionTimer?.cancel()
+        suggestionTimer = nil
+        overlayManager.hide()
+        appState.suggestedWord = nil
+    }
+
+    /// Accept the current suggestion, add to dictionary, and dismiss.
+    private func acceptSuggestionOverlay() {
+        guard let appState, let suggestion = appState.suggestedWord else { return }
+        dictionaryStore?.acceptSuggestion(suggestion)
+        dismissSuggestionOverlay()
+    }
+
+    /// Testable entry point: surface a suggestion in the overlay.
+    func handleSuggestion(_ suggestion: DictionarySuggestion) {
+        showSuggestionOverlay(suggestion)
+    }
+
     /// Configure the text processing filters based on current user preferences.
     private func configureFilters() {
         textProcessor.removeAllFilters()
@@ -475,6 +570,10 @@ final class AppCoordinator {
 
         if defaults.bool(forKey: "removeFillerWords") {
             textProcessor.addFilter(FillerWordFilter())
+        }
+
+        if let phrases = dictionaryStore?.entries.map(\.phrase), !phrases.isEmpty {
+            textProcessor.addFilter(DictionaryReplacementFilter(phrases: phrases))
         }
 
         if defaults.bool(forKey: "autoFormat") {
