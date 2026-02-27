@@ -1,3 +1,7 @@
+# Build output
+build/
+DerivedData/
+
 # Xcode user-specific files
 xcuserdata/
 *.xcworkspace/
@@ -7,9 +11,6 @@ xcuserdata/
 .build/
 .swiftpm/
 Package.resolved
-
-# Build artifacts
-build/
 
 # macOS
 .DS_Store
