@@ -19,6 +19,23 @@ cp Speak/Info.plist "$APP_DIR/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleName Speak Dev" "$APP_DIR/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Speak Dev" "$APP_DIR/Info.plist"
 
+# Generate .icns from asset catalog PNGs for CFBundleIconFile
+mkdir -p "$APP_DIR/Resources"
+ICON_BASE="Speak/Assets.xcassets/AppIcon.appiconset"
+ICONSET=$(mktemp -d)/AppIcon.iconset
+mkdir -p "$ICONSET"
+cp "$ICON_BASE/app_icon_16.png"   "$ICONSET/icon_16x16.png"
+cp "$ICON_BASE/app_icon_32.png"   "$ICONSET/icon_16x16@2x.png"
+cp "$ICON_BASE/app_icon_32.png"   "$ICONSET/icon_32x32.png"
+cp "$ICON_BASE/app_icon_64.png"   "$ICONSET/icon_32x32@2x.png"
+cp "$ICON_BASE/app_icon_128.png"  "$ICONSET/icon_128x128.png"
+cp "$ICON_BASE/app_icon_256.png"  "$ICONSET/icon_128x128@2x.png"
+cp "$ICON_BASE/app_icon_256.png"  "$ICONSET/icon_256x256.png"
+cp "$ICON_BASE/app_icon_512.png"  "$ICONSET/icon_256x256@2x.png"
+cp "$ICON_BASE/app_icon_512.png"  "$ICONSET/icon_512x512.png"
+cp "$ICON_BASE/app_icon_1024.png" "$ICONSET/icon_512x512@2x.png"
+iconutil -c icns "$ICONSET" -o "$APP_DIR/Resources/AppIcon.icns"
+
 # Symlink Sparkle.framework so @loader_path resolution works
 SPARKLE_FW="$BUILD_DIR/Sparkle.framework"
 if [ ! -d "$SPARKLE_FW" ]; then
