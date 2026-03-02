@@ -9,8 +9,8 @@ struct AudioCaptureManagerSampleBufferTests {
     /// verify that `toPCMBuffer()` faithfully copies all samples.
     @Test
     func toPCMBufferConvertsAllSamples() throws {
-        let sampleRate: Double = 48_000
-        let frameCount: Int = 1024
+        let sampleRate: Double = 48000
+        let frameCount = 1024
         let channels: UInt32 = 1
 
         // Build an AudioStreamBasicDescription for Float32, non-interleaved mono.
