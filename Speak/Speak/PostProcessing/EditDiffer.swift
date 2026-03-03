@@ -106,6 +106,6 @@ enum EditDiffer {
     }
 
     private static func isSimilar(_ lhs: String, _ rhs: String) -> Bool {
-        StringSimilarity.isSimilar(lhs, rhs)
+        StringSimilarity.isSimilar(lhs, rhs, threshold: 0.5)
     }
 }

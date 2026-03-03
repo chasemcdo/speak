@@ -13,7 +13,7 @@ struct DictionarySettingsView: View {
 
                 Section("Add Word") {
                     HStack {
-                        TextField("Word or phrase", text: $newWord)
+                        TextField("Word", text: $newWord)
                             .textFieldStyle(.roundedBorder)
                             .onSubmit { addWord() }
                         Button("Add") { addWord() }
