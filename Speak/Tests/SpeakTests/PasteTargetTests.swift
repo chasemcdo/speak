@@ -184,11 +184,9 @@ struct PasteTargetTests {
     // MARK: - Auto-paste always attempts paste regardless of text field detection
 
     @Test @MainActor
-    func confirmAlwaysPastesEvenWithoutDetectedTextField() async {
+    func confirmAlwaysPastes() async {
         configureDefaults()
-        let context = MockContext()
-        context.hasFocusedTextFieldResult = false
-        let (coordinator, appState, _, _, overlay, paster, _) = makeCoordinator(context: context)
+        let (coordinator, appState, _, _, overlay, paster, _) = makeCoordinator()
 
         await coordinator.start()
         appState.appendFinalizedText("Hello world")
@@ -196,29 +194,13 @@ struct PasteTargetTests {
 
         #expect(paster.pasteCalled)
         #expect(paster.pastedText == "Hello world")
-        #expect(!appState.pasteFailedHint)
         #expect(overlay.hideCalled)
     }
 
     @Test @MainActor
-    func confirmWithTextFieldPastesNormally() async {
+    func confirmSavesToHistory() async {
         configureDefaults()
-        let (coordinator, appState, _, _, _, paster, _) = makeCoordinator()
-
-        await coordinator.start()
-        appState.appendFinalizedText("Hello world")
-        await coordinator.confirm()
-
-        #expect(paster.pasteCalled)
-        #expect(!appState.pasteFailedHint)
-    }
-
-    @Test @MainActor
-    func confirmSavesToHistoryRegardlessOfTextField() async {
-        configureDefaults()
-        let context = MockContext()
-        context.hasFocusedTextFieldResult = false
-        let (coordinator, appState, historyStore, _, _, _, _) = makeCoordinator(context: context)
+        let (coordinator, appState, historyStore, _, _, _, _) = makeCoordinator()
 
         await coordinator.start()
         appState.appendFinalizedText("Hello world")
@@ -227,14 +209,12 @@ struct PasteTargetTests {
         #expect(historyStore.mostRecent?.processedText == "Hello world")
     }
 
-    // MARK: - Preview paste always attempts paste regardless of text field detection
+    // MARK: - Preview paste always attempts paste
 
     @Test @MainActor
-    func pasteFromPreviewAlwaysPastesEvenWithoutDetectedTextField() async {
+    func pasteFromPreviewAlwaysPastes() async {
         configureDefaults()
-        let context = MockContext()
-        context.hasFocusedTextFieldResult = false
-        let (coordinator, appState, _, _, overlay, paster, _) = makeCoordinator(context: context)
+        let (coordinator, appState, _, _, overlay, paster, _) = makeCoordinator()
 
         await coordinator.start()
         appState.appendFinalizedText("Hello world")
@@ -243,7 +223,6 @@ struct PasteTargetTests {
         await coordinator.pasteFromPreview()
 
         #expect(paster.pasteCalled)
-        #expect(!appState.pasteFailedHint)
         #expect(!appState.isPreviewing)
         #expect(overlay.hideCalled)
     }
@@ -254,16 +233,13 @@ struct PasteTargetTests {
     func confirmWithAutoPasteOffCopiesToClipboard() async {
         configureDefaults()
         UserDefaults.standard.set(false, forKey: "autoPaste")
-        let context = MockContext()
-        context.hasFocusedTextFieldResult = false
-        let (coordinator, appState, _, _, overlay, paster, _) = makeCoordinator(context: context)
+        let (coordinator, appState, _, _, overlay, paster, _) = makeCoordinator()
 
         await coordinator.start()
         appState.appendFinalizedText("Hello world")
         await coordinator.confirm()
 
         #expect(!paster.pasteCalled)
-        #expect(!appState.pasteFailedHint)
         #expect(overlay.hideCalled)
         let clipboardText = NSPasteboard.general.string(forType: .string)
         #expect(clipboardText == "Hello world")
@@ -273,9 +249,7 @@ struct PasteTargetTests {
     func pasteFromPreviewWithAutoPasteOffCopiesToClipboard() async {
         configureDefaults()
         UserDefaults.standard.set(false, forKey: "autoPaste")
-        let context = MockContext()
-        context.hasFocusedTextFieldResult = false
-        let (coordinator, appState, _, _, overlay, paster, _) = makeCoordinator(context: context)
+        let (coordinator, appState, _, _, overlay, paster, _) = makeCoordinator()
 
         await coordinator.start()
         appState.appendFinalizedText("Preview text")
@@ -284,7 +258,6 @@ struct PasteTargetTests {
         await coordinator.pasteFromPreview()
 
         #expect(!paster.pasteCalled)
-        #expect(!appState.pasteFailedHint)
         #expect(overlay.hideCalled)
         let clipboardText = NSPasteboard.general.string(forType: .string)
         #expect(clipboardText == "Preview text")
