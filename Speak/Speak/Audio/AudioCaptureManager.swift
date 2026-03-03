@@ -1,7 +1,6 @@
 import AudioToolbox
 @preconcurrency import AVFoundation
 import CoreAudio
-import CoreMedia
 import Speech
 
 final class AudioCaptureManager: @unchecked Sendable {
@@ -412,30 +411,6 @@ private final class ConversionState: @unchecked Sendable {
 
     init(buffer: AVAudioPCMBuffer) {
         self.buffer = buffer
-    }
-}
-
-// MARK: - CMSampleBuffer → AVAudioPCMBuffer
-
-extension CMSampleBuffer {
-    func toPCMBuffer() -> AVAudioPCMBuffer? {
-        guard let formatDesc = formatDescription,
-              let asbdPtr = CMAudioFormatDescriptionGetStreamBasicDescription(formatDesc)
-        else { return nil }
-
-        var asbd = asbdPtr.pointee
-        guard let format = AVAudioFormat(streamDescription: &asbd) else { return nil }
-
-        let frameCount = AVAudioFrameCount(CMSampleBufferGetNumSamples(self))
-        guard frameCount > 0,
-              let pcm = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount)
-        else { return nil }
-
-        pcm.frameLength = frameCount
-        let status = CMSampleBufferCopyPCMDataIntoAudioBufferList(
-            self, at: 0, frameCount: Int32(frameCount), into: pcm.mutableAudioBufferList
-        )
-        return status == noErr ? pcm : nil
     }
 }
 
