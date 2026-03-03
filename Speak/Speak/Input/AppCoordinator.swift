@@ -191,21 +191,15 @@ final class AppCoordinator {
 
         // Paste if we have text
         if !text.isEmpty {
-            if contextReader.hasFocusedTextField(in: previousApp) {
-                // Hide overlay and paste normally
-                overlayManager.hide()
+            overlayManager.hide()
 
-                let autoPaste = UserDefaults.standard.bool(forKey: "autoPaste")
-                if autoPaste {
-                    await pasteService.paste(text, into: previousApp)
-                } else {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(text, forType: .string)
-                    previousApp?.activate()
-                }
+            let autoPaste = UserDefaults.standard.bool(forKey: "autoPaste")
+            if autoPaste {
+                await pasteService.paste(text, into: previousApp)
             } else {
-                showPasteFailedHint(text: text)
-                return
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(text, forType: .string)
+                previousApp?.activate()
             }
         } else {
             overlayManager.hide()
@@ -268,23 +262,16 @@ final class AppCoordinator {
 
         // Paste if we have text
         if !text.isEmpty {
-            if contextReader.hasFocusedTextField(in: previousApp) {
-                // Hide overlay and reset state
-                overlayManager.hide()
-                appState.reset()
+            overlayManager.hide()
+            appState.reset()
 
-                let autoPaste = UserDefaults.standard.bool(forKey: "autoPaste")
-                if autoPaste {
-                    await pasteService.paste(text, into: previousApp)
-                } else {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(text, forType: .string)
-                    previousApp?.activate()
-                }
+            let autoPaste = UserDefaults.standard.bool(forKey: "autoPaste")
+            if autoPaste {
+                await pasteService.paste(text, into: previousApp)
             } else {
-                appState.reset()
-                showPasteFailedHint(text: text)
-                return
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(text, forType: .string)
+                previousApp?.activate()
             }
         } else {
             overlayManager.hide()

@@ -85,7 +85,7 @@ private final class MockHistoryHotkey: HistoryHotkeyManaging {
 
 // MARK: - Tests
 
-@Suite("Paste Target")
+@Suite("Paste Target", .serialized)
 struct PasteTargetTests {
     private func configureDefaults() {
         let defaults = UserDefaults.standard
@@ -181,57 +181,40 @@ struct PasteTargetTests {
         #expect(context.readScreenVocabularyCallCount == 1)
     }
 
-    // MARK: - Paste-fail via confirm()
+    // MARK: - Auto-paste always attempts paste regardless of text field detection
 
     @Test @MainActor
-    func confirmWithNoTextFieldSkipsPasteAndShowsHint() async {
+    func confirmAlwaysPastesEvenWithoutDetectedTextField() async {
         configureDefaults()
         let context = MockContext()
         context.hasFocusedTextFieldResult = false
-        let (coordinator, appState, _, _, _, paster, _) = makeCoordinator(context: context)
+        let (coordinator, appState, _, _, overlay, paster, _) = makeCoordinator(context: context)
 
         await coordinator.start()
         appState.appendFinalizedText("Hello world")
         await coordinator.confirm()
 
-        #expect(!paster.pasteCalled)
-        #expect(appState.pasteFailedHint)
+        #expect(paster.pasteCalled)
+        #expect(paster.pastedText == "Hello world")
+        #expect(!appState.pasteFailedHint)
+        #expect(overlay.hideCalled)
     }
 
     @Test @MainActor
-    func confirmWithNoTextFieldPutsTextOnClipboard() async {
+    func confirmWithTextFieldPastesNormally() async {
         configureDefaults()
-        let context = MockContext()
-        context.hasFocusedTextFieldResult = false
-        let (coordinator, appState, _, _, _, _, _) = makeCoordinator(context: context)
+        let (coordinator, appState, _, _, _, paster, _) = makeCoordinator()
 
         await coordinator.start()
         appState.appendFinalizedText("Hello world")
         await coordinator.confirm()
 
-        let clipboardText = NSPasteboard.general.string(forType: .string)
-        #expect(clipboardText == "Hello world")
+        #expect(paster.pasteCalled)
+        #expect(!appState.pasteFailedHint)
     }
 
     @Test @MainActor
-    func confirmWithNoTextFieldShowsOverlay() async {
-        configureDefaults()
-        let context = MockContext()
-        context.hasFocusedTextFieldResult = false
-        let (coordinator, appState, _, _, overlay, _, _) = makeCoordinator(context: context)
-
-        await coordinator.start()
-        appState.appendFinalizedText("Hello world")
-        #expect(overlay.showCallCount == 1)
-
-        await coordinator.confirm()
-
-        #expect(overlay.showCallCount == 2)
-        #expect(overlay.hideCallCount == 0)
-    }
-
-    @Test @MainActor
-    func confirmWithNoTextFieldStillSavesToHistory() async {
+    func confirmSavesToHistoryRegardlessOfTextField() async {
         configureDefaults()
         let context = MockContext()
         context.hasFocusedTextFieldResult = false
@@ -244,27 +227,14 @@ struct PasteTargetTests {
         #expect(historyStore.mostRecent?.processedText == "Hello world")
     }
 
-    @Test @MainActor
-    func confirmWithTextFieldStillPastesNormally() async {
-        configureDefaults()
-        let (coordinator, appState, _, _, _, paster, _) = makeCoordinator()
-
-        await coordinator.start()
-        appState.appendFinalizedText("Hello world")
-        await coordinator.confirm()
-
-        #expect(paster.pasteCalled)
-        #expect(!appState.pasteFailedHint)
-    }
-
-    // MARK: - Paste-fail via pasteFromPreview()
+    // MARK: - Preview paste always attempts paste regardless of text field detection
 
     @Test @MainActor
-    func pasteFromPreviewWithNoTextFieldShowsHint() async {
+    func pasteFromPreviewAlwaysPastesEvenWithoutDetectedTextField() async {
         configureDefaults()
         let context = MockContext()
         context.hasFocusedTextFieldResult = false
-        let (coordinator, appState, _, _, _, paster, _) = makeCoordinator(context: context)
+        let (coordinator, appState, _, _, overlay, paster, _) = makeCoordinator(context: context)
 
         await coordinator.start()
         appState.appendFinalizedText("Hello world")
@@ -272,16 +242,40 @@ struct PasteTargetTests {
 
         await coordinator.pasteFromPreview()
 
+        #expect(paster.pasteCalled)
+        #expect(!appState.pasteFailedHint)
+        #expect(!appState.isPreviewing)
+        #expect(overlay.hideCalled)
+    }
+
+    // MARK: - Auto-paste OFF copies to clipboard without pasting
+
+    @Test @MainActor
+    func confirmWithAutoPasteOffCopiesToClipboard() async {
+        configureDefaults()
+        UserDefaults.standard.set(false, forKey: "autoPaste")
+        let context = MockContext()
+        context.hasFocusedTextFieldResult = false
+        let (coordinator, appState, _, _, overlay, paster, _) = makeCoordinator(context: context)
+
+        await coordinator.start()
+        appState.appendFinalizedText("Hello world")
+        await coordinator.confirm()
+
         #expect(!paster.pasteCalled)
-        #expect(appState.pasteFailedHint)
+        #expect(!appState.pasteFailedHint)
+        #expect(overlay.hideCalled)
+        let clipboardText = NSPasteboard.general.string(forType: .string)
+        #expect(clipboardText == "Hello world")
     }
 
     @Test @MainActor
-    func pasteFromPreviewWithNoTextFieldPutsTextOnClipboard() async {
+    func pasteFromPreviewWithAutoPasteOffCopiesToClipboard() async {
         configureDefaults()
+        UserDefaults.standard.set(false, forKey: "autoPaste")
         let context = MockContext()
         context.hasFocusedTextFieldResult = false
-        let (coordinator, appState, _, _, _, _, _) = makeCoordinator(context: context)
+        let (coordinator, appState, _, _, overlay, paster, _) = makeCoordinator(context: context)
 
         await coordinator.start()
         appState.appendFinalizedText("Preview text")
@@ -289,67 +283,10 @@ struct PasteTargetTests {
 
         await coordinator.pasteFromPreview()
 
-        let clipboardText = NSPasteboard.general.string(forType: .string)
-        #expect(clipboardText == "Preview text")
-    }
-
-    @Test @MainActor
-    func pasteFromPreviewWithNoTextFieldClearsPreviewState() async {
-        configureDefaults()
-        let context = MockContext()
-        context.hasFocusedTextFieldResult = false
-        let (coordinator, appState, _, _, _, _, _) = makeCoordinator(context: context)
-
-        await coordinator.start()
-        appState.appendFinalizedText("Hello world")
-        await coordinator.stopWithoutPaste()
-        #expect(appState.isPreviewing)
-
-        await coordinator.pasteFromPreview()
-
-        #expect(!appState.isPreviewing)
-        #expect(appState.pasteFailedHint)
-    }
-
-    // MARK: - Dismiss paste-failed hint
-
-    @Test @MainActor
-    func dismissPasteFailedHintResetsState() async {
-        configureDefaults()
-        let context = MockContext()
-        context.hasFocusedTextFieldResult = false
-        let (coordinator, appState, _, _, overlay, _, _) = makeCoordinator(context: context)
-
-        await coordinator.start()
-        appState.appendFinalizedText("Hello world")
-        await coordinator.confirm()
-        #expect(appState.pasteFailedHint)
-
-        NotificationCenter.default.post(name: .overlayCancelRequested, object: nil)
-        await Task.yield()
-
+        #expect(!paster.pasteCalled)
         #expect(!appState.pasteFailedHint)
         #expect(overlay.hideCalled)
-    }
-
-    @Test @MainActor
-    func newRecordingAfterPasteFailedHintWorks() async {
-        configureDefaults()
-        let context = MockContext()
-        context.hasFocusedTextFieldResult = false
-        let (coordinator, appState, _, _, _, _, _) = makeCoordinator(context: context)
-
-        await coordinator.start()
-        appState.appendFinalizedText("Hello world")
-        await coordinator.confirm()
-        #expect(appState.pasteFailedHint)
-
-        NotificationCenter.default.post(name: .overlayCancelRequested, object: nil)
-        await Task.yield()
-
-        context.hasFocusedTextFieldResult = true
-        await coordinator.start()
-        #expect(appState.isRecording)
-        #expect(!appState.pasteFailedHint)
+        let clipboardText = NSPasteboard.general.string(forType: .string)
+        #expect(clipboardText == "Preview text")
     }
 }
