@@ -30,7 +30,10 @@ enum PasteService {
         var activated = false
         for _ in 0 ..< 10 {
             try? await Task.sleep(for: .milliseconds(50))
-            if app.isActive { activated = true; break }
+            if app.isActive {
+                activated = true
+                break
+            }
         }
 
         guard activated else {
