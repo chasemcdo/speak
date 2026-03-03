@@ -13,19 +13,29 @@ struct AudioWaveformView: View {
     private let barScales: [CGFloat] = [0.5, 0.8, 1.0, 0.8, 0.5]
 
     var body: some View {
-        HStack(spacing: spacing) {
-            ForEach(0 ..< barCount, id: \.self) { index in
-                let level = index < barLevels.count ? CGFloat(barLevels[index]) : 0
-                let normalized = min(level / 0.015, 1.0)
-                let scaled = normalized * barScales[index]
-                let height = minHeight + scaled * (maxHeight - minHeight)
+        TimelineView(.animation) { timeline in
+            let time = timeline.date.timeIntervalSinceReferenceDate
 
-                RoundedRectangle(cornerRadius: barWidth / 2)
-                    .fill(.blue)
-                    .frame(width: barWidth, height: height)
+            HStack(spacing: spacing) {
+                ForEach(0 ..< barCount, id: \.self) { index in
+                    let level = index < barLevels.count ? CGFloat(barLevels[index]) : 0
+                    let normalized = min(level / 0.015, 1.0)
+                    let scaled = normalized * barScales[index]
+
+                    // Per-bar sine shimmer: ~1.3 Hz, phase offset of 2π/5 between bars
+                    let phase = time * 8.0 + Double(index) * (.pi * 2.0 / 5.0)
+                    let shimmer = (1.0 - 0.12 * sin(phase)) * Double(scaled)
+
+                    let height = minHeight + CGFloat(shimmer) * (maxHeight - minHeight)
+                    let opacity = 1.0 - 0.15 * sin(phase) * Double(scaled)
+
+                    RoundedRectangle(cornerRadius: barWidth / 2)
+                        .fill(.blue)
+                        .opacity(opacity)
+                        .frame(width: barWidth, height: height)
+                }
             }
+            .frame(height: maxHeight)
         }
-        .animation(.easeOut(duration: 0.08), value: barLevels)
-        .frame(height: maxHeight)
     }
 }
