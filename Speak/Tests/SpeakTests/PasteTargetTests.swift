@@ -223,6 +223,7 @@ struct PasteTargetTests {
         await coordinator.pasteFromPreview()
 
         #expect(paster.pasteCalled)
+        #expect(paster.pastedText == "Hello world")
         #expect(!appState.isPreviewing)
         #expect(overlay.hideCalled)
     }
