@@ -101,8 +101,6 @@ final class AppCoordinator {
                 guard let self, let appState = self.appState else { return }
                 if appState.isPreviewing {
                     await self.pasteFromPreview()
-                } else if appState.isRecording {
-                    await self.confirm()
                 }
             }
         }
@@ -421,8 +419,6 @@ final class AppCoordinator {
                 guard let self, let appState = self.appState, appState.isRecording else { return }
                 if event.keyCode == 53 { // Escape
                     await self.stopWithoutPaste()
-                } else if event.keyCode == 36 { // Return
-                    await self.confirm()
                 }
             }
         }
