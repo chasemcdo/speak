@@ -27,7 +27,7 @@ struct AudioWaveformView: View {
                     let shimmer = (1.0 - 0.12 * sin(phase)) * Double(scaled)
 
                     let height = minHeight + CGFloat(shimmer) * (maxHeight - minHeight)
-                    let opacity = 1.0 - 0.15 * sin(phase) * Double(scaled)
+                    let opacity = max(0, min(1.0, 1.0 - 0.15 * sin(phase) * Double(scaled)))
 
                     RoundedRectangle(cornerRadius: barWidth / 2)
                         .fill(.blue)
