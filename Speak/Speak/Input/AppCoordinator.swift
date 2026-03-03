@@ -184,11 +184,15 @@ final class AppCoordinator {
     func confirm() async {
         guard let appState, appState.isRecording else { return }
 
+        // Capture setting before async work so it reflects the user's
+        // intent at the time they stopped recording.
+        let autoPaste = UserDefaults.standard.bool(forKey: "autoPaste")
+
         let text = await stopAndProcess()
 
         // Paste if we have text
         if !text.isEmpty {
-            await deliverText(text)
+            await deliverText(text, autoPaste: autoPaste)
         } else {
             overlayManager.hide()
             appState.reset()
@@ -245,13 +249,14 @@ final class AppCoordinator {
     func pasteFromPreview() async {
         guard let appState, appState.isPreviewing else { return }
 
+        let autoPaste = UserDefaults.standard.bool(forKey: "autoPaste")
         let text = appState.previewText
         removePreviewMonitors()
 
         // Paste if we have text
         if !text.isEmpty {
             appState.reset()
-            await deliverText(text)
+            await deliverText(text, autoPaste: autoPaste)
         } else {
             overlayManager.hide()
             appState.reset()
@@ -393,10 +398,10 @@ final class AppCoordinator {
     }
 
     /// Deliver transcribed text via auto-paste or clipboard copy.
-    private func deliverText(_ text: String) async {
+    private func deliverText(_ text: String, autoPaste: Bool) async {
         overlayManager.hide()
 
-        if UserDefaults.standard.bool(forKey: "autoPaste") {
+        if autoPaste {
             await pasteService.paste(text, into: previousApp)
         } else {
             NSPasteboard.general.clearContents()

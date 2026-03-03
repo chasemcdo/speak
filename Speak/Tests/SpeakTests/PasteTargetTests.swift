@@ -235,6 +235,10 @@ struct PasteTargetTests {
         UserDefaults.standard.set(false, forKey: "autoPaste")
         let (coordinator, appState, _, _, overlay, paster, _) = makeCoordinator()
 
+        // Seed clipboard with a sentinel so we can verify it was overwritten
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString("__sentinel__", forType: .string)
+
         await coordinator.start()
         appState.appendFinalizedText("Hello world")
         await coordinator.confirm()
@@ -250,6 +254,9 @@ struct PasteTargetTests {
         configureDefaults()
         UserDefaults.standard.set(false, forKey: "autoPaste")
         let (coordinator, appState, _, _, overlay, paster, _) = makeCoordinator()
+
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString("__sentinel__", forType: .string)
 
         await coordinator.start()
         appState.appendFinalizedText("Preview text")
