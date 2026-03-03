@@ -62,6 +62,12 @@ final class AudioCaptureManager: @unchecked Sendable {
     // MARK: - Capture
 
     func startCapture() throws -> AsyncStream<AVAudioPCMBuffer> {
+        guard audioUnit == nil else {
+            throw AudioCaptureError.alreadyCapturing
+        }
+        guard Self.permissionGranted else {
+            throw AudioCaptureError.microphonePermissionDenied
+        }
         try validateAudioInput()
 
         let (stream, continuation) = AsyncStream<AVAudioPCMBuffer>.makeStream(
@@ -436,6 +442,7 @@ extension CMSampleBuffer {
 // MARK: - Errors
 
 enum AudioCaptureError: LocalizedError {
+    case alreadyCapturing
     case formatConversionFailed
     case microphonePermissionDenied
     case noAudioInputDevice
@@ -443,6 +450,8 @@ enum AudioCaptureError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
+        case .alreadyCapturing:
+            return "Audio capture is already running."
         case .formatConversionFailed:
             return "Failed to convert audio format for speech recognition."
         case .microphonePermissionDenied:
