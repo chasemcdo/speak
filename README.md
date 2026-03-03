@@ -29,8 +29,9 @@ Speak aims to bridge that gap: **the accuracy of Apple's SpeechAnalyzer for tran
 
 1. Grab the latest **Speak.dmg** from [Releases](../../releases)
 2. Open the DMG and drag **Speak** to your Applications folder
-3. On first launch, right-click the app and choose **Open** (macOS requires this for unsigned apps — you only need to do it once)
-4. Grant Microphone and Accessibility permissions when prompted
+3. On first launch, you will get a warning about this app being unsigned
+4. Open your Mac's **Devices and Security** setting and choose **Open anyway** at the bottom of the page (macOS requires this for unsigned apps — you only need to do it once)
+5. Grant Microphone and Accessibility permissions when prompted
 
 ### Build from source
 

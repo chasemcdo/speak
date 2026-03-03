@@ -37,6 +37,8 @@ export const metadata: Metadata = {
     title: "Speak",
     description:
       "Free native macOS dictation powered by Apple's on-device SpeechAnalyzer. No cloud, no subscription.",
+    site: "@get_speak",
+    creator: "@get_speak",
   },
 };
 
