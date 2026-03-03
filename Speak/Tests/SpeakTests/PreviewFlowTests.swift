@@ -44,10 +44,13 @@ private final class MockOverlay: OverlayPresenting {
 private final class MockPaster: Pasting {
     var pasteCalled = false
     var pastedText: String?
+    var pasteResult = true
 
-    func paste(_ text: String, into app: NSRunningApplication?) async {
+    @discardableResult
+    func paste(_ text: String, into app: NSRunningApplication?) async -> Bool {
         pasteCalled = true
         pastedText = text
+        return pasteResult
     }
 }
 

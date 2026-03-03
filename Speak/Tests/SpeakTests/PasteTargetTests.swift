@@ -46,10 +46,13 @@ private final class MockOverlay: OverlayPresenting {
 private final class MockPaster: Pasting {
     var pasteCalled = false
     var pastedText: String?
+    var pasteResult = true
 
-    func paste(_ text: String, into app: NSRunningApplication?) async {
+    @discardableResult
+    func paste(_ text: String, into app: NSRunningApplication?) async -> Bool {
         pasteCalled = true
         pastedText = text
+        return pasteResult
     }
 }
 
@@ -269,5 +272,70 @@ struct PasteTargetTests {
         #expect(overlay.hideCalled)
         let clipboardText = NSPasteboard.general.string(forType: .string)
         #expect(clipboardText == "Preview text")
+    }
+
+    // MARK: - Paste failure shows hint
+
+    @Test @MainActor
+    func confirmShowsHintOnPasteFailure() async {
+        configureDefaults()
+        let paster = MockPaster()
+        paster.pasteResult = false
+        let (coordinator, appState, _, _, overlay, _, _) = makeCoordinator(paster: paster)
+
+        await coordinator.start()
+        appState.appendFinalizedText("Hello world")
+        await coordinator.confirm()
+
+        #expect(appState.pasteFailedHint)
+        #expect(overlay.showCallCount >= 2, "Overlay should be re-shown for the hint")
+    }
+
+    @Test @MainActor
+    func pasteFromPreviewShowsHintOnPasteFailure() async {
+        configureDefaults()
+        let paster = MockPaster()
+        paster.pasteResult = false
+        let (coordinator, appState, _, _, overlay, _, _) = makeCoordinator(paster: paster)
+
+        await coordinator.start()
+        appState.appendFinalizedText("Hello world")
+        await coordinator.stopWithoutPaste()
+
+        await coordinator.pasteFromPreview()
+
+        #expect(appState.pasteFailedHint)
+        #expect(overlay.showCallCount >= 2, "Overlay should be re-shown for the hint")
+    }
+
+    @Test @MainActor
+    func autoPasteOffDoesNotShowHintOnFailure() async {
+        configureDefaults()
+        UserDefaults.standard.set(false, forKey: "autoPaste")
+        let paster = MockPaster()
+        paster.pasteResult = false
+        let (coordinator, appState, _, _, _, _, _) = makeCoordinator(paster: paster)
+
+        await coordinator.start()
+        appState.appendFinalizedText("Hello world")
+        await coordinator.confirm()
+
+        #expect(!appState.pasteFailedHint, "No hint when autoPaste is off — text is just copied to clipboard")
+    }
+
+    @Test @MainActor
+    func confirmShowsHintWhenNoFocusedTextField() async {
+        configureDefaults()
+        let context = MockContext()
+        context.hasFocusedTextFieldResult = false
+        let (coordinator, appState, _, _, overlay, paster, _) = makeCoordinator(context: context)
+
+        await coordinator.start()
+        appState.appendFinalizedText("Hello world")
+        await coordinator.confirm()
+
+        #expect(paster.pasteCalled, "Paste should still be attempted")
+        #expect(appState.pasteFailedHint, "Hint should show when no text field is focused")
+        #expect(overlay.showCallCount >= 2)
     }
 }

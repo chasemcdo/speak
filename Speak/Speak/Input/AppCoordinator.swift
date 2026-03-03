@@ -41,6 +41,7 @@ final class AppCoordinator {
     private var appState: AppState?
     private var historyStore: HistoryStore?
     private var previewDismissTimer: DispatchWorkItem?
+    private var pasteFailedHintTimer: DispatchWorkItem?
     private var recordingKeyMonitor: Any?
     private var previewKeyMonitor: Any?
     private var audioLevelMonitor: AudioLevelMonitor?
@@ -74,7 +75,9 @@ final class AppCoordinator {
         ) { [weak self] _ in
             Task { @MainActor in
                 guard let self, let appState = self.appState else { return }
-                if appState.isPreviewing {
+                if appState.pasteFailedHint {
+                    self.dismissPasteFailedHint()
+                } else if appState.isPreviewing {
                     self.dismissPreview()
                 } else if appState.isRecording {
                     await self.stopWithoutPaste()
@@ -402,12 +405,40 @@ final class AppCoordinator {
         overlayManager.hide()
 
         if autoPaste {
-            await pasteService.paste(text, into: previousApp)
+            let success = await pasteService.paste(text, into: previousApp)
+            if !success || !contextReader.hasFocusedTextField(in: previousApp) {
+                showPasteFailedHint()
+            }
         } else {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(text, forType: .string)
             previousApp?.activate()
         }
+    }
+
+    /// Show the paste-failed hint overlay and schedule auto-dismiss.
+    private func showPasteFailedHint() {
+        guard let appState else { return }
+        SoundFeedback.playPasteFailedSound()
+        appState.pasteFailedHint = true
+        overlayManager.show(appState: appState)
+
+        let work = DispatchWorkItem { [weak self] in
+            Task { @MainActor in
+                self?.dismissPasteFailedHint()
+            }
+        }
+        pasteFailedHintTimer = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: work)
+    }
+
+    /// Dismiss the paste-failed hint if it's still showing.
+    private func dismissPasteFailedHint() {
+        guard let appState, appState.pasteFailedHint else { return }
+        pasteFailedHintTimer?.cancel()
+        pasteFailedHintTimer = nil
+        overlayManager.hide()
+        appState.pasteFailedHint = false
     }
 
     /// Configure the text processing filters based on current user preferences.

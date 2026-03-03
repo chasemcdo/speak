@@ -40,6 +40,7 @@ struct AppStateTests {
         state.error = "Some error"
         state.isPreviewing = true
         state.previewText = "Preview text"
+        state.pasteFailedHint = true
 
         state.reset()
 
@@ -49,6 +50,7 @@ struct AppStateTests {
         #expect(state.error == nil)
         #expect(state.isPreviewing == false)
         #expect(state.previewText == "")
+        #expect(state.pasteFailedHint == false)
     }
 
     @Test @MainActor func appendFinalizedTextAppendsAndClearsVolatile() {
@@ -70,17 +72,6 @@ struct AppStateTests {
         let state = AppState()
         state.updateVolatileText("typing...")
         #expect(state.volatileText == "typing...")
-    }
-
-    // MARK: - Paste-failed hint
-
-    @Test @MainActor func resetClearsPasteFailedHint() {
-        let state = AppState()
-        state.pasteFailedHint = true
-
-        state.reset()
-
-        #expect(state.pasteFailedHint == false)
     }
 
     // MARK: - Preview state

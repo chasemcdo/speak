@@ -6,7 +6,9 @@ enum PasteService {
     /// Paste the given text into the target application.
     /// Saves the current pasteboard, writes the text, simulates Cmd+V,
     /// then restores the original pasteboard after a delay.
-    static func paste(_ text: String, into app: NSRunningApplication?) async {
+    /// Returns `true` on success, `false` if the target app could not be activated.
+    @discardableResult
+    static func paste(_ text: String, into app: NSRunningApplication?) async -> Bool {
         let pasteboard = NSPasteboard.general
 
         // 1. Save current pasteboard contents
@@ -18,13 +20,22 @@ enum PasteService {
         pasteboard.setString(text, forType: .string)
 
         // 3. Activate the target app so it receives the keystroke
-        if let app {
-            app.activate()
-            // Wait for the app to actually become frontmost
-            for _ in 0 ..< 10 {
-                try? await Task.sleep(for: .milliseconds(50))
-                if app.isActive { break }
-            }
+        guard let app else {
+            // No target app — leave text on clipboard for manual paste
+            return false
+        }
+
+        app.activate()
+        // Wait for the app to actually become frontmost
+        var activated = false
+        for _ in 0 ..< 10 {
+            try? await Task.sleep(for: .milliseconds(50))
+            if app.isActive { activated = true; break }
+        }
+
+        guard activated else {
+            // Target app couldn't be activated — leave text on clipboard for manual paste
+            return false
         }
 
         // Small extra delay to ensure the app's text field is ready
@@ -44,6 +55,8 @@ enum PasteService {
                 }
             }
         }
+
+        return true
     }
 
     /// Simulate a Cmd+V keystroke using CGEvent.

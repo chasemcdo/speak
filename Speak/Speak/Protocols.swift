@@ -25,12 +25,14 @@ extension OverlayManager: OverlayPresenting {}
 
 @MainActor
 protocol Pasting {
-    func paste(_ text: String, into app: NSRunningApplication?) async
+    @discardableResult
+    func paste(_ text: String, into app: NSRunningApplication?) async -> Bool
 }
 
 @MainActor
 struct PasteServiceAdapter: Pasting {
-    func paste(_ text: String, into app: NSRunningApplication?) async {
+    @discardableResult
+    func paste(_ text: String, into app: NSRunningApplication?) async -> Bool {
         await PasteService.paste(text, into: app)
     }
 }
