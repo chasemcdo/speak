@@ -8,6 +8,10 @@ final class AudioCaptureManager: @unchecked Sendable {
     private let callbackState = InputCallbackState()
     private let captureQueue = DispatchQueue(label: "com.speak.audio-capture", qos: .userInteractive)
 
+    deinit {
+        stopCapture()
+    }
+
     var levelMonitor: AudioLevelMonitor? {
         get { callbackState.levelMonitor }
         set { callbackState.levelMonitor = newValue }
@@ -169,6 +173,11 @@ final class AudioCaptureManager: @unchecked Sendable {
             try osCheck(AudioUnitInitialize(unit))
             try osCheck(AudioOutputUnitStart(unit))
         } catch {
+            callbackState.audioUnit = nil
+            callbackState.captureFormat = nil
+            callbackState.continuation?.finish()
+            callbackState.continuation = nil
+            callbackState.converter = nil
             AudioComponentInstanceDispose(unit)
             throw error
         }
@@ -334,14 +343,53 @@ private func halInputCallback(
 // MARK: - InputCallbackState
 
 /// Shared mutable state accessed from the HAL I/O callback and the processing queue.
+/// All property access is serialized through `lock` to prevent data races between
+/// the caller thread (start/stop), the I/O callback, and the processing queue.
 private final class InputCallbackState: @unchecked Sendable {
-    var continuation: AsyncStream<AVAudioPCMBuffer>.Continuation?
-    var converter: AVAudioConverter?
-    var targetFormat: AVAudioFormat?
-    var captureFormat: AVAudioFormat?
-    var levelMonitor: AudioLevelMonitor?
-    var audioUnit: AudioUnit?
-    var captureQueue: DispatchQueue?
+    private let lock = NSLock()
+
+    private var _continuation: AsyncStream<AVAudioPCMBuffer>.Continuation?
+    private var _converter: AVAudioConverter?
+    private var _targetFormat: AVAudioFormat?
+    private var _captureFormat: AVAudioFormat?
+    private var _levelMonitor: AudioLevelMonitor?
+    private var _audioUnit: AudioUnit?
+    private var _captureQueue: DispatchQueue?
+
+    var continuation: AsyncStream<AVAudioPCMBuffer>.Continuation? {
+        get { lock.withLock { _continuation } }
+        set { lock.withLock { _continuation = newValue } }
+    }
+
+    var converter: AVAudioConverter? {
+        get { lock.withLock { _converter } }
+        set { lock.withLock { _converter = newValue } }
+    }
+
+    var targetFormat: AVAudioFormat? {
+        get { lock.withLock { _targetFormat } }
+        set { lock.withLock { _targetFormat = newValue } }
+    }
+
+    var captureFormat: AVAudioFormat? {
+        get { lock.withLock { _captureFormat } }
+        set { lock.withLock { _captureFormat = newValue } }
+    }
+
+    var levelMonitor: AudioLevelMonitor? {
+        get { lock.withLock { _levelMonitor } }
+        set { lock.withLock { _levelMonitor = newValue } }
+    }
+
+    var audioUnit: AudioUnit? {
+        get { lock.withLock { _audioUnit } }
+        set { lock.withLock { _audioUnit = newValue } }
+    }
+
+    var captureQueue: DispatchQueue? {
+        get { lock.withLock { _captureQueue } }
+        set { lock.withLock { _captureQueue = newValue } }
+    }
 
     func processBuffer(_ buffer: AVAudioPCMBuffer) {
         levelMonitor?.updateRMS(from: buffer)
