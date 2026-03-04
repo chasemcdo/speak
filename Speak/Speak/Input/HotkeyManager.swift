@@ -56,6 +56,7 @@ final class HotkeyManager {
     private var eventTapRunLoopSource: CFRunLoopSource?
     private var onStart: (() -> Void)?
     private var onStop: (() -> Void)?
+    private var onModeChange: ((RecordingMode) -> Void)?
 
     /// Internal state machine for gesture recognition.
     private enum State {
@@ -89,9 +90,14 @@ final class HotkeyManager {
 
     // MARK: - Public API
 
-    func register(onStart: @escaping () -> Void, onStop: @escaping () -> Void) {
+    func register(
+        onStart: @escaping () -> Void,
+        onStop: @escaping () -> Void,
+        onModeChange: @escaping (RecordingMode) -> Void
+    ) {
         self.onStart = onStart
         self.onStop = onStop
+        self.onModeChange = onModeChange
 
         // Monitor flagsChanged for the configured modifier key (works system-wide)
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
@@ -115,6 +121,7 @@ final class HotkeyManager {
         localMonitor = nil
         onStart = nil
         onStop = nil
+        onModeChange = nil
         cancelTimers()
         removeKeyDownMonitor()
         state = .idle
@@ -164,6 +171,7 @@ final class HotkeyManager {
                 if event.getIntegerValueField(.keyboardEventKeycode) == 0x31,
                    manager.state == .holdRecording {
                     manager.state = .toggleRecording
+                    manager.onModeChange?(.toggle)
                     return nil
                 }
 
@@ -215,6 +223,7 @@ final class HotkeyManager {
     func handleKeyDown(_ event: NSEvent) -> Bool {
         guard event.keyCode == 0x31, state == .holdRecording else { return false }
         state = .toggleRecording
+        onModeChange?(.toggle)
         removeKeyDownMonitor()
         return true
     }
@@ -250,6 +259,7 @@ final class HotkeyManager {
                 guard let self, self.state == .firstDown else { return }
                 self.state = .holdRecording
                 self.installKeyDownMonitor()
+                self.onModeChange?(.hold)
                 self.onStart?()
             }
             holdTimer = work
@@ -298,6 +308,7 @@ final class HotkeyManager {
             // Release after the second tap of a double-tap — ignore this release,
             // recording continues in toggle mode.
             state = .toggleRecording
+            onModeChange?(.toggle)
 
         case .toggleRecording:
             // fn released while in toggle mode (after hold→space transition) —

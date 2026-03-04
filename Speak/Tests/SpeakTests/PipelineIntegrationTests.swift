@@ -65,7 +65,15 @@ private final class MockContext: ContextReading {
 }
 
 private final class MockHotkey: HotkeyManaging {
-    func register(onStart: @escaping () -> Void, onStop: @escaping () -> Void) {}
+    var onModeChange: ((RecordingMode) -> Void)?
+
+    func register(
+        onStart: @escaping () -> Void,
+        onStop: @escaping () -> Void,
+        onModeChange: @escaping (RecordingMode) -> Void
+    ) {
+        self.onModeChange = onModeChange
+    }
     func resetState() {}
 }
 
@@ -323,6 +331,134 @@ struct PipelineIntegrationTests {
         await coordinator.cancel()
         #expect(appState.audioLevel == nil)
         #expect(transcriber.levelMonitor == nil)
+    }
+
+    // MARK: - Recording mode wiring
+
+    @Test @MainActor
+    func modeChangeWiresToAppState() async {
+        configureDefaults()
+
+        let hotkey = MockHotkey()
+        let transcriber = MockTranscriber()
+        let overlay = MockOverlay()
+        let paster = MockPaster()
+        let appState = AppState()
+        let historyStore = HistoryStore()
+
+        let coordinator = makeCoordinator(
+            transcriber: transcriber, overlay: overlay, paster: paster,
+            hotkeyManager: hotkey
+        )
+        coordinator.setUp(appState: appState, historyStore: historyStore)
+
+        hotkey.onModeChange?(.hold)
+        await Task.yield()
+        #expect(appState.recordingMode == .hold)
+
+        hotkey.onModeChange?(.toggle)
+        await Task.yield()
+        #expect(appState.recordingMode == .toggle)
+    }
+
+    @Test @MainActor
+    func confirmFromOverlayDuringRecordingStopsAndPastes() async {
+        configureDefaults()
+
+        let transcriber = MockTranscriber()
+        let overlay = MockOverlay()
+        let paster = MockPaster()
+        let appState = AppState()
+        let historyStore = HistoryStore()
+
+        let coordinator = makeCoordinator(
+            transcriber: transcriber, overlay: overlay, paster: paster
+        )
+        coordinator.setUp(appState: appState, historyStore: historyStore)
+
+        await coordinator.start()
+        appState.appendFinalizedText("Stop button text.")
+
+        NotificationCenter.default.post(name: .overlayConfirmRequested, object: nil)
+        // Allow the notification handler to process
+        try? await Task.sleep(for: .milliseconds(100))
+
+        #expect(transcriber.stopSessionCalled)
+        #expect(paster.pasteCalled)
+        #expect(paster.pastedText == "Stop button text.")
+        #expect(overlay.hideCalled)
+    }
+
+    @Test @MainActor
+    func confirmFromOverlayWhenNotRecordingIsNoOp() async {
+        configureDefaults()
+
+        let transcriber = MockTranscriber()
+        let overlay = MockOverlay()
+        let paster = MockPaster()
+        let appState = AppState()
+        let historyStore = HistoryStore()
+
+        let coordinator = makeCoordinator(
+            transcriber: transcriber, overlay: overlay, paster: paster
+        )
+        coordinator.setUp(appState: appState, historyStore: historyStore)
+
+        // Don't start recording — post confirm notification
+        NotificationCenter.default.post(name: .overlayConfirmRequested, object: nil)
+        await Task.yield()
+
+        #expect(!paster.pasteCalled)
+        #expect(!transcriber.stopSessionCalled)
+    }
+
+    @Test @MainActor
+    func modeResetsOnNextStart() async {
+        configureDefaults()
+
+        let transcriber = MockTranscriber()
+        let overlay = MockOverlay()
+        let paster = MockPaster()
+        let appState = AppState()
+        let historyStore = HistoryStore()
+
+        let coordinator = makeCoordinator(
+            transcriber: transcriber, overlay: overlay, paster: paster
+        )
+        coordinator.setUp(appState: appState, historyStore: historyStore)
+
+        await coordinator.start()
+        appState.recordingMode = .toggle
+        appState.appendFinalizedText("Text")
+
+        await coordinator.confirm()
+
+        // start() calls reset() which clears recordingMode
+        await coordinator.start()
+        #expect(appState.recordingMode == .hold)
+    }
+
+    @Test @MainActor
+    func modeResetsAfterCancel() async {
+        configureDefaults()
+
+        let transcriber = MockTranscriber()
+        let overlay = MockOverlay()
+        let paster = MockPaster()
+        let appState = AppState()
+        let historyStore = HistoryStore()
+
+        let coordinator = makeCoordinator(
+            transcriber: transcriber, overlay: overlay, paster: paster
+        )
+        coordinator.setUp(appState: appState, historyStore: historyStore)
+
+        await coordinator.start()
+        appState.recordingMode = .toggle
+
+        await coordinator.cancel()
+
+        #expect(appState.recordingMode == .hold)
     }
 
     @Test @MainActor

@@ -64,6 +64,11 @@ final class AppCoordinator {
                 Task { @MainActor in
                     await self?.confirm()
                 }
+            },
+            onModeChange: { [weak self] mode in
+                Task { @MainActor in
+                    self?.appState?.recordingMode = mode
+                }
             }
         )
 
@@ -92,7 +97,9 @@ final class AppCoordinator {
         ) { [weak self] _ in
             Task { @MainActor in
                 guard let self, let appState = self.appState else { return }
-                if appState.isPreviewing {
+                if appState.isRecording {
+                    await self.confirm()
+                } else if appState.isPreviewing {
                     await self.pasteFromPreview()
                 }
             }

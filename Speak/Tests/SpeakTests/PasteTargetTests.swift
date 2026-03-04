@@ -75,7 +75,11 @@ private final class MockContext: ContextReading {
 }
 
 private final class MockHotkey: HotkeyManaging {
-    func register(onStart: @escaping () -> Void, onStop: @escaping () -> Void) {}
+    func register(
+        onStart: @escaping () -> Void,
+        onStop: @escaping () -> Void,
+        onModeChange: @escaping (RecordingMode) -> Void
+    ) {}
     func resetState() {}
 }
 

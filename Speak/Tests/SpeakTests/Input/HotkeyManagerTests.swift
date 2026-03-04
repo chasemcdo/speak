@@ -49,7 +49,8 @@ struct HotkeyManagerTests {
 
         manager.register(
             onStart: { startCalled = true },
-            onStop: { stopCalled = true }
+            onStop: { stopCalled = true },
+            onModeChange: { _ in }
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function) else {
@@ -84,7 +85,8 @@ struct HotkeyManagerTests {
 
         manager.register(
             onStart: { startCalled = true },
-            onStop: { stopCalled = true }
+            onStop: { stopCalled = true },
+            onModeChange: { _ in }
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
@@ -125,7 +127,7 @@ struct HotkeyManagerTests {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()
-        manager.register(onStart: {}, onStop: {})
+        manager.register(onStart: {}, onStop: {}, onModeChange: { _ in })
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function) else {
             Issue.record("Failed to create event")
@@ -152,7 +154,7 @@ struct HotkeyManagerTests {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()
-        manager.register(onStart: {}, onStop: {})
+        manager.register(onStart: {}, onStop: {}, onModeChange: { _ in })
 
         guard let spaceEvent = keyDownEvent(keyCode: 0x31, characters: " ") else {
             Issue.record("Failed to create keyDown event")
@@ -169,7 +171,7 @@ struct HotkeyManagerTests {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()
-        manager.register(onStart: {}, onStop: {})
+        manager.register(onStart: {}, onStop: {}, onModeChange: { _ in })
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
               let upEvent = flagsChangedEvent(modifierFlags: []) else {
@@ -206,7 +208,8 @@ struct HotkeyManagerTests {
 
         manager.register(
             onStart: { startCalled = true },
-            onStop: { stopCalled = true }
+            onStop: { stopCalled = true },
+            onModeChange: { _ in }
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
@@ -243,7 +246,7 @@ struct HotkeyManagerTests {
 
         let manager = HotkeyManager()
         var stopCalled = false
-        manager.register(onStart: {}, onStop: { stopCalled = true })
+        manager.register(onStart: {}, onStop: { stopCalled = true }, onModeChange: { _ in })
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
               let upEvent = flagsChangedEvent(modifierFlags: []) else {
@@ -273,7 +276,7 @@ struct HotkeyManagerTests {
 
         let manager = HotkeyManager()
         var stopCalled = false
-        manager.register(onStart: {}, onStop: { stopCalled = true })
+        manager.register(onStart: {}, onStop: { stopCalled = true }, onModeChange: { _ in })
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function) else {
             Issue.record("Failed to create event")
@@ -291,6 +294,208 @@ struct HotkeyManagerTests {
         }
         manager.handleFlagsChanged(mixedEvent)
         #expect(stopCalled)
+
+        manager.unregister()
+    }
+
+    // MARK: - Mode change callbacks
+
+    @Test @MainActor
+    func holdActivationFiresModeChangeHold() async throws {
+        UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
+
+        let manager = HotkeyManager()
+        var modeChanges: [RecordingMode] = []
+
+        manager.register(
+            onStart: {},
+            onStop: {},
+            onModeChange: { modeChanges.append($0) }
+        )
+
+        guard let downEvent = flagsChangedEvent(modifierFlags: .function) else {
+            Issue.record("Failed to create event")
+            return
+        }
+        manager.handleFlagsChanged(downEvent)
+
+        // Wait for hold threshold
+        try await Task.sleep(for: .milliseconds(400))
+
+        #expect(modeChanges == [.hold])
+
+        manager.unregister()
+    }
+
+    @Test @MainActor
+    func doubleTapFiresModeChangeToggle() {
+        UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
+
+        let manager = HotkeyManager()
+        var modeChanges: [RecordingMode] = []
+
+        manager.register(
+            onStart: {},
+            onStop: {},
+            onModeChange: { modeChanges.append($0) }
+        )
+
+        guard let downEvent = flagsChangedEvent(modifierFlags: .function),
+              let upEvent = flagsChangedEvent(modifierFlags: []) else {
+            Issue.record("Failed to create events")
+            return
+        }
+
+        // Double-tap: first tap
+        manager.handleFlagsChanged(downEvent)
+        manager.handleFlagsChanged(upEvent)
+
+        // Second tap press (triggers onStart)
+        manager.handleFlagsChanged(downEvent)
+        #expect(modeChanges.isEmpty) // Not yet — fires on release
+
+        // Second tap release → enters toggleRecording
+        manager.handleFlagsChanged(upEvent)
+        #expect(modeChanges == [.toggle])
+
+        manager.unregister()
+    }
+
+    @Test @MainActor
+    func spacebarTransitionFiresModeChangeToggle() async throws {
+        UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
+
+        let manager = HotkeyManager()
+        var modeChanges: [RecordingMode] = []
+
+        manager.register(
+            onStart: {},
+            onStop: {},
+            onModeChange: { modeChanges.append($0) }
+        )
+
+        guard let downEvent = flagsChangedEvent(modifierFlags: .function) else {
+            Issue.record("Failed to create event")
+            return
+        }
+        manager.handleFlagsChanged(downEvent)
+
+        // Wait for hold threshold → fires .hold
+        try await Task.sleep(for: .milliseconds(400))
+        #expect(modeChanges == [.hold])
+
+        // Spacebar → fires .toggle
+        guard let spaceEvent = keyDownEvent(keyCode: 0x31, characters: " ", modifierFlags: .function) else {
+            Issue.record("Failed to create keyDown event")
+            return
+        }
+        manager.handleKeyDown(spaceEvent)
+        #expect(modeChanges == [.hold, .toggle])
+
+        manager.unregister()
+    }
+
+    @Test @MainActor
+    func quickSingleTapFiresNoModeChange() async throws {
+        UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
+
+        let manager = HotkeyManager()
+        var modeChanges: [RecordingMode] = []
+
+        manager.register(
+            onStart: {},
+            onStop: {},
+            onModeChange: { modeChanges.append($0) }
+        )
+
+        guard let downEvent = flagsChangedEvent(modifierFlags: .function),
+              let upEvent = flagsChangedEvent(modifierFlags: []) else {
+            Issue.record("Failed to create events")
+            return
+        }
+
+        // Quick tap — release before hold threshold
+        manager.handleFlagsChanged(downEvent)
+        manager.handleFlagsChanged(upEvent)
+
+        // Wait for double-tap window to expire
+        try await Task.sleep(for: .milliseconds(400))
+
+        #expect(modeChanges.isEmpty)
+
+        manager.unregister()
+    }
+
+    @Test @MainActor
+    func resetStateDuringHoldFiresNoExtraModeChange() async throws {
+        UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
+
+        let manager = HotkeyManager()
+        var modeChanges: [RecordingMode] = []
+
+        manager.register(
+            onStart: {},
+            onStop: {},
+            onModeChange: { modeChanges.append($0) }
+        )
+
+        guard let downEvent = flagsChangedEvent(modifierFlags: .function),
+              let upEvent = flagsChangedEvent(modifierFlags: []) else {
+            Issue.record("Failed to create events")
+            return
+        }
+
+        // Enter hold mode
+        manager.handleFlagsChanged(downEvent)
+        try await Task.sleep(for: .milliseconds(400))
+        #expect(modeChanges == [.hold])
+
+        // Reset externally
+        manager.resetState()
+
+        // Release — should NOT fire additional mode change
+        manager.handleFlagsChanged(upEvent)
+        #expect(modeChanges == [.hold])
+
+        manager.unregister()
+    }
+
+    @Test @MainActor
+    func multipleSpacebarPressesFiresToggleOnlyOnce() async throws {
+        UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
+
+        let manager = HotkeyManager()
+        var modeChanges: [RecordingMode] = []
+
+        manager.register(
+            onStart: {},
+            onStop: {},
+            onModeChange: { modeChanges.append($0) }
+        )
+
+        guard let downEvent = flagsChangedEvent(modifierFlags: .function) else {
+            Issue.record("Failed to create event")
+            return
+        }
+        manager.handleFlagsChanged(downEvent)
+
+        // Wait for hold threshold
+        try await Task.sleep(for: .milliseconds(400))
+        #expect(modeChanges == [.hold])
+
+        guard let spaceEvent = keyDownEvent(keyCode: 0x31, characters: " ", modifierFlags: .function) else {
+            Issue.record("Failed to create keyDown event")
+            return
+        }
+
+        // First spacebar → transition to toggle
+        manager.handleKeyDown(spaceEvent)
+        #expect(modeChanges == [.hold, .toggle])
+
+        // Second spacebar → already in toggleRecording, not consumed
+        let consumed = manager.handleKeyDown(spaceEvent)
+        #expect(!consumed)
+        #expect(modeChanges == [.hold, .toggle])
 
         manager.unregister()
     }

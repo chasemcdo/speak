@@ -30,12 +30,12 @@ struct OverlayView: View {
             if appState.isPostProcessing {
                 ProcessingIndicator()
                     .padding(.top, 4)
-            } else if let monitor = appState.audioLevel {
-                AudioWaveformView(barLevels: monitor.barLevels)
-                    .padding(.top, 4)
             } else {
-                RecordingDot()
-                    .padding(.top, 4)
+                RecordingIndicator(
+                    audioLevel: appState.audioLevel,
+                    recordingMode: appState.recordingMode
+                )
+                .padding(.top, 2)
             }
 
             // Transcription text
@@ -122,6 +122,52 @@ struct OverlayView: View {
         )
         .font(.body)
         .lineLimit(8)
+    }
+}
+
+// MARK: - Recording indicator
+
+struct RecordingIndicator: View {
+    var audioLevel: AudioLevelMonitor?
+    var recordingMode: RecordingMode
+
+    var body: some View {
+        HStack(spacing: 6) {
+            if recordingMode == .toggle {
+                Button {
+                    NotificationCenter.default.post(name: .overlayCancelRequested, object: nil)
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 16, height: 16)
+                        .background(.secondary.opacity(0.15), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .transition(.scale.combined(with: .opacity))
+            }
+
+            if let monitor = audioLevel {
+                AudioWaveformView(barLevels: monitor.barLevels)
+            } else {
+                RecordingDot()
+            }
+
+            if recordingMode == .toggle {
+                Button {
+                    NotificationCenter.default.post(name: .overlayConfirmRequested, object: nil)
+                } label: {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(.red)
+                        .frame(width: 8, height: 8)
+                        .frame(width: 16, height: 16)
+                        .background(.secondary.opacity(0.15), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .transition(.scale.combined(with: .opacity))
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: recordingMode)
     }
 }
 
