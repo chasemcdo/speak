@@ -213,14 +213,8 @@ struct PreviewFlowTests {
         appState.appendFinalizedText("Text")
 
         await coordinator.stopWithoutPaste()
-
-        // Mode should reset since stopAndProcess calls reset-related paths
-        // Preview retains previewText but recordingMode resets via appState.reset()
-        // Actually stopWithoutPaste doesn't call reset — it keeps preview state.
-        // The mode persists during preview, but resets when preview is dismissed.
         #expect(appState.isPreviewing)
 
-        // Dismissing the preview resets everything
         coordinator.dismissPreview()
         #expect(appState.recordingMode == .hold)
     }
