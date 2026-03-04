@@ -74,6 +74,7 @@ private final class MockHotkey: HotkeyManaging {
     ) {
         self.onModeChange = onModeChange
     }
+
     func resetState() {}
 }
 
@@ -83,7 +84,7 @@ private final class MockHistoryHotkey: HistoryHotkeyManaging {
 
 // MARK: - Tests
 
-@Suite("Pipeline Integration")
+@Suite("Pipeline Integration", .serialized)
 struct PipelineIntegrationTests {
     private func configureDefaults() {
         let defaults = UserDefaults.standard
