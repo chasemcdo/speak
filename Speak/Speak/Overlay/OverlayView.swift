@@ -63,7 +63,6 @@ struct OverlayView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .animation(.easeOut(duration: 0.2), value: appState.recordingMode)
     }
 
     private var pasteFailedHintContent: some View {
