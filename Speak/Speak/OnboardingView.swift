@@ -2,6 +2,7 @@ import SwiftUI
 
 struct OnboardingView: View {
     @Environment(AppState.self) private var appState
+    @Environment(AppCoordinator.self) private var coordinator
     @Environment(\.dismissWindow) private var dismissWindow
     @AppStorage("onboardingComplete") private var onboardingComplete = false
 
@@ -64,6 +65,7 @@ struct OnboardingView: View {
             // Done button
             if allGranted {
                 Button("Get Started") {
+                    coordinator.preloadModel()
                     onboardingComplete = true
                     dismissWindow(id: "onboarding")
                 }

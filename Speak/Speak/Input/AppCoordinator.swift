@@ -47,6 +47,7 @@ final class AppCoordinator {
     private var cancelObserver: Any?
     private var confirmObserver: Any?
     private var pasteFailedHintTimer: DispatchWorkItem?
+    private var preloadTask: Task<Void, Never>?
 
     /// Set up the coordinator with the shared app state. Call once at app launch.
     func setUp(appState: AppState, historyStore: HistoryStore) {
@@ -116,7 +117,7 @@ final class AppCoordinator {
     /// Pre-download the speech model for the user's selected locale so it's
     /// ready when they start recording.
     func preloadModel() {
-        Task {
+        preloadTask = Task {
             let modelManager = ModelManager()
             let locale = UserDefaults.standard.string(forKey: "locale")
                 .flatMap { Locale(identifier: $0) } ?? Locale.current
@@ -158,6 +159,9 @@ final class AppCoordinator {
         // Start transcription
         let locale = UserDefaults.standard.string(forKey: "locale")
             .flatMap { Locale(identifier: $0) } ?? Locale.current
+
+        // Wait for any in-flight preload to finish
+        await preloadTask?.value
 
         do {
             try await transcriptionEngine.startSession(appState: appState, locale: locale)

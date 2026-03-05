@@ -11,6 +11,9 @@ struct MenuBarView: View {
 
     var body: some View {
         Group {
+            EmptyView()
+                .task { coordinator.preloadModel() }
+
             if appState.isPreviewing {
                 Button("Paste Transcription") {
                     Task { await coordinator.pasteFromPreview() }
