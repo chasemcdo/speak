@@ -175,11 +175,13 @@ final class AppCoordinator {
             .flatMap { Locale(identifier: $0) } ?? Locale.current
 
         // Wait for any in-flight preload, but don't block recording forever
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask { await self.preloadTask?.value }
-            group.addTask { try? await Task.sleep(for: .seconds(10)) }
-            await group.next()
-            group.cancelAll()
+        if let task = preloadTask {
+            await withTaskGroup(of: Void.self) { group in
+                group.addTask { await task.value }
+                group.addTask { try? await Task.sleep(for: .seconds(10)) }
+                await group.next()
+                group.cancelAll()
+            }
         }
 
         do {
