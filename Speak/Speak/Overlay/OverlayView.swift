@@ -33,7 +33,8 @@ struct OverlayView: View {
             } else {
                 RecordingIndicator(
                     audioLevel: appState.audioLevel,
-                    recordingMode: appState.recordingMode
+                    recordingMode: appState.recordingMode,
+                    isRecording: appState.isRecording
                 )
                 .padding(.top, 2)
             }
@@ -130,10 +131,15 @@ struct OverlayView: View {
 struct RecordingIndicator: View {
     var audioLevel: AudioLevelMonitor?
     var recordingMode: RecordingMode
+    var isRecording: Bool
+
+    private var showButtons: Bool {
+        recordingMode == .toggle && isRecording
+    }
 
     var body: some View {
         HStack(spacing: 6) {
-            if recordingMode == .toggle {
+            if showButtons {
                 Button {
                     NotificationCenter.default.post(name: .overlayCancelRequested, object: nil)
                 } label: {
@@ -144,6 +150,7 @@ struct RecordingIndicator: View {
                         .background(.secondary.opacity(0.15), in: Circle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Cancel recording")
                 .transition(.scale.combined(with: .opacity))
             }
 
@@ -153,7 +160,7 @@ struct RecordingIndicator: View {
                 RecordingDot()
             }
 
-            if recordingMode == .toggle {
+            if showButtons {
                 Button {
                     NotificationCenter.default.post(name: .overlayConfirmRequested, object: nil)
                 } label: {
@@ -164,6 +171,7 @@ struct RecordingIndicator: View {
                         .background(.secondary.opacity(0.15), in: Circle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Stop and paste")
                 .transition(.scale.combined(with: .opacity))
             }
         }

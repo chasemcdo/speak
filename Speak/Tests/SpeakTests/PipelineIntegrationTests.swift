@@ -433,6 +433,7 @@ struct PipelineIntegrationTests {
         appState.appendFinalizedText("Text")
 
         await coordinator.confirm()
+        #expect(appState.recordingMode == .toggle)
 
         // start() calls reset() which clears recordingMode
         await coordinator.start()

@@ -214,6 +214,7 @@ struct PreviewFlowTests {
 
         await coordinator.stopWithoutPaste()
         #expect(appState.isPreviewing)
+        #expect(appState.recordingMode == .toggle)
 
         coordinator.dismissPreview()
         #expect(appState.recordingMode == .hold)
