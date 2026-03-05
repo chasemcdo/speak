@@ -134,7 +134,6 @@ final class AppCoordinator {
             await MainActor.run {
                 guard let self, self.preloadLocaleID == localeID else { return }
                 self.preloadTask = nil
-                self.preloadLocaleID = nil
             }
         }
     }
@@ -170,10 +169,6 @@ final class AppCoordinator {
         transcriptionEngine.levelMonitor = monitor
         appState.audioLevel = monitor
 
-        // Start transcription
-        let locale = UserDefaults.standard.string(forKey: "locale")
-            .flatMap { Locale(identifier: $0) } ?? Locale.current
-
         // Wait for any in-flight preload, but don't block recording forever
         if let task = preloadTask {
             await withTaskGroup(of: Void.self) { group in
@@ -183,6 +178,10 @@ final class AppCoordinator {
                 group.cancelAll()
             }
         }
+
+        // Read locale after preload await so we pick up any change made during the wait
+        let locale = UserDefaults.standard.string(forKey: "locale")
+            .flatMap { Locale(identifier: $0) } ?? Locale.current
 
         do {
             try await transcriptionEngine.startSession(appState: appState, locale: locale)
