@@ -107,10 +107,10 @@ struct OverlayView: View {
 
     private var pasteFailedHintContent: some View {
         VStack(spacing: 4) {
-            Text("No text field selected")
+            Text("Couldn't paste automatically")
                 .font(.body)
                 .foregroundStyle(.primary)
-            Text("Press \u{2303}\u{2318}V to paste later.")
+            Text("Text copied — press \u{2318}V to paste manually.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
