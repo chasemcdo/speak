@@ -127,6 +127,7 @@ final class AppCoordinator {
         }
 
         preloadLocaleID = localeID
+        preloadTask?.cancel()
         preloadTask = Task { [weak self] in
             let modelManager = ModelManager()
             try? await modelManager.ensureModelAvailable(for: locale)
@@ -173,8 +174,13 @@ final class AppCoordinator {
         let locale = UserDefaults.standard.string(forKey: "locale")
             .flatMap { Locale(identifier: $0) } ?? Locale.current
 
-        // Wait for any in-flight preload to finish
-        await preloadTask?.value
+        // Wait for any in-flight preload, but don't block recording forever
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { await self.preloadTask?.value }
+            group.addTask { try? await Task.sleep(for: .seconds(10)) }
+            await group.next()
+            group.cancelAll()
+        }
 
         do {
             try await transcriptionEngine.startSession(appState: appState, locale: locale)
