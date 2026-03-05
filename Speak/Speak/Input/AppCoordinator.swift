@@ -48,6 +48,7 @@ final class AppCoordinator {
     private var confirmObserver: Any?
     private var pasteFailedHintTimer: DispatchWorkItem?
     private var preloadTask: Task<Void, Never>?
+    private var preloadLocaleID: String?
 
     /// Set up the coordinator with the shared app state. Call once at app launch.
     func setUp(appState: AppState, historyStore: HistoryStore) {
@@ -117,11 +118,23 @@ final class AppCoordinator {
     /// Pre-download the speech model for the user's selected locale so it's
     /// ready when they start recording.
     func preloadModel() {
-        preloadTask = Task {
+        let locale = UserDefaults.standard.string(forKey: "locale")
+            .flatMap { Locale(identifier: $0) } ?? Locale.current
+        let localeID = locale.identifier(.bcp47)
+
+        if let preloadTask, !preloadTask.isCancelled, preloadLocaleID == localeID {
+            return
+        }
+
+        preloadLocaleID = localeID
+        preloadTask = Task { [weak self] in
             let modelManager = ModelManager()
-            let locale = UserDefaults.standard.string(forKey: "locale")
-                .flatMap { Locale(identifier: $0) } ?? Locale.current
             try? await modelManager.ensureModelAvailable(for: locale)
+            await MainActor.run {
+                guard let self, self.preloadLocaleID == localeID else { return }
+                self.preloadTask = nil
+                self.preloadLocaleID = nil
+            }
         }
     }
 
