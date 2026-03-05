@@ -6,7 +6,8 @@ enum PasteService {
     /// Paste the given text into the target application.
     /// Saves the current pasteboard, writes the text, simulates Cmd+V,
     /// then restores the original pasteboard after a delay.
-    /// Returns `true` on success, `false` if the target app could not be activated.
+    /// Returns `true` when paste is attempted.
+    /// Returns `false` when no target app is available or the target app could not be activated.
     @discardableResult
     static func paste(_ text: String, into app: NSRunningApplication?) async -> Bool {
         let pasteboard = NSPasteboard.general
