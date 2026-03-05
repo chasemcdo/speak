@@ -406,7 +406,7 @@ final class AppCoordinator {
 
         if autoPaste {
             let success = await pasteService.paste(text, into: previousApp)
-            if !success || !contextReader.hasFocusedTextField(in: previousApp) {
+            if !success {
                 showPasteFailedHint()
             }
         } else {

@@ -324,18 +324,17 @@ struct PasteTargetTests {
     }
 
     @Test @MainActor
-    func confirmShowsHintWhenNoFocusedTextField() async {
+    func confirmNoHintWhenNoFocusedTextField() async {
         configureDefaults()
         let context = MockContext()
         context.hasFocusedTextFieldResult = false
-        let (coordinator, appState, _, _, overlay, paster, _) = makeCoordinator(context: context)
+        let (coordinator, appState, _, _, _, paster, _) = makeCoordinator(context: context)
 
         await coordinator.start()
         appState.appendFinalizedText("Hello world")
         await coordinator.confirm()
 
         #expect(paster.pasteCalled, "Paste should still be attempted")
-        #expect(appState.pasteFailedHint, "Hint should show when no text field is focused")
-        #expect(overlay.showCallCount >= 2)
+        #expect(!appState.pasteFailedHint, "No hint when paste succeeded — text field detection is unreliable")
     }
 }
