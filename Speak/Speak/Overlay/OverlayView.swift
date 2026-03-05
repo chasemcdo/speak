@@ -175,7 +175,7 @@ struct RecordingIndicator: View {
                 .transition(.scale.combined(with: .opacity))
             }
         }
-        .animation(.easeOut(duration: 0.2), value: recordingMode)
+        .animation(.easeOut(duration: 0.2), value: showButtons)
     }
 }
 

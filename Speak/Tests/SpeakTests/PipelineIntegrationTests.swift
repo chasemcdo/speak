@@ -381,8 +381,11 @@ struct PipelineIntegrationTests {
         appState.appendFinalizedText("Stop button text.")
 
         NotificationCenter.default.post(name: .overlayConfirmRequested, object: nil)
-        // Allow the notification handler to process
-        try? await Task.sleep(for: .milliseconds(100))
+        // Yield until the notification handler's async Task completes
+        for _ in 0..<100 {
+            await Task.yield()
+            if paster.pasteCalled { break }
+        }
 
         #expect(transcriber.stopSessionCalled)
         #expect(paster.pasteCalled)
