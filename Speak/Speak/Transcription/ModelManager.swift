@@ -40,7 +40,9 @@ final class ModelManager {
         do {
             try await reserveLocale(locale)
         } catch {
-            logger.warning("Failed to reserve speech model for \(locale.identifier(.bcp47), privacy: .public): \(error.localizedDescription, privacy: .public)")
+            let id = locale.identifier(.bcp47)
+            let msg = error.localizedDescription
+            logger.warning("Failed to reserve model for \(id, privacy: .public): \(msg, privacy: .public)")
         }
     }
 
