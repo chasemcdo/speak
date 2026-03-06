@@ -71,8 +71,15 @@ private final class MockContext: ContextReading {
 private final class MockHotkey: HotkeyManaging {
     var resetStateCalled = false
     var resetStateCallCount = 0
+    var onModeChange: ((RecordingMode) -> Void)?
 
-    func register(onStart: @escaping () -> Void, onStop: @escaping () -> Void) {}
+    func register(
+        onStart: @escaping () -> Void,
+        onStop: @escaping () -> Void,
+        onModeChange: @escaping (RecordingMode) -> Void
+    ) {
+        self.onModeChange = onModeChange
+    }
 
     func resetState() {
         resetStateCalled = true
@@ -194,6 +201,23 @@ struct PreviewFlowTests {
         #expect(appState.previewText == "")
         // Should not save empty text to history
         #expect(historyStore.entries.count == initialCount)
+    }
+
+    @Test @MainActor
+    func modeResetsAfterStopWithoutPaste() async {
+        configureDefaults()
+        let (coordinator, appState, _, _, _, _, _) = makeCoordinator()
+
+        await coordinator.start()
+        appState.recordingMode = .toggle
+        appState.appendFinalizedText("Text")
+
+        await coordinator.stopWithoutPaste()
+        #expect(appState.isPreviewing)
+        #expect(appState.recordingMode == .toggle)
+
+        coordinator.dismissPreview()
+        #expect(appState.recordingMode == .hold)
     }
 
     @Test @MainActor

@@ -40,6 +40,7 @@ struct AppStateTests {
         state.error = "Some error"
         state.isPreviewing = true
         state.previewText = "Preview text"
+        state.recordingMode = .toggle
 
         state.reset()
 
@@ -49,6 +50,7 @@ struct AppStateTests {
         #expect(state.error == nil)
         #expect(state.isPreviewing == false)
         #expect(state.previewText == "")
+        #expect(state.recordingMode == .hold)
     }
 
     @Test @MainActor func appendFinalizedTextAppendsAndClearsVolatile() {
@@ -100,5 +102,21 @@ struct AppStateTests {
 
         #expect(state.isPreviewing == false)
         #expect(state.previewText == "")
+    }
+
+    // MARK: - Recording mode
+
+    @Test @MainActor func recordingModeDefaultsToHold() {
+        let state = AppState()
+        #expect(state.recordingMode == .hold)
+    }
+
+    @Test @MainActor func resetClearsRecordingMode() {
+        let state = AppState()
+        state.recordingMode = .toggle
+
+        state.reset()
+
+        #expect(state.recordingMode == .hold)
     }
 }
