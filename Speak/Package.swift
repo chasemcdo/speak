@@ -32,12 +32,12 @@ let package = Package(
                 .linkedFramework("CoreGraphics"),
                 .linkedFramework("ServiceManagement"),
                 .linkedFramework("FoundationModels"),
-            ]
+            ],
         ),
         .testTarget(
             name: "SpeakTests",
             dependencies: ["Speak"],
-            path: "Tests/SpeakTests"
+            path: "Tests/SpeakTests",
         ),
-    ]
+    ],
 )

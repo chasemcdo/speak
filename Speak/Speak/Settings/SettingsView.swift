@@ -44,7 +44,7 @@ struct SettingsView: View {
 
                 Toggle("Auto-paste into active app", isOn: $autoPaste)
                     .help(
-                        "When enabled, text is automatically pasted into the focused app. When disabled, text is copied to the clipboard."
+                        "When enabled, text is automatically pasted into the focused app. When disabled, text is copied to the clipboard.",
                     )
             }
 
@@ -57,7 +57,7 @@ struct SettingsView: View {
 
                 Toggle("AI-powered formatting", isOn: $llmRewrite)
                     .help(
-                        "Use Apple Intelligence to clean up grammar, format lists, add paragraphs, and match your writing style."
+                        "Use Apple Intelligence to clean up grammar, format lists, add paragraphs, and match your writing style.",
                     )
                     .disabled(!llmAvailable)
 
@@ -105,7 +105,7 @@ struct SettingsView: View {
                     title: "Microphone",
                     granted: micGranted,
                     canRequestDirectly: AudioCaptureManager.permissionNotDetermined,
-                    settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
+                    settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone",
                 ) {
                     let manager = AudioCaptureManager()
                     micGranted = await manager.requestPermission()
@@ -114,13 +114,13 @@ struct SettingsView: View {
                     title: "Accessibility",
                     granted: accessibilityGranted,
                     canRequestDirectly: false,
-                    settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+                    settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
                 ) {}
                 PermissionRow(
                     title: "Speech Recognition",
                     granted: speechGranted,
                     canRequestDirectly: ModelManager.authorizationNotDetermined,
-                    settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_SpeechRecognition"
+                    settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_SpeechRecognition",
                 ) {
                     let manager = ModelManager()
                     speechGranted = await manager.requestAuthorization()

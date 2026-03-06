@@ -23,7 +23,7 @@ final class AppCoordinator {
         contextReader: any ContextReading = ContextReader(),
         pasteService: any Pasting = PasteServiceAdapter(),
         checkMicPermission: @escaping @MainActor () -> Bool = { AudioCaptureManager.permissionGranted },
-        checkSpeechAuth: @escaping @MainActor () -> Bool = { ModelManager.authorizationGranted }
+        checkSpeechAuth: @escaping @MainActor () -> Bool = { ModelManager.authorizationGranted },
     ) {
         self.transcriptionEngine = transcriptionEngine
         self.overlayManager = overlayManager
@@ -69,14 +69,14 @@ final class AppCoordinator {
                 Task { @MainActor in
                     self?.appState?.recordingMode = mode
                 }
-            }
+            },
         )
 
         // Listen for overlay cancel/confirm from keyboard events in the panel
         cancelObserver = NotificationCenter.default.addObserver(
             forName: .overlayCancelRequested,
             object: nil,
-            queue: .main
+            queue: .main,
         ) { [weak self] _ in
             Task { @MainActor in
                 guard let self, let appState = self.appState else { return }
@@ -93,7 +93,7 @@ final class AppCoordinator {
         confirmObserver = NotificationCenter.default.addObserver(
             forName: .overlayConfirmRequested,
             object: nil,
-            queue: .main
+            queue: .main,
         ) { [weak self] _ in
             Task { @MainActor in
                 guard let self, let appState = self.appState else { return }
@@ -363,7 +363,7 @@ final class AppCoordinator {
                 let context = ProcessingContext(
                     surroundingText: capturedContext,
                     screenVocabulary: capturedVocabulary,
-                    locale: locale
+                    locale: locale,
                 )
 
                 text = await textProcessor.process(text, context: context)
@@ -376,7 +376,7 @@ final class AppCoordinator {
                 rawText: rawText,
                 processedText: text,
                 sourceAppName: previousApp?.localizedName,
-                sourceAppBundleID: previousApp?.bundleIdentifier
+                sourceAppBundleID: previousApp?.bundleIdentifier,
             ))
         }
 

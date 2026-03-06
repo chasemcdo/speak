@@ -14,7 +14,7 @@ private func flagsChangedEvent(modifierFlags: NSEvent.ModifierFlags) -> NSEvent?
         characters: "",
         charactersIgnoringModifiers: "",
         isARepeat: false,
-        keyCode: 0
+        keyCode: 0,
     )
 }
 
@@ -31,16 +31,16 @@ private func keyDownEvent(keyCode: UInt16, characters: String = "",
         characters: characters,
         charactersIgnoringModifiers: characters,
         isARepeat: false,
-        keyCode: keyCode
+        keyCode: keyCode,
     )
 }
 
-@Suite("HotkeyManager", .serialized)
+@Suite(.serialized)
 struct HotkeyManagerTests {
     // MARK: - Basic hold flow
 
     @Test @MainActor
-    func holdAndReleaseFnTriggersStartThenStop() async throws {
+    func `hold and release fn triggers start then stop`() async throws {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()
@@ -50,7 +50,7 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: { startCalled = true },
             onStop: { stopCalled = true },
-            onModeChange: { _ in }
+            onModeChange: { _ in },
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function) else {
@@ -76,7 +76,7 @@ struct HotkeyManagerTests {
     // MARK: - Spacebar hold-to-persist
 
     @Test @MainActor
-    func spacebarDuringHoldTransitionsToToggle() async throws {
+    func `spacebar during hold transitions to toggle`() async throws {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()
@@ -86,7 +86,7 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: { startCalled = true },
             onStop: { stopCalled = true },
-            onModeChange: { _ in }
+            onModeChange: { _ in },
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
@@ -123,7 +123,7 @@ struct HotkeyManagerTests {
     }
 
     @Test @MainActor
-    func nonSpacebarKeyDuringHoldIsNotConsumed() async throws {
+    func `non spacebar key during hold is not consumed`() async throws {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()
@@ -150,7 +150,7 @@ struct HotkeyManagerTests {
     }
 
     @Test @MainActor
-    func spacebarInIdleStateIsNotConsumed() {
+    func `spacebar in idle state is not consumed`() {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()
@@ -167,7 +167,7 @@ struct HotkeyManagerTests {
     }
 
     @Test @MainActor
-    func spacebarInToggleRecordingIsNotConsumed() {
+    func `spacebar in toggle recording is not consumed`() {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()
@@ -199,7 +199,7 @@ struct HotkeyManagerTests {
     // MARK: - Double-tap still works (no regression)
 
     @Test @MainActor
-    func doubleTapTriggersStartAndSubsequentTapStops() {
+    func `double tap triggers start and subsequent tap stops`() {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()
@@ -209,7 +209,7 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: { startCalled = true },
             onStop: { stopCalled = true },
-            onModeChange: { _ in }
+            onModeChange: { _ in },
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
@@ -241,7 +241,7 @@ struct HotkeyManagerTests {
     // MARK: - resetState
 
     @Test @MainActor
-    func resetStatePreventsStopOnRelease() async throws {
+    func `reset state prevents stop on release`() async throws {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()
@@ -271,7 +271,7 @@ struct HotkeyManagerTests {
     // MARK: - Other modifier cancels hold
 
     @Test @MainActor
-    func otherModifierDuringHoldStopsRecording() async throws {
+    func `other modifier during hold stops recording`() async throws {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()
@@ -301,7 +301,7 @@ struct HotkeyManagerTests {
     // MARK: - Mode change callbacks
 
     @Test @MainActor
-    func holdActivationFiresModeChangeHold() async throws {
+    func `hold activation fires mode change hold`() async throws {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()
@@ -310,7 +310,7 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: {},
             onStop: {},
-            onModeChange: { modeChanges.append($0) }
+            onModeChange: { modeChanges.append($0) },
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function) else {
@@ -328,7 +328,7 @@ struct HotkeyManagerTests {
     }
 
     @Test @MainActor
-    func doubleTapFiresModeChangeToggle() {
+    func `double tap fires mode change toggle`() {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()
@@ -337,7 +337,7 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: {},
             onStop: {},
-            onModeChange: { modeChanges.append($0) }
+            onModeChange: { modeChanges.append($0) },
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
@@ -362,7 +362,7 @@ struct HotkeyManagerTests {
     }
 
     @Test @MainActor
-    func spacebarTransitionFiresModeChangeToggle() async throws {
+    func `spacebar transition fires mode change toggle`() async throws {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()
@@ -371,7 +371,7 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: {},
             onStop: {},
-            onModeChange: { modeChanges.append($0) }
+            onModeChange: { modeChanges.append($0) },
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function) else {
@@ -396,7 +396,7 @@ struct HotkeyManagerTests {
     }
 
     @Test @MainActor
-    func quickSingleTapFiresNoModeChange() async throws {
+    func `quick single tap fires no mode change`() async throws {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()
@@ -405,7 +405,7 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: {},
             onStop: {},
-            onModeChange: { modeChanges.append($0) }
+            onModeChange: { modeChanges.append($0) },
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
@@ -427,7 +427,7 @@ struct HotkeyManagerTests {
     }
 
     @Test @MainActor
-    func resetStateDuringHoldFiresNoExtraModeChange() async throws {
+    func `reset state during hold fires no extra mode change`() async throws {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()
@@ -436,7 +436,7 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: {},
             onStop: {},
-            onModeChange: { modeChanges.append($0) }
+            onModeChange: { modeChanges.append($0) },
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
@@ -461,7 +461,7 @@ struct HotkeyManagerTests {
     }
 
     @Test @MainActor
-    func multipleSpacebarPressesFiresToggleOnlyOnce() async throws {
+    func `multiple spacebar presses fires toggle only once`() async throws {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()
@@ -470,7 +470,7 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: {},
             onStop: {},
-            onModeChange: { modeChanges.append($0) }
+            onModeChange: { modeChanges.append($0) },
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function) else {

@@ -70,7 +70,7 @@ private final class MockHotkey: HotkeyManaging {
     func register(
         onStart: @escaping () -> Void,
         onStop: @escaping () -> Void,
-        onModeChange: @escaping (RecordingMode) -> Void
+        onModeChange: @escaping (RecordingMode) -> Void,
     ) {
         self.onModeChange = onModeChange
     }
@@ -84,7 +84,7 @@ private final class MockHistoryHotkey: HistoryHotkeyManaging {
 
 // MARK: - Tests
 
-@Suite("Pipeline Integration", .serialized)
+@Suite(.serialized)
 struct PipelineIntegrationTests {
     private func configureDefaults() {
         let defaults = UserDefaults.standard
@@ -104,7 +104,7 @@ struct PipelineIntegrationTests {
         hotkeyManager: any HotkeyManaging = MockHotkey(),
         historyHotkeyManager: any HistoryHotkeyManaging = MockHistoryHotkey(),
         micPermission: Bool = true,
-        speechAuth: Bool = true
+        speechAuth: Bool = true,
     ) -> AppCoordinator {
         AppCoordinator(
             transcriptionEngine: transcriber,
@@ -114,12 +114,12 @@ struct PipelineIntegrationTests {
             contextReader: contextReader,
             pasteService: paster,
             checkMicPermission: { micPermission },
-            checkSpeechAuth: { speechAuth }
+            checkSpeechAuth: { speechAuth },
         )
     }
 
     @Test @MainActor
-    func fullDictationFlow() async {
+    func `full dictation flow`() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -129,7 +129,7 @@ struct PipelineIntegrationTests {
         let historyStore = HistoryStore()
 
         let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster
+            transcriber: transcriber, overlay: overlay, paster: paster,
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -151,7 +151,7 @@ struct PipelineIntegrationTests {
     }
 
     @Test @MainActor
-    func cancelFlowResetsState() async {
+    func `cancel flow resets state`() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -161,7 +161,7 @@ struct PipelineIntegrationTests {
         let historyStore = HistoryStore()
 
         let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster
+            transcriber: transcriber, overlay: overlay, paster: paster,
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -176,7 +176,7 @@ struct PipelineIntegrationTests {
     }
 
     @Test @MainActor
-    func micPermissionDeniedSetsError() async {
+    func `mic permission denied sets error`() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -187,7 +187,7 @@ struct PipelineIntegrationTests {
 
         let coordinator = makeCoordinator(
             transcriber: transcriber, overlay: overlay, paster: paster,
-            micPermission: false
+            micPermission: false,
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -198,7 +198,7 @@ struct PipelineIntegrationTests {
     }
 
     @Test @MainActor
-    func speechPermissionDeniedSetsError() async {
+    func `speech permission denied sets error`() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -209,7 +209,7 @@ struct PipelineIntegrationTests {
 
         let coordinator = makeCoordinator(
             transcriber: transcriber, overlay: overlay, paster: paster,
-            speechAuth: false
+            speechAuth: false,
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -220,7 +220,7 @@ struct PipelineIntegrationTests {
     }
 
     @Test @MainActor
-    func emptyTranscriptionSkipsPaste() async {
+    func `empty transcription skips paste`() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -230,7 +230,7 @@ struct PipelineIntegrationTests {
         let historyStore = HistoryStore()
 
         let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster
+            transcriber: transcriber, overlay: overlay, paster: paster,
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -241,7 +241,7 @@ struct PipelineIntegrationTests {
     }
 
     @Test @MainActor
-    func transcriptionErrorDismissesOverlay() async {
+    func `transcription error dismisses overlay`() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -252,7 +252,7 @@ struct PipelineIntegrationTests {
         let historyStore = HistoryStore()
 
         let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster
+            transcriber: transcriber, overlay: overlay, paster: paster,
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -265,7 +265,7 @@ struct PipelineIntegrationTests {
     // MARK: - Audio level monitor wiring
 
     @Test @MainActor
-    func startWiresAudioLevelMonitor() async {
+    func `start wires audio level monitor`() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -275,7 +275,7 @@ struct PipelineIntegrationTests {
         let historyStore = HistoryStore()
 
         let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster
+            transcriber: transcriber, overlay: overlay, paster: paster,
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -289,7 +289,7 @@ struct PipelineIntegrationTests {
     }
 
     @Test @MainActor
-    func confirmClearsAudioLevelMonitor() async {
+    func `confirm clears audio level monitor`() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -299,7 +299,7 @@ struct PipelineIntegrationTests {
         let historyStore = HistoryStore()
 
         let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster
+            transcriber: transcriber, overlay: overlay, paster: paster,
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -312,7 +312,7 @@ struct PipelineIntegrationTests {
     }
 
     @Test @MainActor
-    func cancelClearsAudioLevelMonitor() async {
+    func `cancel clears audio level monitor`() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -322,7 +322,7 @@ struct PipelineIntegrationTests {
         let historyStore = HistoryStore()
 
         let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster
+            transcriber: transcriber, overlay: overlay, paster: paster,
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -337,7 +337,7 @@ struct PipelineIntegrationTests {
     // MARK: - Recording mode wiring
 
     @Test @MainActor
-    func modeChangeWiresToAppState() async {
+    func `mode change wires to app state`() async {
         configureDefaults()
 
         let hotkey = MockHotkey()
@@ -349,7 +349,7 @@ struct PipelineIntegrationTests {
 
         let coordinator = makeCoordinator(
             transcriber: transcriber, overlay: overlay, paster: paster,
-            hotkeyManager: hotkey
+            hotkeyManager: hotkey,
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -363,7 +363,7 @@ struct PipelineIntegrationTests {
     }
 
     @Test @MainActor
-    func confirmFromOverlayDuringRecordingStopsAndPastes() async {
+    func `confirm from overlay during recording stops and pastes`() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -373,7 +373,7 @@ struct PipelineIntegrationTests {
         let historyStore = HistoryStore()
 
         let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster
+            transcriber: transcriber, overlay: overlay, paster: paster,
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -382,7 +382,7 @@ struct PipelineIntegrationTests {
 
         NotificationCenter.default.post(name: .overlayConfirmRequested, object: nil)
         // Yield until the notification handler's async Task completes
-        for _ in 0..<100 {
+        for _ in 0 ..< 100 {
             await Task.yield()
             if paster.pasteCalled { break }
         }
@@ -394,7 +394,7 @@ struct PipelineIntegrationTests {
     }
 
     @Test @MainActor
-    func confirmFromOverlayWhenNotRecordingIsNoOp() async {
+    func `confirm from overlay when not recording is no op`() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -404,7 +404,7 @@ struct PipelineIntegrationTests {
         let historyStore = HistoryStore()
 
         let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster
+            transcriber: transcriber, overlay: overlay, paster: paster,
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -417,7 +417,7 @@ struct PipelineIntegrationTests {
     }
 
     @Test @MainActor
-    func modeResetsOnNextStart() async {
+    func `mode resets on next start`() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -427,7 +427,7 @@ struct PipelineIntegrationTests {
         let historyStore = HistoryStore()
 
         let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster
+            transcriber: transcriber, overlay: overlay, paster: paster,
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -444,7 +444,7 @@ struct PipelineIntegrationTests {
     }
 
     @Test @MainActor
-    func modeResetsAfterCancel() async {
+    func `mode resets after cancel`() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -454,7 +454,7 @@ struct PipelineIntegrationTests {
         let historyStore = HistoryStore()
 
         let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster
+            transcriber: transcriber, overlay: overlay, paster: paster,
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -467,7 +467,7 @@ struct PipelineIntegrationTests {
     }
 
     @Test @MainActor
-    func transcriptionErrorClearsAudioLevelMonitor() async {
+    func `transcription error clears audio level monitor`() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -478,7 +478,7 @@ struct PipelineIntegrationTests {
         let historyStore = HistoryStore()
 
         let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster
+            transcriber: transcriber, overlay: overlay, paster: paster,
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 

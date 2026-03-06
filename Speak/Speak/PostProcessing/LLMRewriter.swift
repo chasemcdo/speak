@@ -56,9 +56,8 @@ struct LLMRewriter: TextFilter {
         // Build vocabulary hint from screen context
         let vocabularyHint = Self.buildVocabularyHint(from: context.screenVocabulary)
 
-        let prompt: String
-        if let surrounding = context.surroundingText, !surrounding.isEmpty {
-            prompt = """
+        let prompt = if let surrounding = context.surroundingText, !surrounding.isEmpty {
+            """
             The user is writing in this context:
             ---
             \(surrounding)
@@ -70,7 +69,7 @@ struct LLMRewriter: TextFilter {
             \(text)
             """
         } else {
-            prompt = """
+            """
             \(vocabularyHint)
             Format this dictated text for written communication. \
             Return ONLY the formatted text:
@@ -154,7 +153,7 @@ struct LLMRewriter: TextFilter {
 private func withTaskTimeout<T: Sendable>(
     seconds: TimeInterval,
     fallback: T,
-    operation: @escaping @Sendable () async throws -> T
+    operation: @escaping @Sendable () async throws -> T,
 ) async -> T {
     await withTaskGroup(of: T.self) { group in
         group.addTask {

@@ -76,7 +76,7 @@ private final class MockHotkey: HotkeyManaging {
     func register(
         onStart: @escaping () -> Void,
         onStop: @escaping () -> Void,
-        onModeChange: @escaping (RecordingMode) -> Void
+        onModeChange: @escaping (RecordingMode) -> Void,
     ) {
         self.onModeChange = onModeChange
     }
@@ -93,7 +93,7 @@ private final class MockHistoryHotkey: HistoryHotkeyManaging {
 
 // MARK: - Helpers
 
-@Suite("Preview Flow", .serialized)
+@Suite(.serialized)
 struct PreviewFlowTests {
     private func configureDefaults() {
         let defaults = UserDefaults.standard
@@ -109,7 +109,7 @@ struct PreviewFlowTests {
         transcriber: MockTranscriber = MockTranscriber(),
         overlay: MockOverlay = MockOverlay(),
         paster: MockPaster = MockPaster(),
-        hotkeyManager: MockHotkey = MockHotkey()
+        hotkeyManager: MockHotkey = MockHotkey(),
     ) -> (AppCoordinator, AppState, HistoryStore, MockTranscriber, MockOverlay, MockPaster, MockHotkey) {
         let appState = AppState()
         let historyStore = HistoryStore()
@@ -121,7 +121,7 @@ struct PreviewFlowTests {
             contextReader: MockContext(),
             pasteService: paster,
             checkMicPermission: { true },
-            checkSpeechAuth: { true }
+            checkSpeechAuth: { true },
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
         return (coordinator, appState, historyStore, transcriber, overlay, paster, hotkeyManager)
@@ -130,7 +130,7 @@ struct PreviewFlowTests {
     // MARK: - stopWithoutPaste
 
     @Test @MainActor
-    func stopWithoutPasteEntersPreviewState() async {
+    func `stop without paste enters preview state`() async {
         configureDefaults()
         let (coordinator, appState, _, transcriber, _, paster, _) = makeCoordinator()
 
@@ -147,7 +147,7 @@ struct PreviewFlowTests {
     }
 
     @Test @MainActor
-    func stopWithoutPasteDoesNotHideOverlay() async {
+    func `stop without paste does not hide overlay`() async {
         configureDefaults()
         let (coordinator, appState, _, _, overlay, _, _) = makeCoordinator()
 
@@ -161,7 +161,7 @@ struct PreviewFlowTests {
     }
 
     @Test @MainActor
-    func stopWithoutPasteResetsHotkeyState() async {
+    func `stop without paste resets hotkey state`() async {
         configureDefaults()
         let (coordinator, appState, _, _, _, _, hotkey) = makeCoordinator()
 
@@ -174,7 +174,7 @@ struct PreviewFlowTests {
     }
 
     @Test @MainActor
-    func stopWithoutPasteSavesToHistory() async {
+    func `stop without paste saves to history`() async {
         configureDefaults()
         let (coordinator, appState, historyStore, _, _, _, _) = makeCoordinator()
 
@@ -187,7 +187,7 @@ struct PreviewFlowTests {
     }
 
     @Test @MainActor
-    func stopWithoutPasteWithEmptyTextSetsEmptyPreview() async {
+    func `stop without paste with empty text sets empty preview`() async {
         configureDefaults()
         let (coordinator, appState, historyStore, _, _, _, _) = makeCoordinator()
         let initialCount = historyStore.entries.count
@@ -204,7 +204,7 @@ struct PreviewFlowTests {
     }
 
     @Test @MainActor
-    func modeResetsAfterStopWithoutPaste() async {
+    func `mode resets after stop without paste`() async {
         configureDefaults()
         let (coordinator, appState, _, _, _, _, _) = makeCoordinator()
 
@@ -221,7 +221,7 @@ struct PreviewFlowTests {
     }
 
     @Test @MainActor
-    func stopWithoutPasteGuardsNotRecording() async {
+    func `stop without paste guards not recording`() async {
         configureDefaults()
         let (coordinator, appState, _, _, _, _, _) = makeCoordinator()
 
@@ -234,7 +234,7 @@ struct PreviewFlowTests {
     // MARK: - pasteFromPreview
 
     @Test @MainActor
-    func pasteFromPreviewPastesAndResets() async {
+    func `paste from preview pastes and resets`() async {
         configureDefaults()
         let (coordinator, appState, _, _, overlay, paster, _) = makeCoordinator()
 
@@ -254,7 +254,7 @@ struct PreviewFlowTests {
     }
 
     @Test @MainActor
-    func pasteFromPreviewWithEmptyTextSkipsPaste() async {
+    func `paste from preview with empty text skips paste`() async {
         configureDefaults()
         let (coordinator, appState, _, _, _, paster, _) = makeCoordinator()
 
@@ -269,7 +269,7 @@ struct PreviewFlowTests {
     }
 
     @Test @MainActor
-    func pasteFromPreviewGuardsNotInPreview() async {
+    func `paste from preview guards not in preview`() async {
         configureDefaults()
         let (coordinator, _, _, _, _, paster, _) = makeCoordinator()
 
@@ -282,7 +282,7 @@ struct PreviewFlowTests {
     // MARK: - dismissPreview
 
     @Test @MainActor
-    func dismissPreviewHidesOverlayAndResets() async {
+    func `dismiss preview hides overlay and resets`() async {
         configureDefaults()
         let (coordinator, appState, _, _, overlay, paster, _) = makeCoordinator()
 
@@ -300,7 +300,7 @@ struct PreviewFlowTests {
     }
 
     @Test @MainActor
-    func dismissPreviewIsNoOpWithoutAppState() {
+    func `dismiss preview is no op without app state`() {
         configureDefaults()
         // Coordinator without setUp — appState is nil
         let coordinator = AppCoordinator(
@@ -311,7 +311,7 @@ struct PreviewFlowTests {
             contextReader: MockContext(),
             pasteService: MockPaster(),
             checkMicPermission: { true },
-            checkSpeechAuth: { true }
+            checkSpeechAuth: { true },
         )
 
         // Should not crash
@@ -321,7 +321,7 @@ struct PreviewFlowTests {
     // MARK: - Full preview flow end-to-end
 
     @Test @MainActor
-    func fullPreviewThenPasteFlow() async {
+    func `full preview then paste flow`() async {
         configureDefaults()
         let (coordinator, appState, _, transcriber, overlay, paster, _) = makeCoordinator()
 
@@ -349,7 +349,7 @@ struct PreviewFlowTests {
     }
 
     @Test @MainActor
-    func fullPreviewThenDismissFlow() async {
+    func `full preview then dismiss flow`() async {
         configureDefaults()
         let (coordinator, appState, _, _, _, paster, _) = makeCoordinator()
 
@@ -368,7 +368,7 @@ struct PreviewFlowTests {
     // MARK: - start() dismisses active preview
 
     @Test @MainActor
-    func startDismissesActivePreview() async {
+    func `start dismisses active preview`() async {
         configureDefaults()
         let (coordinator, appState, _, _, overlay, _, _) = makeCoordinator()
 
@@ -389,7 +389,7 @@ struct PreviewFlowTests {
     // MARK: - confirm still works (no regression)
 
     @Test @MainActor
-    func confirmStillPastesDirectly() async {
+    func `confirm still pastes directly`() async {
         configureDefaults()
         let (coordinator, appState, _, _, overlay, paster, _) = makeCoordinator()
 
@@ -408,7 +408,7 @@ struct PreviewFlowTests {
     // MARK: - cancel still works (no regression)
 
     @Test @MainActor
-    func cancelStillResetsWithoutPasting() async {
+    func `cancel still resets without pasting`() async {
         configureDefaults()
         let (coordinator, appState, _, _, overlay, paster, _) = makeCoordinator()
 
@@ -427,7 +427,7 @@ struct PreviewFlowTests {
     // MARK: - Post-processing in preview
 
     @Test @MainActor
-    func stopWithoutPasteRunsPostProcessing() async {
+    func `stop without paste runs post processing`() async {
         let defaults = UserDefaults.standard
         defaults.set(true, forKey: "removeFillerWords")
         defaults.set(true, forKey: "autoFormat")

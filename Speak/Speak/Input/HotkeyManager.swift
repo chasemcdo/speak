@@ -11,28 +11,28 @@ enum TranscriptionHotkey: String, CaseIterable {
 
     var modifierFlag: NSEvent.ModifierFlags {
         switch self {
-        case .fn: return .function
-        case .control: return .control
-        case .option: return .option
-        case .command: return .command
+        case .fn: .function
+        case .control: .control
+        case .option: .option
+        case .command: .command
         }
     }
 
     var label: String {
         switch self {
-        case .fn: return "fn"
-        case .control: return "⌃ Control"
-        case .option: return "⌥ Option"
-        case .command: return "⌘ Command"
+        case .fn: "fn"
+        case .control: "⌃ Control"
+        case .option: "⌥ Option"
+        case .command: "⌘ Command"
         }
     }
 
     var shortLabel: String {
         switch self {
-        case .fn: return "fn"
-        case .control: return "⌃"
-        case .option: return "⌥"
-        case .command: return "⌘"
+        case .fn: "fn"
+        case .control: "⌃"
+        case .option: "⌥"
+        case .command: "⌘"
         }
     }
 
@@ -93,7 +93,7 @@ final class HotkeyManager {
     func register(
         onStart: @escaping () -> Void,
         onStop: @escaping () -> Void,
-        onModeChange: @escaping (RecordingMode) -> Void
+        onModeChange: @escaping (RecordingMode) -> Void,
     ) {
         self.onStart = onStart
         self.onStop = onStop
@@ -177,7 +177,7 @@ final class HotkeyManager {
 
                 return Unmanaged.passUnretained(event)
             },
-            userInfo: selfPtr
+            userInfo: selfPtr,
         ) {
             eventTap = tap
             let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
@@ -256,11 +256,11 @@ final class HotkeyManager {
         case .idle:
             // Start the hold timer — if key stays down long enough, enter hold mode
             let work = DispatchWorkItem { [weak self] in
-                guard let self, self.state == .firstDown else { return }
-                self.state = .holdRecording
-                self.installKeyDownMonitor()
-                self.onModeChange?(.hold)
-                self.onStart?()
+                guard let self, state == .firstDown else { return }
+                state = .holdRecording
+                installKeyDownMonitor()
+                onModeChange?(.hold)
+                onStart?()
             }
             holdTimer = work
             DispatchQueue.main.asyncAfter(deadline: .now() + holdThreshold, execute: work)
@@ -290,9 +290,9 @@ final class HotkeyManager {
             holdTimer = nil
 
             let work = DispatchWorkItem { [weak self] in
-                guard let self, self.state == .awaitingSecondTap else { return }
+                guard let self, state == .awaitingSecondTap else { return }
                 // Double-tap window expired — this was just a single tap while idle. No-op.
-                self.state = .idle
+                state = .idle
             }
             doubleTapTimer = work
             DispatchQueue.main.asyncAfter(deadline: .now() + doubleTapWindow, execute: work)

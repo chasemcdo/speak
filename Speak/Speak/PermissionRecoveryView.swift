@@ -41,7 +41,7 @@ struct PermissionRecoveryView: View {
                         title: "Microphone",
                         description: "Required to hear your voice",
                         canRequestDirectly: canRequestMic,
-                        settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
+                        settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone",
                     ) {
                         let manager = AudioCaptureManager()
                         micGranted = await manager.requestPermission()
@@ -54,7 +54,7 @@ struct PermissionRecoveryView: View {
                         title: "Speech Recognition",
                         description: "Required for on-device transcription",
                         canRequestDirectly: canRequestSpeech,
-                        settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_SpeechRecognition"
+                        settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_SpeechRecognition",
                     ) {
                         let manager = ModelManager()
                         speechGranted = await manager.requestAuthorization()
@@ -67,7 +67,7 @@ struct PermissionRecoveryView: View {
                         title: "Accessibility",
                         description: "Required to paste text into other apps",
                         canRequestDirectly: false,
-                        settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+                        settingsURL: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
                     ) {}
                 }
             }
@@ -82,7 +82,7 @@ struct PermissionRecoveryView: View {
         .frame(width: 400)
         .task {
             // Poll for permission restoration
-            while !allGranted && !Task.isCancelled {
+            while !allGranted, !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1))
                 micGranted = AudioCaptureManager.permissionGranted
                 accessibilityGranted = PasteService.accessibilityGranted

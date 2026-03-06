@@ -18,7 +18,7 @@ final class ModelManager {
     /// Downloads it if necessary.
     func ensureModelAvailable(for transcriber: SpeechTranscriber) async throws {
         if let request = try await AssetInventory.assetInstallationRequest(
-            supporting: [transcriber]
+            supporting: [transcriber],
         ) {
             try await request.downloadAndInstall()
         }
@@ -31,7 +31,7 @@ final class ModelManager {
             locale: locale,
             transcriptionOptions: [],
             reportingOptions: [.volatileResults],
-            attributeOptions: [.audioTimeRange]
+            attributeOptions: [.audioTimeRange],
         )
         try await ensureModelAvailable(for: transcriber)
     }
