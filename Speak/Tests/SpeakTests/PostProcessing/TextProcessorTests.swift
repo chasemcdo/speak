@@ -27,7 +27,7 @@ private struct SuffixFilter: TextFilter {
 private let ctx = ProcessingContext(locale: .current)
 
 struct TextProcessorTests {
-    @Test @MainActor func chainsFiltersInOrder() async {
+    @Test @MainActor func `chains filters in order`() async {
         let processor = TextProcessor()
         processor.addFilter(UppercaseFilter())
         processor.addFilter(SuffixFilter(suffix: "!"))
@@ -36,7 +36,7 @@ struct TextProcessorTests {
         #expect(result == "HELLO!")
     }
 
-    @Test @MainActor func emptyInputReturnsEmpty() async {
+    @Test @MainActor func `empty input returns empty`() async {
         let processor = TextProcessor()
         processor.addFilter(UppercaseFilter())
 
@@ -44,14 +44,14 @@ struct TextProcessorTests {
         #expect(result == "")
     }
 
-    @Test @MainActor func noFiltersReturnsInput() async {
+    @Test @MainActor func `no filters returns input`() async {
         let processor = TextProcessor()
 
         let result = await processor.process("hello", context: ctx)
         #expect(result == "hello")
     }
 
-    @Test @MainActor func throwingFilterIsSkipped() async {
+    @Test @MainActor func `throwing filter is skipped`() async {
         let processor = TextProcessor()
         processor.addFilter(ThrowingFilter())
         processor.addFilter(UppercaseFilter())
@@ -60,7 +60,7 @@ struct TextProcessorTests {
         #expect(result == "HELLO")
     }
 
-    @Test @MainActor func isProcessingResetsAfterCompletion() async {
+    @Test @MainActor func `is processing resets after completion`() async {
         let processor = TextProcessor()
         processor.addFilter(UppercaseFilter())
 
@@ -69,7 +69,7 @@ struct TextProcessorTests {
         #expect(processor.isProcessing == false)
     }
 
-    @Test @MainActor func removeAllFiltersClearsFilters() async {
+    @Test @MainActor func `remove all filters clears filters`() async {
         let processor = TextProcessor()
         processor.addFilter(UppercaseFilter())
         processor.removeAllFilters()

@@ -139,9 +139,9 @@ enum TranscriptionError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case let .modelUnavailable(locale):
-            return "Speech model for \(locale.localizedString(forIdentifier: locale.identifier) ?? locale.identifier) is not available."
+            "Speech model for \(locale.localizedString(forIdentifier: locale.identifier) ?? locale.identifier) is not available."
         case .notAuthorized:
-            return "Speech recognition is not authorized."
+            "Speech recognition is not authorized."
         }
     }
 }

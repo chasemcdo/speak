@@ -474,15 +474,15 @@ enum AudioCaptureError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .alreadyCapturing:
-            return "Audio capture is already running."
+            "Audio capture is already running."
         case .formatConversionFailed:
-            return "Failed to convert audio format for speech recognition."
+            "Failed to convert audio format for speech recognition."
         case .microphonePermissionDenied:
-            return "Microphone access is required for dictation."
+            "Microphone access is required for dictation."
         case .noAudioInputDevice:
-            return "No microphone found. Please connect an audio input device."
+            "No microphone found. Please connect an audio input device."
         case .invalidAudioFormat:
-            return "Audio input device has an invalid format."
+            "Audio input device has an invalid format."
         }
     }
 }
