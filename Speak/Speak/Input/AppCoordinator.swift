@@ -419,6 +419,8 @@ final class AppCoordinator {
     /// Show the paste-failed hint overlay and schedule auto-dismiss.
     private func showPasteFailedHint() {
         guard let appState else { return }
+        pasteFailedHintTimer?.cancel()
+        pasteFailedHintTimer = nil
         SoundFeedback.playPasteFailedSound()
         appState.pasteFailedHint = true
         overlayManager.show(appState: appState)
