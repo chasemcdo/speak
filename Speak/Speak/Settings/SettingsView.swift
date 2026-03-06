@@ -149,6 +149,7 @@ struct SettingsView: View {
             }
         }
         .onChange(of: localeIdentifier) {
+            guard !appState.isRecording else { return }
             coordinator.preloadModel()
         }
     }

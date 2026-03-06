@@ -48,6 +48,7 @@ final class AppCoordinator {
     private var confirmObserver: Any?
     private var pasteFailedHintTimer: DispatchWorkItem?
     private var preloadTasksByLocale: [String: Task<Void, Never>] = [:]
+    @ObservationIgnored private var isPreparing = false
 
     /// Set up the coordinator with the shared app state. Call once at app launch.
     func setUp(appState: AppState, historyStore: HistoryStore) {
@@ -160,7 +161,9 @@ final class AppCoordinator {
 
     /// Start a dictation session.
     func start() async {
-        guard let appState, !appState.isRecording else { return }
+        guard let appState, !appState.isRecording, !isPreparing else { return }
+        isPreparing = true
+        defer { isPreparing = false }
 
         let locale = UserDefaults.standard.string(forKey: "locale")
             .flatMap { Locale(identifier: $0) } ?? Locale.current
