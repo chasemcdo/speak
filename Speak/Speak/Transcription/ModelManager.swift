@@ -41,8 +41,7 @@ final class ModelManager {
             try await reserveLocale(locale)
         } catch {
             let id = locale.identifier(.bcp47)
-            let msg = error.localizedDescription
-            logger.warning("Failed to reserve model for \(id, privacy: .public): \(msg, privacy: .public)")
+            logger.warning("Failed to reserve model for \(id, privacy: .public): \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -56,7 +55,7 @@ final class ModelManager {
         if reserved.count >= max, let oldest = reserved.first {
             // Reserve first so we never drop below a valid reservation
             _ = try await AssetInventory.reserve(locale: locale)
-            try? await AssetInventory.release(reservedLocale: oldest)
+            await AssetInventory.release(reservedLocale: oldest)
             return
         }
         _ = try await AssetInventory.reserve(locale: locale)
