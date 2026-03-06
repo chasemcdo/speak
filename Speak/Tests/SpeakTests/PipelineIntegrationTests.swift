@@ -75,7 +75,6 @@ private final class MockHistoryHotkey: HistoryHotkeyManaging {
 
 // MARK: - Tests
 
-@Suite("Pipeline Integration")
 struct PipelineIntegrationTests {
     private func configureDefaults() {
         let defaults = UserDefaults.standard

@@ -1,7 +1,6 @@
 @testable import Speak
 import Testing
 
-@Suite("AppState")
 struct AppStateTests {
     @Test @MainActor func displayTextCombinesFinalizedAndVolatile() {
         let state = AppState()

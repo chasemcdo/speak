@@ -2,7 +2,6 @@
 @testable import Speak
 import Testing
 
-@Suite("AudioLevelMonitor")
 struct AudioLevelMonitorTests {
     // MARK: - Helpers
 

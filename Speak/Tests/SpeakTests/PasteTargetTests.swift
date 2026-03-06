@@ -85,7 +85,6 @@ private final class MockHistoryHotkey: HistoryHotkeyManaging {
 
 // MARK: - Tests
 
-@Suite("Paste Target")
 struct PasteTargetTests {
     private func configureDefaults() {
         let defaults = UserDefaults.standard

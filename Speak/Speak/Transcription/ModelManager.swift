@@ -41,7 +41,10 @@ final class ModelManager {
             try await reserveLocale(locale)
         } catch {
             let id = locale.identifier(.bcp47)
-            logger.warning("Failed to reserve model for \(id, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            logger
+                .warning(
+                    "Failed to reserve model for \(id, privacy: .public): \(error.localizedDescription, privacy: .public)"
+                )
         }
     }
 

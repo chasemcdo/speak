@@ -3,7 +3,7 @@ import AppKit
 /// Vocabulary extracted from the user's screen via the Accessibility tree.
 /// Contains proper nouns, filenames, identifiers, and other terms the LLM should
 /// use for spelling correction.
-struct ScreenVocabulary: Sendable {
+struct ScreenVocabulary {
     /// The app name (e.g. "Slack", "Cursor").
     var appName: String?
     /// The window title (e.g. "#deploy — Daniyal", "generate_changelog.sh — MyProject").

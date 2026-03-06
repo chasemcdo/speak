@@ -8,7 +8,6 @@ private func formatted(_ text: String) async throws -> String {
     try await filter.apply(to: text, context: ctx)
 }
 
-@Suite("FormattingFilter")
 struct FormattingFilterTests {
     // -- Sentence capitalization --
 

@@ -35,7 +35,7 @@ private func keyDownEvent(keyCode: UInt16, characters: String = "",
     )
 }
 
-@Suite("HotkeyManager", .serialized)
+@Suite(.serialized)
 struct HotkeyManagerTests {
     // MARK: - Basic hold flow
 

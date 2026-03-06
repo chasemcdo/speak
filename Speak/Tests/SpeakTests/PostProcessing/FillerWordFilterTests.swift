@@ -10,7 +10,6 @@ private func filtered(_ text: String) async throws -> String {
 
 // MARK: - Multi-word fillers
 
-@Suite("FillerWordFilter")
 struct FillerWordFilterTests {
     // -- Multi-word fillers --
 

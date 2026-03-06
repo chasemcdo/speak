@@ -26,7 +26,6 @@ private struct SuffixFilter: TextFilter {
 
 private let ctx = ProcessingContext(locale: .current)
 
-@Suite("TextProcessor")
 struct TextProcessorTests {
     @Test @MainActor func chainsFiltersInOrder() async {
         let processor = TextProcessor()

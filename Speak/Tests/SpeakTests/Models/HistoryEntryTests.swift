@@ -2,7 +2,6 @@ import Foundation
 @testable import Speak
 import Testing
 
-@Suite("HistoryEntry")
 struct HistoryEntryTests {
     @Test func codableRoundTrip() throws {
         let entry = HistoryEntry(
