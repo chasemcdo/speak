@@ -78,7 +78,7 @@ private final class MockHotkey: HotkeyManaging {
     func register(
         onStart: @escaping () -> Void,
         onStop: @escaping () -> Void,
-        onModeChange: @escaping (RecordingMode) -> Void,
+        onModeChange: @escaping (RecordingMode) -> Void
     ) {}
     func resetState() {}
 }
@@ -104,7 +104,7 @@ struct PasteTargetTests {
         transcriber: MockTranscriber = MockTranscriber(),
         overlay: MockOverlay = MockOverlay(),
         paster: MockPaster = MockPaster(),
-        context: MockContext = MockContext(),
+        context: MockContext = MockContext()
     ) -> (AppCoordinator, AppState, HistoryStore, MockTranscriber, MockOverlay, MockPaster, MockContext) {
         let appState = AppState()
         let historyStore = HistoryStore()
@@ -116,7 +116,7 @@ struct PasteTargetTests {
             contextReader: context,
             pasteService: paster,
             checkMicPermission: { true },
-            checkSpeechAuth: { true },
+            checkSpeechAuth: { true }
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
         return (coordinator, appState, historyStore, transcriber, overlay, paster, context)

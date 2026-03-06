@@ -20,7 +20,7 @@ struct OverlayView: View {
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(.white.opacity(0.1), lineWidth: 0.5),
+                .strokeBorder(.white.opacity(0.1), lineWidth: 0.5)
         )
     }
 
@@ -34,7 +34,7 @@ struct OverlayView: View {
                 RecordingIndicator(
                     audioLevel: appState.audioLevel,
                     recordingMode: appState.recordingMode,
-                    isRecording: appState.isRecording,
+                    isRecording: appState.isRecording
                 )
                 .padding(.top, 2)
             }
@@ -119,7 +119,7 @@ struct OverlayView: View {
 
     private var transcriptionText: some View {
         Text(
-            "\(Text(appState.finalizedText).foregroundStyle(.primary))\(Text(appState.volatileText).foregroundStyle(.secondary))",
+            "\(Text(appState.finalizedText).foregroundStyle(.primary))\(Text(appState.volatileText).foregroundStyle(.secondary))"
         )
         .font(.body)
         .lineLimit(8)
@@ -193,7 +193,7 @@ struct RecordingDot: View {
             .animation(
                 .easeInOut(duration: 0.8)
                     .repeatForever(autoreverses: true),
-                value: isPulsing,
+                value: isPulsing
             )
             .onAppear { isPulsing = true }
     }
@@ -212,7 +212,7 @@ struct ProcessingIndicator: View {
             .animation(
                 .easeInOut(duration: 0.5)
                     .repeatForever(autoreverses: true),
-                value: isAnimating,
+                value: isAnimating
             )
             .onAppear { isAnimating = true }
     }

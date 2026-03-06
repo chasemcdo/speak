@@ -52,7 +52,7 @@ protocol HotkeyManaging {
     func register(
         onStart: @escaping () -> Void,
         onStop: @escaping () -> Void,
-        onModeChange: @escaping (RecordingMode) -> Void,
+        onModeChange: @escaping (RecordingMode) -> Void
     )
     func resetState()
 }

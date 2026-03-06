@@ -38,7 +38,7 @@ final class TranscriptionEngine {
             locale: locale,
             transcriptionOptions: [],
             reportingOptions: [.volatileResults],
-            attributeOptions: [.audioTimeRange],
+            attributeOptions: [.audioTimeRange]
         )
         self.transcriber = transcriber
 

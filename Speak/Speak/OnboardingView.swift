@@ -37,7 +37,7 @@ struct OnboardingView: View {
                     number: 1,
                     title: "Microphone",
                     description: "To hear your voice",
-                    granted: micGranted,
+                    granted: micGranted
                 ) {
                     await requestMicrophone()
                 }
@@ -46,7 +46,7 @@ struct OnboardingView: View {
                     number: 2,
                     title: "Speech Recognition",
                     description: "To transcribe your voice on-device",
-                    granted: speechGranted,
+                    granted: speechGranted
                 ) {
                     await requestSpeech()
                 }
@@ -55,7 +55,7 @@ struct OnboardingView: View {
                     number: 3,
                     title: "Accessibility",
                     description: "To paste text into other apps",
-                    granted: accessibilityGranted,
+                    granted: accessibilityGranted
                 ) {
                     requestAccessibility()
                 }

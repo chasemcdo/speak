@@ -93,7 +93,7 @@ final class HotkeyManager {
     func register(
         onStart: @escaping () -> Void,
         onStop: @escaping () -> Void,
-        onModeChange: @escaping (RecordingMode) -> Void,
+        onModeChange: @escaping (RecordingMode) -> Void
     ) {
         self.onStart = onStart
         self.onStop = onStop
@@ -177,7 +177,7 @@ final class HotkeyManager {
 
                 return Unmanaged.passUnretained(event)
             },
-            userInfo: selfPtr,
+            userInfo: selfPtr
         ) {
             eventTap = tap
             let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)

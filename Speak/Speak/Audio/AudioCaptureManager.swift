@@ -55,7 +55,7 @@ final class AudioCaptureManager: @unchecked Sendable {
     func prepareFormat(compatibleWith module: SpeechTranscriber) async throws {
         try validateAudioInput()
         guard let bestFormat = await SpeechAnalyzer.bestAvailableAudioFormat(
-            compatibleWith: [module],
+            compatibleWith: [module]
         ) else {
             throw AudioCaptureError.formatConversionFailed
         }
@@ -74,7 +74,7 @@ final class AudioCaptureManager: @unchecked Sendable {
         try validateAudioInput()
 
         let (stream, continuation) = AsyncStream<AVAudioPCMBuffer>.makeStream(
-            bufferingPolicy: .bufferingNewest(10),
+            bufferingPolicy: .bufferingNewest(10)
         )
         callbackState.continuation = continuation
         callbackState.converter = nil
@@ -90,7 +90,7 @@ final class AudioCaptureManager: @unchecked Sendable {
             componentSubType: kAudioUnitSubType_HALOutput,
             componentManufacturer: kAudioUnitManufacturer_Apple,
             componentFlags: 0,
-            componentFlagsMask: 0,
+            componentFlagsMask: 0
         )
         guard let component = AudioComponentFindNext(nil, &desc) else {
             throw AudioCaptureError.noAudioInputDevice
@@ -106,7 +106,7 @@ final class AudioCaptureManager: @unchecked Sendable {
             try osCheck(AudioUnitSetProperty(
                 unit, kAudioOutputUnitProperty_EnableIO,
                 kAudioUnitScope_Input, 1,
-                &enableIO, UInt32(MemoryLayout<UInt32>.size),
+                &enableIO, UInt32(MemoryLayout<UInt32>.size)
             ))
 
             // Disable output on element 0 (speaker side).
@@ -114,7 +114,7 @@ final class AudioCaptureManager: @unchecked Sendable {
             try osCheck(AudioUnitSetProperty(
                 unit, kAudioOutputUnitProperty_EnableIO,
                 kAudioUnitScope_Output, 0,
-                &disableIO, UInt32(MemoryLayout<UInt32>.size),
+                &disableIO, UInt32(MemoryLayout<UInt32>.size)
             ))
 
             // Point the unit at the default input device.
@@ -122,7 +122,7 @@ final class AudioCaptureManager: @unchecked Sendable {
             try osCheck(AudioUnitSetProperty(
                 unit, kAudioOutputUnitProperty_CurrentDevice,
                 kAudioUnitScope_Global, 0,
-                &devID, UInt32(MemoryLayout<AudioDeviceID>.size),
+                &devID, UInt32(MemoryLayout<AudioDeviceID>.size)
             ))
 
             // Query the hardware's native format so we can request Float32 at the
@@ -132,7 +132,7 @@ final class AudioCaptureManager: @unchecked Sendable {
             try osCheck(AudioUnitGetProperty(
                 unit, kAudioUnitProperty_StreamFormat,
                 kAudioUnitScope_Input, 1,
-                &hwFormat, &fmtSize,
+                &hwFormat, &fmtSize
             ))
 
             // Ask the AU's internal converter to deliver Float32 non-interleaved
@@ -147,12 +147,12 @@ final class AudioCaptureManager: @unchecked Sendable {
                 mBytesPerFrame: 4,
                 mChannelsPerFrame: hwFormat.mChannelsPerFrame,
                 mBitsPerChannel: 32,
-                mReserved: 0,
+                mReserved: 0
             )
             try osCheck(AudioUnitSetProperty(
                 unit, kAudioUnitProperty_StreamFormat,
                 kAudioUnitScope_Output, 1,
-                &captureASBD, UInt32(MemoryLayout<AudioStreamBasicDescription>.size),
+                &captureASBD, UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
             ))
 
             callbackState.captureFormat = AVAudioFormat(streamDescription: &captureASBD)
@@ -162,12 +162,12 @@ final class AudioCaptureManager: @unchecked Sendable {
             // Install the render callback on the input scope.
             var cb = AURenderCallbackStruct(
                 inputProc: halInputCallback,
-                inputProcRefCon: Unmanaged.passUnretained(callbackState).toOpaque(),
+                inputProcRefCon: Unmanaged.passUnretained(callbackState).toOpaque()
             )
             try osCheck(AudioUnitSetProperty(
                 unit, kAudioOutputUnitProperty_SetInputCallback,
                 kAudioUnitScope_Global, 0,
-                &cb, UInt32(MemoryLayout<AURenderCallbackStruct>.size),
+                &cb, UInt32(MemoryLayout<AURenderCallbackStruct>.size)
             ))
 
             try osCheck(AudioUnitInitialize(unit))
@@ -219,18 +219,18 @@ final class AudioCaptureManager: @unchecked Sendable {
     }
 
     private static func getDeviceID(
-        for selector: AudioObjectPropertySelector,
+        for selector: AudioObjectPropertySelector
     ) throws -> AudioDeviceID {
         var deviceID: AudioDeviceID = 0
         var size = UInt32(MemoryLayout<AudioDeviceID>.size)
         var address = AudioObjectPropertyAddress(
             mSelector: selector,
             mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain,
+            mElement: kAudioObjectPropertyElementMain
         )
         let status = AudioObjectGetPropertyData(
             AudioObjectID(kAudioObjectSystemObject),
-            &address, 0, nil, &size, &deviceID,
+            &address, 0, nil, &size, &deviceID
         )
         guard status == noErr else { throw AudioCaptureError.noAudioInputDevice }
         return deviceID
@@ -242,7 +242,7 @@ final class AudioCaptureManager: @unchecked Sendable {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioDevicePropertyTransportType,
             mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain,
+            mElement: kAudioObjectPropertyElementMain
         )
         guard AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &transportType) == noErr
         else { return false }
@@ -256,18 +256,18 @@ final class AudioCaptureManager: @unchecked Sendable {
         var devicesAddr = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyDevices,
             mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain,
+            mElement: kAudioObjectPropertyElementMain
         )
         guard AudioObjectGetPropertyDataSize(
             AudioObjectID(kAudioObjectSystemObject),
-            &devicesAddr, 0, nil, &propSize,
+            &devicesAddr, 0, nil, &propSize
         ) == noErr else { return nil }
 
         let count = Int(propSize) / MemoryLayout<AudioDeviceID>.size
         var devices = [AudioDeviceID](repeating: 0, count: count)
         guard AudioObjectGetPropertyData(
             AudioObjectID(kAudioObjectSystemObject),
-            &devicesAddr, 0, nil, &propSize, &devices,
+            &devicesAddr, 0, nil, &propSize, &devices
         ) == noErr else { return nil }
 
         for deviceID in devices {
@@ -277,7 +277,7 @@ final class AudioCaptureManager: @unchecked Sendable {
             var tAddr = AudioObjectPropertyAddress(
                 mSelector: kAudioDevicePropertyTransportType,
                 mScope: kAudioObjectPropertyScopeGlobal,
-                mElement: kAudioObjectPropertyElementMain,
+                mElement: kAudioObjectPropertyElementMain
             )
             guard AudioObjectGetPropertyData(deviceID, &tAddr, 0, nil, &tSize, &transport) == noErr,
                   transport == kAudioDeviceTransportTypeBuiltIn
@@ -288,7 +288,7 @@ final class AudioCaptureManager: @unchecked Sendable {
             var streamsAddr = AudioObjectPropertyAddress(
                 mSelector: kAudioDevicePropertyStreams,
                 mScope: kAudioObjectPropertyScopeInput,
-                mElement: kAudioObjectPropertyElementMain,
+                mElement: kAudioObjectPropertyElementMain
             )
             guard AudioObjectGetPropertyDataSize(deviceID, &streamsAddr, 0, nil, &streamsSize) == noErr,
                   streamsSize > 0
@@ -315,7 +315,7 @@ private func halInputCallback(
     inTimeStamp: UnsafePointer<AudioTimeStamp>,
     inBusNumber: UInt32,
     inNumberFrames: UInt32,
-    ioData: UnsafeMutablePointer<AudioBufferList>?,
+    ioData: UnsafeMutablePointer<AudioBufferList>?
 ) -> OSStatus {
     let state = Unmanaged<InputCallbackState>.fromOpaque(inRefCon).takeUnretainedValue()
 
@@ -329,7 +329,7 @@ private func halInputCallback(
 
     let status = AudioUnitRender(
         audioUnit, ioActionFlags, inTimeStamp, inBusNumber, inNumberFrames,
-        pcmBuffer.mutableAudioBufferList,
+        pcmBuffer.mutableAudioBufferList
     )
     guard status == noErr else { return status }
 
@@ -420,10 +420,10 @@ private final class InputCallbackState: @unchecked Sendable {
     static func convertBuffer(
         _ buffer: AVAudioPCMBuffer,
         using converter: AVAudioConverter,
-        to format: AVAudioFormat,
+        to format: AVAudioFormat
     ) -> AVAudioPCMBuffer? {
         let frameCapacity = AVAudioFrameCount(
-            Double(buffer.frameLength) * (format.sampleRate / buffer.format.sampleRate),
+            Double(buffer.frameLength) * (format.sampleRate / buffer.format.sampleRate)
         )
         guard let outputBuffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCapacity) else {
             return nil

@@ -153,7 +153,7 @@ struct LLMRewriter: TextFilter {
 private func withTaskTimeout<T: Sendable>(
     seconds: TimeInterval,
     fallback: T,
-    operation: @escaping @Sendable () async throws -> T,
+    operation: @escaping @Sendable () async throws -> T
 ) async -> T {
     await withTaskGroup(of: T.self) { group in
         group.addTask {

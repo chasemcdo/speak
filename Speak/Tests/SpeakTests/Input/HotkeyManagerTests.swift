@@ -14,7 +14,7 @@ private func flagsChangedEvent(modifierFlags: NSEvent.ModifierFlags) -> NSEvent?
         characters: "",
         charactersIgnoringModifiers: "",
         isARepeat: false,
-        keyCode: 0,
+        keyCode: 0
     )
 }
 
@@ -31,7 +31,7 @@ private func keyDownEvent(keyCode: UInt16, characters: String = "",
         characters: characters,
         charactersIgnoringModifiers: characters,
         isARepeat: false,
-        keyCode: keyCode,
+        keyCode: keyCode
     )
 }
 
@@ -50,7 +50,7 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: { startCalled = true },
             onStop: { stopCalled = true },
-            onModeChange: { _ in },
+            onModeChange: { _ in }
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function) else {
@@ -86,7 +86,7 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: { startCalled = true },
             onStop: { stopCalled = true },
-            onModeChange: { _ in },
+            onModeChange: { _ in }
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
@@ -209,7 +209,7 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: { startCalled = true },
             onStop: { stopCalled = true },
-            onModeChange: { _ in },
+            onModeChange: { _ in }
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
@@ -310,7 +310,7 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: {},
             onStop: {},
-            onModeChange: { modeChanges.append($0) },
+            onModeChange: { modeChanges.append($0) }
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function) else {
@@ -337,7 +337,7 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: {},
             onStop: {},
-            onModeChange: { modeChanges.append($0) },
+            onModeChange: { modeChanges.append($0) }
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
@@ -371,7 +371,7 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: {},
             onStop: {},
-            onModeChange: { modeChanges.append($0) },
+            onModeChange: { modeChanges.append($0) }
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function) else {
@@ -405,7 +405,7 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: {},
             onStop: {},
-            onModeChange: { modeChanges.append($0) },
+            onModeChange: { modeChanges.append($0) }
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
@@ -436,7 +436,7 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: {},
             onStop: {},
-            onModeChange: { modeChanges.append($0) },
+            onModeChange: { modeChanges.append($0) }
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
@@ -470,7 +470,7 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: {},
             onStop: {},
-            onModeChange: { modeChanges.append($0) },
+            onModeChange: { modeChanges.append($0) }
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function) else {

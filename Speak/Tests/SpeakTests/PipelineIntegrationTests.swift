@@ -70,7 +70,7 @@ private final class MockHotkey: HotkeyManaging {
     func register(
         onStart: @escaping () -> Void,
         onStop: @escaping () -> Void,
-        onModeChange: @escaping (RecordingMode) -> Void,
+        onModeChange: @escaping (RecordingMode) -> Void
     ) {
         self.onModeChange = onModeChange
     }
@@ -104,7 +104,7 @@ struct PipelineIntegrationTests {
         hotkeyManager: any HotkeyManaging = MockHotkey(),
         historyHotkeyManager: any HistoryHotkeyManaging = MockHistoryHotkey(),
         micPermission: Bool = true,
-        speechAuth: Bool = true,
+        speechAuth: Bool = true
     ) -> AppCoordinator {
         AppCoordinator(
             transcriptionEngine: transcriber,
@@ -114,7 +114,7 @@ struct PipelineIntegrationTests {
             contextReader: contextReader,
             pasteService: paster,
             checkMicPermission: { micPermission },
-            checkSpeechAuth: { speechAuth },
+            checkSpeechAuth: { speechAuth }
         )
     }
 
@@ -129,7 +129,7 @@ struct PipelineIntegrationTests {
         let historyStore = HistoryStore()
 
         let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster,
+            transcriber: transcriber, overlay: overlay, paster: paster
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -161,7 +161,7 @@ struct PipelineIntegrationTests {
         let historyStore = HistoryStore()
 
         let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster,
+            transcriber: transcriber, overlay: overlay, paster: paster
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -187,7 +187,7 @@ struct PipelineIntegrationTests {
 
         let coordinator = makeCoordinator(
             transcriber: transcriber, overlay: overlay, paster: paster,
-            micPermission: false,
+            micPermission: false
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -209,7 +209,7 @@ struct PipelineIntegrationTests {
 
         let coordinator = makeCoordinator(
             transcriber: transcriber, overlay: overlay, paster: paster,
-            speechAuth: false,
+            speechAuth: false
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -230,7 +230,7 @@ struct PipelineIntegrationTests {
         let historyStore = HistoryStore()
 
         let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster,
+            transcriber: transcriber, overlay: overlay, paster: paster
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -252,7 +252,7 @@ struct PipelineIntegrationTests {
         let historyStore = HistoryStore()
 
         let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster,
+            transcriber: transcriber, overlay: overlay, paster: paster
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -275,7 +275,7 @@ struct PipelineIntegrationTests {
         let historyStore = HistoryStore()
 
         let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster,
+            transcriber: transcriber, overlay: overlay, paster: paster
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -299,7 +299,7 @@ struct PipelineIntegrationTests {
         let historyStore = HistoryStore()
 
         let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster,
+            transcriber: transcriber, overlay: overlay, paster: paster
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -322,7 +322,7 @@ struct PipelineIntegrationTests {
         let historyStore = HistoryStore()
 
         let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster,
+            transcriber: transcriber, overlay: overlay, paster: paster
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -349,7 +349,7 @@ struct PipelineIntegrationTests {
 
         let coordinator = makeCoordinator(
             transcriber: transcriber, overlay: overlay, paster: paster,
-            hotkeyManager: hotkey,
+            hotkeyManager: hotkey
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -373,7 +373,7 @@ struct PipelineIntegrationTests {
         let historyStore = HistoryStore()
 
         let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster,
+            transcriber: transcriber, overlay: overlay, paster: paster
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -404,7 +404,7 @@ struct PipelineIntegrationTests {
         let historyStore = HistoryStore()
 
         let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster,
+            transcriber: transcriber, overlay: overlay, paster: paster
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -427,7 +427,7 @@ struct PipelineIntegrationTests {
         let historyStore = HistoryStore()
 
         let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster,
+            transcriber: transcriber, overlay: overlay, paster: paster
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -454,7 +454,7 @@ struct PipelineIntegrationTests {
         let historyStore = HistoryStore()
 
         let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster,
+            transcriber: transcriber, overlay: overlay, paster: paster
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
@@ -478,7 +478,7 @@ struct PipelineIntegrationTests {
         let historyStore = HistoryStore()
 
         let coordinator = makeCoordinator(
-            transcriber: transcriber, overlay: overlay, paster: paster,
+            transcriber: transcriber, overlay: overlay, paster: paster
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 

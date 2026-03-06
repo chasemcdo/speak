@@ -39,7 +39,7 @@ final class ContextReader {
         guard AXUIElementCopyAttributeValue(
             appElement,
             kAXFocusedUIElementAttribute as CFString,
-            &focusedRef,
+            &focusedRef
         ) == .success else {
             return nil
         }
@@ -51,7 +51,7 @@ final class ContextReader {
         guard AXUIElementCopyAttributeValue(
             focused,
             kAXValueAttribute as CFString,
-            &valueRef,
+            &valueRef
         ) == .success, let text = valueRef as? String, !text.isEmpty else {
             return nil
         }
@@ -73,7 +73,7 @@ final class ContextReader {
 
         var vocab = ScreenVocabulary(
             appName: app.localizedName,
-            visibleTerms: [],
+            visibleTerms: []
         )
 
         // Get the focused window
@@ -103,7 +103,7 @@ final class ContextReader {
         guard AXUIElementCopyAttributeValue(
             appElement,
             kAXFocusedUIElementAttribute as CFString,
-            &focusedRef,
+            &focusedRef
         ) == .success else {
             return false
         }
@@ -116,7 +116,7 @@ final class ContextReader {
         guard AXUIElementIsAttributeSettable(
             focused,
             kAXValueAttribute as CFString,
-            &isSettable,
+            &isSettable
         ) == .success else {
             return false
         }
@@ -130,7 +130,7 @@ final class ContextReader {
         guard AXUIElementCopyAttributeValue(
             app,
             kAXFocusedWindowAttribute as CFString,
-            &ref,
+            &ref
         ) == .success else {
             return nil
         }
@@ -142,7 +142,7 @@ final class ContextReader {
         guard AXUIElementCopyAttributeValue(
             element,
             attr as CFString,
-            &ref,
+            &ref
         ) == .success, let str = ref as? String, !str.isEmpty else {
             return nil
         }
@@ -154,7 +154,7 @@ final class ContextReader {
         guard AXUIElementCopyAttributeValue(
             element,
             kAXChildrenAttribute as CFString,
-            &ref,
+            &ref
         ) == .success, let children = ref as? [AXUIElement] else {
             return []
         }

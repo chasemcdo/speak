@@ -76,7 +76,7 @@ private final class MockHotkey: HotkeyManaging {
     func register(
         onStart: @escaping () -> Void,
         onStop: @escaping () -> Void,
-        onModeChange: @escaping (RecordingMode) -> Void,
+        onModeChange: @escaping (RecordingMode) -> Void
     ) {
         self.onModeChange = onModeChange
     }
@@ -109,7 +109,7 @@ struct PreviewFlowTests {
         transcriber: MockTranscriber = MockTranscriber(),
         overlay: MockOverlay = MockOverlay(),
         paster: MockPaster = MockPaster(),
-        hotkeyManager: MockHotkey = MockHotkey(),
+        hotkeyManager: MockHotkey = MockHotkey()
     ) -> (AppCoordinator, AppState, HistoryStore, MockTranscriber, MockOverlay, MockPaster, MockHotkey) {
         let appState = AppState()
         let historyStore = HistoryStore()
@@ -121,7 +121,7 @@ struct PreviewFlowTests {
             contextReader: MockContext(),
             pasteService: paster,
             checkMicPermission: { true },
-            checkSpeechAuth: { true },
+            checkSpeechAuth: { true }
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
         return (coordinator, appState, historyStore, transcriber, overlay, paster, hotkeyManager)
@@ -311,7 +311,7 @@ struct PreviewFlowTests {
             contextReader: MockContext(),
             pasteService: MockPaster(),
             checkMicPermission: { true },
-            checkSpeechAuth: { true },
+            checkSpeechAuth: { true }
         )
 
         // Should not crash

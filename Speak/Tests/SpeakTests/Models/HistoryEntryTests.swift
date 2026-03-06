@@ -8,7 +8,7 @@ struct HistoryEntryTests {
             rawText: "um hello world",
             processedText: "Hello world",
             sourceAppName: "Slack",
-            sourceAppBundleID: "com.tinyspeck.slackmacgap",
+            sourceAppBundleID: "com.tinyspeck.slackmacgap"
         )
 
         let data = try JSONEncoder().encode(entry)
@@ -25,7 +25,7 @@ struct HistoryEntryTests {
     @Test func `codable round trip with nil optionals`() throws {
         let entry = HistoryEntry(
             rawText: "test",
-            processedText: "Test",
+            processedText: "Test"
         )
 
         let data = try JSONEncoder().encode(entry)
