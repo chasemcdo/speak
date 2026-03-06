@@ -166,24 +166,6 @@ final class AppCoordinator {
             .flatMap { Locale(identifier: $0) } ?? Locale.current
         let localeID = locale.identifier(.bcp47)
 
-        // Wait for the matching preload to finish before starting so we avoid duplicate downloads
-        if let matchingTask = preloadTasksByLocale[localeID] {
-            await withTaskGroup(of: Void.self) { group in
-                group.addTask { await matchingTask.value }
-                group.addTask {
-                    try? await Task.sleep(nanoseconds: 10 * 1_000_000_000) // 10s grace period
-                }
-                _ = await group.next()
-                group.cancelAll()
-            }
-        }
-
-        // Cancel all preloads so they don't consume bandwidth during recording
-        for (_, task) in preloadTasksByLocale {
-            task.cancel()
-        }
-        preloadTasksByLocale.removeAll()
-
         // Dismiss any active preview before starting a new recording
         if appState.isPreviewing {
             dismissPreview()
@@ -199,11 +181,31 @@ final class AppCoordinator {
             return
         }
 
-        // Reset state
+        // Reset state and show overlay immediately so the user gets feedback
         appState.reset()
-
-        // Show the overlay
         overlayManager.show(appState: appState)
+
+        // Wait for the matching preload to finish before starting audio to avoid duplicate downloads.
+        // We do this while the overlay is showing (potentially in a 'Preparing...' state).
+        if let matchingTask = preloadTasksByLocale[localeID] {
+            await withTaskGroup(of: Void.self) { group in
+                group.addTask { await matchingTask.value }
+                group.addTask {
+                    try? await Task.sleep(nanoseconds: 10 * 1_000_000_000) // 10s grace period
+                }
+                _ = await group.next()
+                group.cancelAll()
+            }
+        }
+
+        // Re-check after the suspension window — another start() may have run while we were waiting
+        guard !appState.isRecording else { return }
+
+        // Cancel all preloads so they don't consume bandwidth during recording
+        for (_, task) in preloadTasksByLocale {
+            task.cancel()
+        }
+        preloadTasksByLocale.removeAll()
 
         // Set up audio level monitor for waveform visualization
         let monitor = AudioLevelMonitor()
@@ -211,8 +213,12 @@ final class AppCoordinator {
         transcriptionEngine.levelMonitor = monitor
         appState.audioLevel = monitor
 
+        // Re-read locale in case the user changed it during the 10s wait window
+        let finalLocale = UserDefaults.standard.string(forKey: "locale")
+            .flatMap { Locale(identifier: $0) } ?? Locale.current
+
         do {
-            try await transcriptionEngine.startSession(appState: appState, locale: locale)
+            try await transcriptionEngine.startSession(appState: appState, locale: finalLocale)
         } catch {
             appState.error = error.localizedDescription
             appState.isRecording = false
