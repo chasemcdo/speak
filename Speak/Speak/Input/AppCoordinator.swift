@@ -166,7 +166,7 @@ final class AppCoordinator {
         }
 
         // Cancel all preloads so they don't consume bandwidth during recording
-        for (id, task) in preloadTasksByLocale {
+        for (_, task) in preloadTasksByLocale {
             task.cancel()
         }
         preloadTasksByLocale.removeAll()
