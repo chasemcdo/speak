@@ -142,6 +142,20 @@ final class AppCoordinator {
     func start() async {
         guard let appState, !appState.isRecording else { return }
 
+        // Wait for any in-flight preload before touching state so a second
+        // hotkey press during the wait is rejected by the guard above.
+        if let task = preloadTask {
+            await withTaskGroup(of: Void.self) { group in
+                group.addTask { await task.value }
+                group.addTask { try? await Task.sleep(for: .seconds(10)) }
+                await group.next()
+                group.cancelAll()
+            }
+        }
+
+        // Re-check after the await in case another call slipped through
+        guard !appState.isRecording else { return }
+
         // Dismiss any active preview before starting a new recording
         if appState.isPreviewing {
             dismissPreview()
@@ -169,17 +183,7 @@ final class AppCoordinator {
         transcriptionEngine.levelMonitor = monitor
         appState.audioLevel = monitor
 
-        // Wait for any in-flight preload, but don't block recording forever
-        if let task = preloadTask {
-            await withTaskGroup(of: Void.self) { group in
-                group.addTask { await task.value }
-                group.addTask { try? await Task.sleep(for: .seconds(10)) }
-                await group.next()
-                group.cancelAll()
-            }
-        }
-
-        // Read locale after preload await so we pick up any change made during the wait
+        // Read locale after preload so we pick up any change made during the wait
         let locale = UserDefaults.standard.string(forKey: "locale")
             .flatMap { Locale(identifier: $0) } ?? Locale.current
 
