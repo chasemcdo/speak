@@ -133,6 +133,12 @@ final class AppCoordinator {
             return
         }
 
+        // Cancel any in-flight preloads for other locales — they are no longer needed
+        for (_, task) in preloadTasksByLocale {
+            task.cancel()
+        }
+        preloadTasksByLocale.removeAll()
+
         let task = Task { [weak self] in
             let modelManager = ModelManager()
             do {
