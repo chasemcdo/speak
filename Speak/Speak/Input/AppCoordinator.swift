@@ -288,7 +288,10 @@ final class AppCoordinator {
         guard let appState, !appState.isRecording,
               let entry = historyStore?.mostRecent else { return }
         let currentApp = NSWorkspace.shared.frontmostApplication
-        await pasteService.paste(entry.processedText, into: currentApp)
+        let success = await pasteService.paste(entry.processedText, into: currentApp)
+        if !success {
+            showPasteFailedHint()
+        }
     }
 
     // MARK: - Private

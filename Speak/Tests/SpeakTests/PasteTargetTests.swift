@@ -337,4 +337,27 @@ struct PasteTargetTests {
         #expect(paster.pasteCalled, "Paste should still be attempted")
         #expect(!appState.pasteFailedHint, "No hint when paste succeeded — text field detection is unreliable")
     }
+
+    // MARK: - Cancel notification dismisses paste-failed hint
+
+    @Test @MainActor
+    func cancelDismissesPasteFailedHint() async {
+        configureDefaults()
+        let paster = MockPaster()
+        paster.pasteResult = false
+        let (coordinator, appState, _, _, overlay, _, _) = makeCoordinator(paster: paster)
+
+        await coordinator.start()
+        appState.appendFinalizedText("Hello world")
+        await coordinator.confirm()
+
+        #expect(appState.pasteFailedHint)
+
+        NotificationCenter.default.post(name: .overlayCancelRequested, object: nil)
+        // Allow the notification to be processed on the main queue
+        await Task.yield()
+
+        #expect(!appState.pasteFailedHint, "Cancel should dismiss the paste-failed hint")
+        #expect(overlay.hideCallCount >= 2, "Overlay should be hidden after hint dismissal")
+    }
 }

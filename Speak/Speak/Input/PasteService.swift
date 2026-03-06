@@ -10,19 +10,8 @@ enum PasteService {
     /// Returns `false` when no target app is available or the target app could not be activated.
     @discardableResult
     static func paste(_ text: String, into app: NSRunningApplication?) async -> Bool {
-        let pasteboard = NSPasteboard.general
-
-        // 1. Save current pasteboard contents
-        let previousChangeCount = pasteboard.changeCount
-        let previousStrings = pasteboard.string(forType: .string)
-
-        // 2. Write our text to the pasteboard
-        pasteboard.clearContents()
-        pasteboard.setString(text, forType: .string)
-
-        // 3. Activate the target app so it receives the keystroke
+        // 1. Activate the target app so it receives the keystroke
         guard let app else {
-            // No target app — leave text on clipboard for manual paste
             return false
         }
 
@@ -38,9 +27,18 @@ enum PasteService {
         }
 
         guard activated else {
-            // Target app couldn't be activated — leave text on clipboard for manual paste
             return false
         }
+
+        let pasteboard = NSPasteboard.general
+
+        // 2. Save current pasteboard contents
+        let previousChangeCount = pasteboard.changeCount
+        let previousStrings = pasteboard.string(forType: .string)
+
+        // 3. Write our text to the pasteboard
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
 
         // Small extra delay to ensure the app's text field is ready
         try? await Task.sleep(for: .milliseconds(100))
