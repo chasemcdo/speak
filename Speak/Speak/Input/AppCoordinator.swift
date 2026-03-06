@@ -189,7 +189,13 @@ final class AppCoordinator {
         // We do this while the overlay is showing (potentially in a 'Preparing...' state).
         if let matchingTask = preloadTasksByLocale[localeID] {
             await withTaskGroup(of: Void.self) { group in
-                group.addTask { await matchingTask.value }
+                group.addTask {
+                    await withTaskCancellationHandler {
+                        await matchingTask.value
+                    } onCancel: {
+                        matchingTask.cancel()
+                    }
+                }
                 group.addTask {
                     try? await Task.sleep(nanoseconds: 10 * 1_000_000_000) // 10s grace period
                 }
