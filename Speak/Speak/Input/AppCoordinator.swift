@@ -130,7 +130,11 @@ final class AppCoordinator {
         preloadTask?.cancel()
         preloadTask = Task { [weak self] in
             let modelManager = ModelManager()
-            try? await modelManager.ensureModelAvailable(for: locale)
+            do {
+                try await modelManager.ensureModelAvailable(for: locale)
+            } catch is CancellationError {
+                return
+            } catch {}
             await MainActor.run {
                 guard let self, self.preloadLocaleID == localeID else { return }
                 self.preloadTask = nil
@@ -142,19 +146,10 @@ final class AppCoordinator {
     func start() async {
         guard let appState, !appState.isRecording else { return }
 
-        // Wait for any in-flight preload before touching state so a second
-        // hotkey press during the wait is rejected by the guard above.
-        if let task = preloadTask {
-            await withTaskGroup(of: Void.self) { group in
-                group.addTask { await task.value }
-                group.addTask { try? await Task.sleep(for: .seconds(10)) }
-                await group.next()
-                group.cancelAll()
-            }
-        }
-
-        // Re-check after the await in case another call slipped through
-        guard !appState.isRecording else { return }
+        // Cancel any in-flight preload so it doesn't block — startSession
+        // will handle the download itself if the model isn't ready yet.
+        preloadTask?.cancel()
+        preloadTask = nil
 
         // Dismiss any active preview before starting a new recording
         if appState.isPreviewing {
