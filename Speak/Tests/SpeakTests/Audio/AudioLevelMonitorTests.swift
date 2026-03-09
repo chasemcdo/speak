@@ -2,7 +2,6 @@
 @testable import Speak
 import Testing
 
-@Suite("AudioLevelMonitor")
 struct AudioLevelMonitorTests {
     // MARK: - Helpers
 
@@ -21,13 +20,13 @@ struct AudioLevelMonitorTests {
     // MARK: - Initial state
 
     @Test @MainActor
-    func initialBarLevelsAreAllZero() {
+    func `initial bar levels are all zero`() {
         let monitor = AudioLevelMonitor()
         #expect(monitor.barLevels == [0, 0, 0, 0, 0])
     }
 
     @Test @MainActor
-    func barLevelsHasFiveElements() {
+    func `bar levels has five elements`() {
         let monitor = AudioLevelMonitor()
         #expect(monitor.barLevels.count == 5)
     }
@@ -35,7 +34,7 @@ struct AudioLevelMonitorTests {
     // MARK: - Stop resets state
 
     @Test @MainActor
-    func stopMonitoringResetsBarLevels() {
+    func `stop monitoring resets bar levels`() {
         let monitor = AudioLevelMonitor()
 
         // Feed audio and tick to move bars
@@ -53,7 +52,7 @@ struct AudioLevelMonitorTests {
     // MARK: - Audio level detection
 
     @Test @MainActor
-    func tickDetectsAudioLevel() {
+    func `tick detects audio level`() {
         let monitor = AudioLevelMonitor()
 
         // Feed a buffer with known amplitude (RMS of constant 0.5 = 0.5)
@@ -65,7 +64,7 @@ struct AudioLevelMonitorTests {
     }
 
     @Test @MainActor
-    func silenceKeepsBarsAtZero() {
+    func `silence keeps bars at zero`() {
         let monitor = AudioLevelMonitor()
 
         // Feed a silent buffer (all zeros)
@@ -81,7 +80,7 @@ struct AudioLevelMonitorTests {
     // MARK: - Bar shifting
 
     @Test @MainActor
-    func barsShiftOverMultipleTicks() {
+    func `bars shift over multiple ticks`() {
         let monitor = AudioLevelMonitor()
 
         // Feed audio so the level is non-zero
@@ -93,12 +92,12 @@ struct AudioLevelMonitorTests {
         }
 
         // Multiple bars should have shifted to non-zero values
-        let nonZeroBars = monitor.barLevels.filter { $0 > 0 }.count
+        let nonZeroBars = monitor.barLevels.count(where: { $0 > 0 })
         #expect(nonZeroBars > 1)
     }
 
     @Test @MainActor
-    func newestBarIsAtIndexZero() {
+    func `newest bar is at index zero`() {
         let monitor = AudioLevelMonitor()
 
         // Feed loud audio and tick once
@@ -112,7 +111,7 @@ struct AudioLevelMonitorTests {
     }
 
     @Test @MainActor
-    func barLevelsAlwaysMaintainFiveElements() {
+    func `bar levels always maintain five elements`() {
         let monitor = AudioLevelMonitor()
 
         monitor.updateRMS(from: makeBuffer(amplitude: 0.5))
@@ -126,7 +125,7 @@ struct AudioLevelMonitorTests {
     // MARK: - Smoothing behavior
 
     @Test @MainActor
-    func smoothingProducesGradualIncrease() {
+    func `smoothing produces gradual increase`() {
         let monitor = AudioLevelMonitor()
 
         // Feed a loud signal
@@ -146,7 +145,7 @@ struct AudioLevelMonitorTests {
     // MARK: - Edge cases
 
     @Test @MainActor
-    func startMonitoringTwiceDoesNotCrash() {
+    func `start monitoring twice does not crash`() {
         let monitor = AudioLevelMonitor()
         monitor.startMonitoring()
         monitor.startMonitoring() // Should replace timer, not crash
@@ -154,13 +153,13 @@ struct AudioLevelMonitorTests {
     }
 
     @Test @MainActor
-    func stopMonitoringWithoutStartDoesNotCrash() {
+    func `stop monitoring without start does not crash`() {
         let monitor = AudioLevelMonitor()
         monitor.stopMonitoring() // Should be safe to call without start
     }
 
     @Test @MainActor
-    func updateRMSWithZeroFrameLengthIsIgnored() throws {
+    func `update RMS with zero frame length is ignored`() throws {
         let monitor = AudioLevelMonitor()
 
         let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 44100, channels: 1))

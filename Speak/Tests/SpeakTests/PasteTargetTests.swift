@@ -75,7 +75,11 @@ private final class MockContext: ContextReading {
 }
 
 private final class MockHotkey: HotkeyManaging {
-    func register(onStart: @escaping () -> Void, onStop: @escaping () -> Void) {}
+    func register(
+        onStart: @escaping () -> Void,
+        onStop: @escaping () -> Void,
+        onModeChange: @escaping (RecordingMode) -> Void
+    ) {}
     func resetState() {}
 }
 
@@ -85,7 +89,6 @@ private final class MockHistoryHotkey: HistoryHotkeyManaging {
 
 // MARK: - Tests
 
-@Suite("Paste Target")
 struct PasteTargetTests {
     private func configureDefaults() {
         let defaults = UserDefaults.standard
@@ -122,7 +125,7 @@ struct PasteTargetTests {
     // MARK: - Context capture timing
 
     @Test @MainActor
-    func contextNotReadAtStart() async {
+    func `context not read at start`() async {
         configureDefaults()
         let (coordinator, _, _, _, _, _, context) = makeCoordinator()
 
@@ -132,7 +135,7 @@ struct PasteTargetTests {
     }
 
     @Test @MainActor
-    func contextReadAtConfirmTime() async {
+    func `context read at confirm time`() async {
         configureDefaults()
         let (coordinator, appState, _, _, _, _, context) = makeCoordinator()
 
@@ -144,7 +147,7 @@ struct PasteTargetTests {
     }
 
     @Test @MainActor
-    func contextReadAtPreviewTime() async {
+    func `context read at preview time`() async {
         configureDefaults()
         let (coordinator, appState, _, _, _, _, context) = makeCoordinator()
 
@@ -158,7 +161,7 @@ struct PasteTargetTests {
     // MARK: - Screen vocabulary capture timing
 
     @Test @MainActor
-    func screenVocabularyNotReadAtStart() async {
+    func `screen vocabulary not read at start`() async {
         configureDefaults()
         UserDefaults.standard.set(true, forKey: "screenContext")
         let (coordinator, _, _, _, _, _, context) = makeCoordinator()
@@ -169,7 +172,7 @@ struct PasteTargetTests {
     }
 
     @Test @MainActor
-    func screenVocabularyReadAtStopTime() async {
+    func `screen vocabulary read at stop time`() async {
         configureDefaults()
         UserDefaults.standard.set(true, forKey: "screenContext")
         let (coordinator, appState, _, _, _, _, context) = makeCoordinator()
@@ -184,7 +187,7 @@ struct PasteTargetTests {
     // MARK: - Paste-fail via confirm()
 
     @Test @MainActor
-    func confirmWithNoTextFieldSkipsPasteAndShowsHint() async {
+    func `confirm with no text field skips paste and shows hint`() async {
         configureDefaults()
         let context = MockContext()
         context.hasFocusedTextFieldResult = false
@@ -199,7 +202,7 @@ struct PasteTargetTests {
     }
 
     @Test @MainActor
-    func confirmWithNoTextFieldPutsTextOnClipboard() async {
+    func `confirm with no text field puts text on clipboard`() async {
         configureDefaults()
         let context = MockContext()
         context.hasFocusedTextFieldResult = false
@@ -214,7 +217,7 @@ struct PasteTargetTests {
     }
 
     @Test @MainActor
-    func confirmWithNoTextFieldShowsOverlay() async {
+    func `confirm with no text field shows overlay`() async {
         configureDefaults()
         let context = MockContext()
         context.hasFocusedTextFieldResult = false
@@ -231,7 +234,7 @@ struct PasteTargetTests {
     }
 
     @Test @MainActor
-    func confirmWithNoTextFieldStillSavesToHistory() async {
+    func `confirm with no text field still saves to history`() async {
         configureDefaults()
         let context = MockContext()
         context.hasFocusedTextFieldResult = false
@@ -245,7 +248,7 @@ struct PasteTargetTests {
     }
 
     @Test @MainActor
-    func confirmWithTextFieldStillPastesNormally() async {
+    func `confirm with text field still pastes normally`() async {
         configureDefaults()
         let (coordinator, appState, _, _, _, paster, _) = makeCoordinator()
 
@@ -260,7 +263,7 @@ struct PasteTargetTests {
     // MARK: - Paste-fail via pasteFromPreview()
 
     @Test @MainActor
-    func pasteFromPreviewWithNoTextFieldShowsHint() async {
+    func `paste from preview with no text field shows hint`() async {
         configureDefaults()
         let context = MockContext()
         context.hasFocusedTextFieldResult = false
@@ -277,7 +280,7 @@ struct PasteTargetTests {
     }
 
     @Test @MainActor
-    func pasteFromPreviewWithNoTextFieldPutsTextOnClipboard() async {
+    func `paste from preview with no text field puts text on clipboard`() async {
         configureDefaults()
         let context = MockContext()
         context.hasFocusedTextFieldResult = false
@@ -294,7 +297,7 @@ struct PasteTargetTests {
     }
 
     @Test @MainActor
-    func pasteFromPreviewWithNoTextFieldClearsPreviewState() async {
+    func `paste from preview with no text field clears preview state`() async {
         configureDefaults()
         let context = MockContext()
         context.hasFocusedTextFieldResult = false
@@ -314,7 +317,7 @@ struct PasteTargetTests {
     // MARK: - Dismiss paste-failed hint
 
     @Test @MainActor
-    func dismissPasteFailedHintResetsState() async {
+    func `dismiss paste failed hint resets state`() async {
         configureDefaults()
         let context = MockContext()
         context.hasFocusedTextFieldResult = false
@@ -333,7 +336,7 @@ struct PasteTargetTests {
     }
 
     @Test @MainActor
-    func newRecordingAfterPasteFailedHintWorks() async {
+    func `new recording after paste failed hint works`() async {
         configureDefaults()
         let context = MockContext()
         context.hasFocusedTextFieldResult = false

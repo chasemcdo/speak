@@ -1,9 +1,15 @@
 import Foundation
 import Observation
 
+enum RecordingMode {
+    case hold
+    case toggle
+}
+
 @MainActor
 @Observable
 final class AppState {
+    var recordingMode: RecordingMode = .hold
     var isRecording = false
     var finalizedText = ""
     var volatileText = ""
@@ -34,6 +40,7 @@ final class AppState {
         previewText = ""
         pasteFailedHint = false
         suggestedWord = nil
+        recordingMode = .hold
     }
 
     func appendFinalizedText(_ text: String) {

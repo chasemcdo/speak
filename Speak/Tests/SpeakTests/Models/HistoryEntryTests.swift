@@ -2,9 +2,8 @@ import Foundation
 @testable import Speak
 import Testing
 
-@Suite("HistoryEntry")
 struct HistoryEntryTests {
-    @Test func codableRoundTrip() throws {
+    @Test func `codable round trip`() throws {
         let entry = HistoryEntry(
             rawText: "um hello world",
             processedText: "Hello world",
@@ -23,7 +22,7 @@ struct HistoryEntryTests {
         #expect(decoded.timestamp == entry.timestamp)
     }
 
-    @Test func codableRoundTripWithNilOptionals() throws {
+    @Test func `codable round trip with nil optionals`() throws {
         let entry = HistoryEntry(
             rawText: "test",
             processedText: "Test"
@@ -39,7 +38,7 @@ struct HistoryEntryTests {
         #expect(decoded.sourceAppBundleID == nil)
     }
 
-    @Test func uniqueIdsGenerated() {
+    @Test func `unique ids generated`() {
         let a = HistoryEntry(rawText: "a", processedText: "A")
         let b = HistoryEntry(rawText: "b", processedText: "B")
         #expect(a.id != b.id)

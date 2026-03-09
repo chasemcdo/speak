@@ -7,7 +7,7 @@ protocol TextFilter: Sendable {
 }
 
 /// Context passed to each filter (surrounding text, locale, etc.)
-struct ProcessingContext: Sendable {
+struct ProcessingContext {
     var surroundingText: String?
     var screenVocabulary: ScreenVocabulary?
     var locale: Locale

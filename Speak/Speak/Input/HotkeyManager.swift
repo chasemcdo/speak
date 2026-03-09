@@ -11,28 +11,28 @@ enum TranscriptionHotkey: String, CaseIterable {
 
     var modifierFlag: NSEvent.ModifierFlags {
         switch self {
-        case .fn: return .function
-        case .control: return .control
-        case .option: return .option
-        case .command: return .command
+        case .fn: .function
+        case .control: .control
+        case .option: .option
+        case .command: .command
         }
     }
 
     var label: String {
         switch self {
-        case .fn: return "fn"
-        case .control: return "⌃ Control"
-        case .option: return "⌥ Option"
-        case .command: return "⌘ Command"
+        case .fn: "fn"
+        case .control: "⌃ Control"
+        case .option: "⌥ Option"
+        case .command: "⌘ Command"
         }
     }
 
     var shortLabel: String {
         switch self {
-        case .fn: return "fn"
-        case .control: return "⌃"
-        case .option: return "⌥"
-        case .command: return "⌘"
+        case .fn: "fn"
+        case .control: "⌃"
+        case .option: "⌥"
+        case .command: "⌘"
         }
     }
 
@@ -56,6 +56,7 @@ final class HotkeyManager {
     private var eventTapRunLoopSource: CFRunLoopSource?
     private var onStart: (() -> Void)?
     private var onStop: (() -> Void)?
+    private var onModeChange: ((RecordingMode) -> Void)?
 
     /// Internal state machine for gesture recognition.
     private enum State {
@@ -89,9 +90,14 @@ final class HotkeyManager {
 
     // MARK: - Public API
 
-    func register(onStart: @escaping () -> Void, onStop: @escaping () -> Void) {
+    func register(
+        onStart: @escaping () -> Void,
+        onStop: @escaping () -> Void,
+        onModeChange: @escaping (RecordingMode) -> Void
+    ) {
         self.onStart = onStart
         self.onStop = onStop
+        self.onModeChange = onModeChange
 
         // Monitor flagsChanged for the configured modifier key (works system-wide)
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
@@ -115,6 +121,7 @@ final class HotkeyManager {
         localMonitor = nil
         onStart = nil
         onStop = nil
+        onModeChange = nil
         cancelTimers()
         removeKeyDownMonitor()
         state = .idle
@@ -164,6 +171,7 @@ final class HotkeyManager {
                 if event.getIntegerValueField(.keyboardEventKeycode) == 0x31,
                    manager.state == .holdRecording {
                     manager.state = .toggleRecording
+                    manager.onModeChange?(.toggle)
                     return nil
                 }
 
@@ -215,6 +223,7 @@ final class HotkeyManager {
     func handleKeyDown(_ event: NSEvent) -> Bool {
         guard event.keyCode == 0x31, state == .holdRecording else { return false }
         state = .toggleRecording
+        onModeChange?(.toggle)
         removeKeyDownMonitor()
         return true
     }
@@ -247,10 +256,11 @@ final class HotkeyManager {
         case .idle:
             // Start the hold timer — if key stays down long enough, enter hold mode
             let work = DispatchWorkItem { [weak self] in
-                guard let self, self.state == .firstDown else { return }
-                self.state = .holdRecording
-                self.installKeyDownMonitor()
-                self.onStart?()
+                guard let self, state == .firstDown else { return }
+                state = .holdRecording
+                installKeyDownMonitor()
+                onModeChange?(.hold)
+                onStart?()
             }
             holdTimer = work
             DispatchQueue.main.asyncAfter(deadline: .now() + holdThreshold, execute: work)
@@ -280,9 +290,9 @@ final class HotkeyManager {
             holdTimer = nil
 
             let work = DispatchWorkItem { [weak self] in
-                guard let self, self.state == .awaitingSecondTap else { return }
+                guard let self, state == .awaitingSecondTap else { return }
                 // Double-tap window expired — this was just a single tap while idle. No-op.
-                self.state = .idle
+                state = .idle
             }
             doubleTapTimer = work
             DispatchQueue.main.asyncAfter(deadline: .now() + doubleTapWindow, execute: work)
@@ -298,6 +308,7 @@ final class HotkeyManager {
             // Release after the second tap of a double-tap — ignore this release,
             // recording continues in toggle mode.
             state = .toggleRecording
+            onModeChange?(.toggle)
 
         case .toggleRecording:
             // fn released while in toggle mode (after hold→space transition) —
