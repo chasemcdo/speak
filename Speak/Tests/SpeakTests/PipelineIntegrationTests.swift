@@ -68,7 +68,16 @@ private final class MockContext: ContextReading {
 }
 
 private final class MockHotkey: HotkeyManaging {
-    func register(onStart: @escaping () -> Void, onStop: @escaping () -> Void) {}
+    var onModeChange: ((RecordingMode) -> Void)?
+
+    func register(
+        onStart: @escaping () -> Void,
+        onStop: @escaping () -> Void,
+        onModeChange: @escaping (RecordingMode) -> Void
+    ) {
+        self.onModeChange = onModeChange
+    }
+
     func resetState() {}
 }
 
@@ -78,7 +87,7 @@ private final class MockHistoryHotkey: HistoryHotkeyManaging {
 
 // MARK: - Tests
 
-@Suite("Pipeline Integration", .serialized)
+@Suite(.serialized)
 struct PipelineIntegrationTests {
     private func configureDefaults() {
         let defaults = UserDefaults.standard
@@ -113,7 +122,7 @@ struct PipelineIntegrationTests {
     }
 
     @Test @MainActor
-    func fullDictationFlow() async {
+    func `full dictation flow`() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -145,7 +154,7 @@ struct PipelineIntegrationTests {
     }
 
     @Test @MainActor
-    func cancelFlowResetsState() async {
+    func `cancel flow resets state`() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -170,7 +179,7 @@ struct PipelineIntegrationTests {
     }
 
     @Test @MainActor
-    func micPermissionDeniedSetsError() async {
+    func `mic permission denied sets error`() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -192,7 +201,7 @@ struct PipelineIntegrationTests {
     }
 
     @Test @MainActor
-    func speechPermissionDeniedSetsError() async {
+    func `speech permission denied sets error`() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -214,7 +223,7 @@ struct PipelineIntegrationTests {
     }
 
     @Test @MainActor
-    func emptyTranscriptionSkipsPaste() async {
+    func `empty transcription skips paste`() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -235,7 +244,7 @@ struct PipelineIntegrationTests {
     }
 
     @Test @MainActor
-    func transcriptionErrorDismissesOverlay() async {
+    func `transcription error dismisses overlay`() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -259,7 +268,7 @@ struct PipelineIntegrationTests {
     // MARK: - Audio level monitor wiring
 
     @Test @MainActor
-    func startWiresAudioLevelMonitor() async {
+    func `start wires audio level monitor`() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -283,7 +292,7 @@ struct PipelineIntegrationTests {
     }
 
     @Test @MainActor
-    func confirmClearsAudioLevelMonitor() async {
+    func `confirm clears audio level monitor`() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -306,7 +315,7 @@ struct PipelineIntegrationTests {
     }
 
     @Test @MainActor
-    func cancelClearsAudioLevelMonitor() async {
+    func `cancel clears audio level monitor`() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -328,8 +337,140 @@ struct PipelineIntegrationTests {
         #expect(transcriber.levelMonitor == nil)
     }
 
+    // MARK: - Recording mode wiring
+
     @Test @MainActor
-    func transcriptionErrorClearsAudioLevelMonitor() async {
+    func `mode change wires to app state`() async {
+        configureDefaults()
+
+        let hotkey = MockHotkey()
+        let transcriber = MockTranscriber()
+        let overlay = MockOverlay()
+        let paster = MockPaster()
+        let appState = AppState()
+        let historyStore = HistoryStore()
+
+        let coordinator = makeCoordinator(
+            transcriber: transcriber, overlay: overlay, paster: paster,
+            hotkeyManager: hotkey
+        )
+        coordinator.setUp(appState: appState, historyStore: historyStore)
+
+        hotkey.onModeChange?(.hold)
+        await Task.yield()
+        #expect(appState.recordingMode == .hold)
+
+        hotkey.onModeChange?(.toggle)
+        await Task.yield()
+        #expect(appState.recordingMode == .toggle)
+    }
+
+    @Test @MainActor
+    func `confirm from overlay during recording stops and pastes`() async {
+        configureDefaults()
+
+        let transcriber = MockTranscriber()
+        let overlay = MockOverlay()
+        let paster = MockPaster()
+        let appState = AppState()
+        let historyStore = HistoryStore()
+
+        let coordinator = makeCoordinator(
+            transcriber: transcriber, overlay: overlay, paster: paster
+        )
+        coordinator.setUp(appState: appState, historyStore: historyStore)
+
+        await coordinator.start()
+        appState.appendFinalizedText("Stop button text.")
+
+        NotificationCenter.default.post(name: .overlayConfirmRequested, object: nil)
+        // Yield until the notification handler's async Task completes
+        for _ in 0 ..< 100 {
+            await Task.yield()
+            if paster.pasteCalled { break }
+        }
+
+        #expect(transcriber.stopSessionCalled)
+        #expect(paster.pasteCalled)
+        #expect(paster.pastedText == "Stop button text.")
+        #expect(overlay.hideCalled)
+    }
+
+    @Test @MainActor
+    func `confirm from overlay when not recording is no op`() async {
+        configureDefaults()
+
+        let transcriber = MockTranscriber()
+        let overlay = MockOverlay()
+        let paster = MockPaster()
+        let appState = AppState()
+        let historyStore = HistoryStore()
+
+        let coordinator = makeCoordinator(
+            transcriber: transcriber, overlay: overlay, paster: paster
+        )
+        coordinator.setUp(appState: appState, historyStore: historyStore)
+
+        // Don't start recording — post confirm notification
+        NotificationCenter.default.post(name: .overlayConfirmRequested, object: nil)
+        await Task.yield()
+
+        #expect(!paster.pasteCalled)
+        #expect(!transcriber.stopSessionCalled)
+    }
+
+    @Test @MainActor
+    func `mode resets on next start`() async {
+        configureDefaults()
+
+        let transcriber = MockTranscriber()
+        let overlay = MockOverlay()
+        let paster = MockPaster()
+        let appState = AppState()
+        let historyStore = HistoryStore()
+
+        let coordinator = makeCoordinator(
+            transcriber: transcriber, overlay: overlay, paster: paster
+        )
+        coordinator.setUp(appState: appState, historyStore: historyStore)
+
+        await coordinator.start()
+        appState.recordingMode = .toggle
+        appState.appendFinalizedText("Text")
+
+        await coordinator.confirm()
+        #expect(appState.recordingMode == .toggle)
+
+        // start() calls reset() which clears recordingMode
+        await coordinator.start()
+        #expect(appState.recordingMode == .hold)
+    }
+
+    @Test @MainActor
+    func `mode resets after cancel`() async {
+        configureDefaults()
+
+        let transcriber = MockTranscriber()
+        let overlay = MockOverlay()
+        let paster = MockPaster()
+        let appState = AppState()
+        let historyStore = HistoryStore()
+
+        let coordinator = makeCoordinator(
+            transcriber: transcriber, overlay: overlay, paster: paster
+        )
+        coordinator.setUp(appState: appState, historyStore: historyStore)
+
+        await coordinator.start()
+        appState.recordingMode = .toggle
+
+        await coordinator.cancel()
+
+        #expect(appState.recordingMode == .hold)
+    }
+
+    @Test @MainActor
+    func `transcription error clears audio level monitor`() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()

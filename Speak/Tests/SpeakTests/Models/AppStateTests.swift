@@ -1,38 +1,37 @@
 @testable import Speak
 import Testing
 
-@Suite("AppState")
 struct AppStateTests {
-    @Test @MainActor func displayTextCombinesFinalizedAndVolatile() {
+    @Test @MainActor func `display text combines finalized and volatile`() {
         let state = AppState()
         state.finalizedText = "Hello "
         state.volatileText = "world"
         #expect(state.displayText == "Hello world")
     }
 
-    @Test @MainActor func displayTextEmptyByDefault() {
+    @Test @MainActor func `display text empty by default`() {
         let state = AppState()
         #expect(state.displayText == "")
     }
 
-    @Test @MainActor func hasTextIsFalseWhenEmpty() {
+    @Test @MainActor func `has text is false when empty`() {
         let state = AppState()
         #expect(state.hasText == false)
     }
 
-    @Test @MainActor func hasTextIsTrueWithFinalizedText() {
+    @Test @MainActor func `has text is true with finalized text`() {
         let state = AppState()
         state.finalizedText = "Hello"
         #expect(state.hasText == true)
     }
 
-    @Test @MainActor func hasTextIsTrueWithVolatileTextOnly() {
+    @Test @MainActor func `has text is true with volatile text only`() {
         let state = AppState()
         state.volatileText = "typing..."
         #expect(state.hasText == true)
     }
 
-    @Test @MainActor func resetClearsAllState() {
+    @Test @MainActor func `reset clears all state`() {
         let state = AppState()
         state.isRecording = true
         state.finalizedText = "Hello"
@@ -41,6 +40,7 @@ struct AppStateTests {
         state.isPreviewing = true
         state.previewText = "Preview text"
         state.pasteFailedHint = true
+        state.recordingMode = .toggle
 
         state.reset()
 
@@ -51,9 +51,10 @@ struct AppStateTests {
         #expect(state.isPreviewing == false)
         #expect(state.previewText == "")
         #expect(state.pasteFailedHint == false)
+        #expect(state.recordingMode == .hold)
     }
 
-    @Test @MainActor func appendFinalizedTextAppendsAndClearsVolatile() {
+    @Test @MainActor func `append finalized text appends and clears volatile`() {
         let state = AppState()
         state.volatileText = "partial"
         state.appendFinalizedText("Hello ")
@@ -61,28 +62,40 @@ struct AppStateTests {
         #expect(state.volatileText == "")
     }
 
-    @Test @MainActor func appendFinalizedTextAccumulates() {
+    @Test @MainActor func `append finalized text accumulates`() {
         let state = AppState()
         state.appendFinalizedText("Hello ")
         state.appendFinalizedText("world")
         #expect(state.finalizedText == "Hello world")
     }
 
-    @Test @MainActor func updateVolatileTextSetsVolatile() {
+    @Test @MainActor func `update volatile text sets volatile`() {
         let state = AppState()
         state.updateVolatileText("typing...")
         #expect(state.volatileText == "typing...")
     }
 
+    // MARK: - Paste-failed hint
+
+    @Test @MainActor func `reset clears paste failed hint`() {
+        let state = AppState()
+        state.pasteFailedHint = true
+
+        state.reset()
+
+        #expect(state.pasteFailedHint == false)
+    }
+
+
     // MARK: - Preview state
 
-    @Test @MainActor func previewStateDefaultsToFalse() {
+    @Test @MainActor func `preview state defaults to false`() {
         let state = AppState()
         #expect(state.isPreviewing == false)
         #expect(state.previewText == "")
     }
 
-    @Test @MainActor func resetClearsPreviewState() {
+    @Test @MainActor func `reset clears preview state`() {
         let state = AppState()
         state.isPreviewing = true
         state.previewText = "Hello world"
@@ -91,5 +104,21 @@ struct AppStateTests {
 
         #expect(state.isPreviewing == false)
         #expect(state.previewText == "")
+    }
+
+    // MARK: - Recording mode
+
+    @Test @MainActor func `recording mode defaults to hold`() {
+        let state = AppState()
+        #expect(state.recordingMode == .hold)
+    }
+
+    @Test @MainActor func `reset clears recording mode`() {
+        let state = AppState()
+        state.recordingMode = .toggle
+
+        state.reset()
+
+        #expect(state.recordingMode == .hold)
     }
 }
