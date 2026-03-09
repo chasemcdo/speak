@@ -86,7 +86,6 @@ struct AppStateTests {
         #expect(state.pasteFailedHint == false)
     }
 
-
     // MARK: - Preview state
 
     @Test @MainActor func `preview state defaults to false`() {
