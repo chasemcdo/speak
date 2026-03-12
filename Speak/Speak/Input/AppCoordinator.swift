@@ -297,7 +297,7 @@ final class AppCoordinator {
         let currentApp = NSWorkspace.shared.frontmostApplication
         let success = await pasteService.paste(entry.processedText, into: currentApp)
         if !success {
-            showPasteFailedHint()
+            showPasteFailedHint(text: entry.processedText)
         }
     }
 
@@ -417,7 +417,7 @@ final class AppCoordinator {
         if autoPaste {
             let success = await pasteService.paste(text, into: previousApp)
             if !success {
-                showPasteFailedHint()
+                showPasteFailedHint(text: text)
             }
         } else {
             NSPasteboard.general.clearContents()
@@ -427,10 +427,13 @@ final class AppCoordinator {
     }
 
     /// Show the paste-failed hint overlay and schedule auto-dismiss.
-    private func showPasteFailedHint() {
+    /// Copies `text` to the clipboard so the user can manually paste.
+    private func showPasteFailedHint(text: String) {
         guard let appState else { return }
         pasteFailedHintTimer?.cancel()
         pasteFailedHintTimer = nil
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
         SoundFeedback.playPasteFailedSound()
         appState.pasteFailedHint = true
         overlayManager.show(appState: appState)
