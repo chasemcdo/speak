@@ -6,26 +6,39 @@ enum PasteService {
     /// Paste the given text into the target application.
     /// Saves the current pasteboard, writes the text, simulates Cmd+V,
     /// then restores the original pasteboard after a delay.
-    static func paste(_ text: String, into app: NSRunningApplication?) async {
+    /// Returns `true` when paste is attempted.
+    /// Returns `false` when no target app is available or the target app could not be activated.
+    @discardableResult
+    static func paste(_ text: String, into app: NSRunningApplication?) async -> Bool {
+        // 1. Activate the target app so it receives the keystroke
+        guard let app else {
+            return false
+        }
+
+        app.activate()
+        // Wait for the app to actually become frontmost
+        var activated = false
+        for _ in 0 ..< 10 {
+            try? await Task.sleep(for: .milliseconds(50))
+            if app.isActive {
+                activated = true
+                break
+            }
+        }
+
+        guard activated else {
+            return false
+        }
+
         let pasteboard = NSPasteboard.general
 
-        // 1. Save current pasteboard contents
+        // 2. Save current pasteboard contents
         let previousChangeCount = pasteboard.changeCount
         let previousStrings = pasteboard.string(forType: .string)
 
-        // 2. Write our text to the pasteboard
+        // 3. Write our text to the pasteboard
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
-
-        // 3. Activate the target app so it receives the keystroke
-        if let app {
-            app.activate()
-            // Wait for the app to actually become frontmost
-            for _ in 0 ..< 10 {
-                try? await Task.sleep(for: .milliseconds(50))
-                if app.isActive { break }
-            }
-        }
 
         // Small extra delay to ensure the app's text field is ready
         try? await Task.sleep(for: .milliseconds(100))
@@ -44,6 +57,8 @@ enum PasteService {
                 }
             }
         }
+
+        return true
     }
 
     /// Simulate a Cmd+V keystroke using CGEvent.
