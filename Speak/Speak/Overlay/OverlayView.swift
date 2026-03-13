@@ -65,17 +65,6 @@ struct OverlayView: View {
         }
     }
 
-    private var pasteFailedHintContent: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("No text field selected")
-                .font(.body)
-                .foregroundStyle(.secondary)
-            Text("Press \u{2303}\u{2318}V to paste later.")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-        }
-    }
-
     private var previewContent: some View {
         VStack(alignment: .leading, spacing: 8) {
             if appState.previewText.isEmpty {
@@ -115,6 +104,18 @@ struct OverlayView: View {
                     .foregroundStyle(.tertiary)
             }
         }
+    }
+
+    private var pasteFailedHintContent: some View {
+        VStack(spacing: 4) {
+            Text("Couldn't paste automatically")
+                .font(.body)
+                .foregroundStyle(.primary)
+            Text("Text copied — focus a text field, then press \u{2318}V.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private var transcriptionText: some View {

@@ -41,12 +41,12 @@ final class AppCoordinator {
     private var appState: AppState?
     private var historyStore: HistoryStore?
     private var previewDismissTimer: DispatchWorkItem?
+    private var pasteFailedHintTimer: DispatchWorkItem?
     private var recordingKeyMonitor: Any?
     private var previewKeyMonitor: Any?
     private var audioLevelMonitor: AudioLevelMonitor?
     private var cancelObserver: Any?
     private var confirmObserver: Any?
-    private var pasteFailedHintTimer: DispatchWorkItem?
 
     /// Set up the coordinator with the shared app state. Call once at app launch.
     func setUp(appState: AppState, historyStore: HistoryStore) {
@@ -194,26 +194,15 @@ final class AppCoordinator {
     func confirm() async {
         guard let appState, appState.isRecording else { return }
 
+        // Capture setting before async work so it reflects the user's
+        // intent at the time they stopped recording.
+        let autoPaste = UserDefaults.standard.bool(forKey: "autoPaste")
+
         let text = await stopAndProcess()
 
         // Paste if we have text
         if !text.isEmpty {
-            if contextReader.hasFocusedTextField(in: previousApp) {
-                // Hide overlay and paste normally
-                overlayManager.hide()
-
-                let autoPaste = UserDefaults.standard.bool(forKey: "autoPaste")
-                if autoPaste {
-                    await pasteService.paste(text, into: previousApp)
-                } else {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(text, forType: .string)
-                    previousApp?.activate()
-                }
-            } else {
-                showPasteFailedHint(text: text)
-                return
-            }
+            await deliverText(text, autoPaste: autoPaste)
         } else {
             overlayManager.hide()
             appState.reset()
@@ -270,29 +259,14 @@ final class AppCoordinator {
     func pasteFromPreview() async {
         guard let appState, appState.isPreviewing else { return }
 
+        let autoPaste = UserDefaults.standard.bool(forKey: "autoPaste")
         let text = appState.previewText
         removePreviewMonitors()
 
         // Paste if we have text
         if !text.isEmpty {
-            if contextReader.hasFocusedTextField(in: previousApp) {
-                // Hide overlay and reset state
-                overlayManager.hide()
-                appState.reset()
-
-                let autoPaste = UserDefaults.standard.bool(forKey: "autoPaste")
-                if autoPaste {
-                    await pasteService.paste(text, into: previousApp)
-                } else {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(text, forType: .string)
-                    previousApp?.activate()
-                }
-            } else {
-                appState.reset()
-                showPasteFailedHint(text: text)
-                return
-            }
+            appState.reset()
+            await deliverText(text, autoPaste: autoPaste)
         } else {
             overlayManager.hide()
             appState.reset()
@@ -321,7 +295,10 @@ final class AppCoordinator {
         guard let appState, !appState.isRecording,
               let entry = historyStore?.mostRecent else { return }
         let currentApp = NSWorkspace.shared.frontmostApplication
-        await pasteService.paste(entry.processedText, into: currentApp)
+        let success = await pasteService.paste(entry.processedText, into: currentApp)
+        if !success {
+            showPasteFailedHint(text: entry.processedText)
+        }
     }
 
     // MARK: - Private
@@ -433,17 +410,31 @@ final class AppCoordinator {
         previewKeyMonitor = nil
     }
 
-    /// Show the paste-failed hint overlay, put text on clipboard, and auto-dismiss after 4 seconds.
+    /// Deliver transcribed text via auto-paste or clipboard copy.
+    private func deliverText(_ text: String, autoPaste: Bool) async {
+        overlayManager.hide()
+
+        if autoPaste {
+            let success = await pasteService.paste(text, into: previousApp)
+            if !success {
+                showPasteFailedHint(text: text)
+            }
+        } else {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(text, forType: .string)
+            previousApp?.activate()
+        }
+    }
+
+    /// Show the paste-failed hint overlay and schedule auto-dismiss.
+    /// Copies `text` to the clipboard so the user can manually paste.
     private func showPasteFailedHint(text: String) {
         guard let appState else { return }
-
         pasteFailedHintTimer?.cancel()
         pasteFailedHintTimer = nil
-
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
         SoundFeedback.playPasteFailedSound()
-
         appState.pasteFailedHint = true
         overlayManager.show(appState: appState)
 
@@ -453,21 +444,16 @@ final class AppCoordinator {
             }
         }
         pasteFailedHintTimer = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: work)
     }
 
-    /// Dismiss the paste-failed hint overlay.
+    /// Dismiss the paste-failed hint if it's still showing.
     private func dismissPasteFailedHint() {
         guard let appState, appState.pasteFailedHint else { return }
-
         pasteFailedHintTimer?.cancel()
         pasteFailedHintTimer = nil
         overlayManager.hide()
-        appState.reset()
-
-        previousApp = nil
-        capturedContext = nil
-        capturedVocabulary = nil
+        appState.pasteFailedHint = false
     }
 
     /// Configure the text processing filters based on current user preferences.

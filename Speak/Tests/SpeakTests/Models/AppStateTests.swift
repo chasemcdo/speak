@@ -39,6 +39,7 @@ struct AppStateTests {
         state.error = "Some error"
         state.isPreviewing = true
         state.previewText = "Preview text"
+        state.pasteFailedHint = true
         state.recordingMode = .toggle
 
         state.reset()
@@ -49,6 +50,7 @@ struct AppStateTests {
         #expect(state.error == nil)
         #expect(state.isPreviewing == false)
         #expect(state.previewText == "")
+        #expect(state.pasteFailedHint == false)
         #expect(state.recordingMode == .hold)
     }
 
