@@ -260,7 +260,6 @@ struct PasteTargetTests {
     @Test @MainActor
     func `paste from preview with auto paste off copies to clipboard`() async {
         configureDefaults()
-        UserDefaults.standard.set(false, forKey: "autoPaste")
         let (coordinator, appState, _, _, overlay, paster, _) = makeCoordinator()
 
         NSPasteboard.general.clearContents()
@@ -270,6 +269,9 @@ struct PasteTargetTests {
         appState.appendFinalizedText("Preview text")
         await coordinator.stopWithoutPaste()
 
+        // Set autoPaste right before the call that reads it so concurrent
+        // test suites cannot overwrite it during the awaits above.
+        UserDefaults.standard.set(false, forKey: "autoPaste")
         await coordinator.pasteFromPreview()
 
         #expect(!paster.pasteCalled)
