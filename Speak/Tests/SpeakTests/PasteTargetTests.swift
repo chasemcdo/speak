@@ -240,7 +240,6 @@ struct PasteTargetTests {
     @Test @MainActor
     func `confirm with auto paste off copies to clipboard`() async {
         configureDefaults()
-        UserDefaults.standard.set(false, forKey: "autoPaste")
         let (coordinator, appState, _, _, overlay, paster, _) = makeCoordinator()
 
         // Seed clipboard with a sentinel so we can verify it was overwritten
@@ -249,6 +248,9 @@ struct PasteTargetTests {
 
         await coordinator.start()
         appState.appendFinalizedText("Hello world")
+        // Set autoPaste right before the call that reads it so concurrent
+        // test suites cannot overwrite it during the awaits above.
+        UserDefaults.standard.set(false, forKey: "autoPaste")
         await coordinator.confirm()
 
         #expect(!paster.pasteCalled)
@@ -317,13 +319,15 @@ struct PasteTargetTests {
     @Test @MainActor
     func `auto paste off does not show hint on failure`() async {
         configureDefaults()
-        UserDefaults.standard.set(false, forKey: "autoPaste")
         let paster = MockPaster()
         paster.pasteResult = false
         let (coordinator, appState, _, _, _, _, _) = makeCoordinator(paster: paster)
 
         await coordinator.start()
         appState.appendFinalizedText("Hello world")
+        // Set autoPaste right before the call that reads it so concurrent
+        // test suites cannot overwrite it during the awaits above.
+        UserDefaults.standard.set(false, forKey: "autoPaste")
         await coordinator.confirm()
 
         #expect(!appState.pasteFailedHint, "No hint when autoPaste is off — text is just copied to clipboard")

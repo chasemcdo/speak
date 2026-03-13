@@ -111,7 +111,7 @@ struct OverlayView: View {
             Text("Couldn't paste automatically")
                 .font(.body)
                 .foregroundStyle(.primary)
-            Text("Text copied — press \u{2318}V to paste manually.")
+            Text("Text copied — focus a text field, then press \u{2318}V.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
