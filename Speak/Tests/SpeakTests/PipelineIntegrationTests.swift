@@ -127,6 +127,13 @@ struct PipelineIntegrationTests {
         )
     }
 
+    @MainActor
+    private func freshDictionaryStore() -> DictionaryStore {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("SpeakTests-\(UUID().uuidString)", isDirectory: true)
+        return DictionaryStore(storageDirectory: dir)
+    }
+
     @Test @MainActor
     func `full dictation flow`() async {
         configureDefaults()
@@ -282,7 +289,7 @@ struct PipelineIntegrationTests {
         let paster = MockPaster()
         let appState = AppState()
         let historyStore = HistoryStore()
-        let dictionaryStore = DictionaryStore()
+        let dictionaryStore = freshDictionaryStore()
         dictionaryStore.add("Decoda")
 
         let coordinator = makeCoordinator(
@@ -539,8 +546,7 @@ struct PipelineIntegrationTests {
         let paster = MockPaster()
         let appState = AppState()
         let historyStore = HistoryStore()
-        let dictionaryStore = DictionaryStore()
-        dictionaryStore.clearAll()
+        let dictionaryStore = freshDictionaryStore()
 
         let coordinator = makeCoordinator(
             transcriber: transcriber, overlay: overlay, paster: paster
@@ -605,8 +611,7 @@ struct PipelineIntegrationTests {
         let paster = MockPaster()
         let appState = AppState()
         let historyStore = HistoryStore()
-        let dictionaryStore = DictionaryStore()
-        dictionaryStore.clearAll()
+        let dictionaryStore = freshDictionaryStore()
 
         let coordinator = makeCoordinator(
             transcriber: transcriber, overlay: overlay, paster: paster

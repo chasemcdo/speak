@@ -491,27 +491,23 @@ final class AppCoordinator {
 
     /// Schedule a delayed read of the target app's text field to detect user corrections.
     private func scheduleEditDetection(pastedText: String, into app: NSRunningApplication?) {
-        let reader = contextReader
         let store = dictionaryStore
         editDetectionTask?.cancel()
         editDetectionTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(3))
             guard !Task.isCancelled else { return }
-            guard let currentText = reader.readContext(from: app) else { return }
+            let currentText = await Task.detached {
+                ContextReader.readContextFromApp(app)
+            }.value
+            guard let currentText, !Task.isCancelled else { return }
             let candidates = EditDiffer.findReplacements(original: pastedText, edited: currentText)
-            var firstSuggestion: DictionarySuggestion?
-            for candidate in candidates {
+            guard !Task.isCancelled else { return }
+            if let candidate = candidates.first {
                 let suggestion = DictionarySuggestion(
                     phrase: candidate.replacement,
                     original: candidate.original
                 )
                 store?.addSuggestion(suggestion)
-                if firstSuggestion == nil {
-                    firstSuggestion = suggestion
-                }
-            }
-            guard !Task.isCancelled else { return }
-            if let suggestion = firstSuggestion {
                 self?.showSuggestionOverlay(suggestion)
             }
         }
@@ -595,6 +591,7 @@ final class AppCoordinator {
     private func acceptSuggestionOverlay() {
         guard let appState, let suggestion = appState.suggestedWord else { return }
         dictionaryStore?.acceptSuggestion(suggestion)
+        configureFilters()
         dismissSuggestionOverlay()
     }
 
