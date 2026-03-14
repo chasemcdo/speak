@@ -26,7 +26,6 @@ final class DictionaryStore {
     private(set) var entries: [DictionaryEntry] = []
     private(set) var suggestions: [DictionarySuggestion] = []
 
-    private static let maxEntries = 500
     private static let maxSuggestions = 50
 
     private let entriesFileURL: URL
@@ -57,9 +56,6 @@ final class DictionaryStore {
         // Avoid duplicates
         guard !entries.contains(where: { $0.phrase.lowercased() == phrase.lowercased() }) else { return }
         entries.insert(DictionaryEntry(phrase: phrase, source: source), at: 0)
-        if entries.count > Self.maxEntries {
-            entries = Array(entries.prefix(Self.maxEntries))
-        }
         saveEntries()
     }
 

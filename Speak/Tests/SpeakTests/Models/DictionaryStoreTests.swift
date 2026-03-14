@@ -134,14 +134,4 @@ struct DictionaryStoreTests {
         #expect(store.suggestions.isEmpty)
     }
 
-    // MARK: - Max entries cap
-
-    @Test @MainActor
-    func maxEntriesCap() {
-        let store = freshStore()
-        for i in 0 ..< 510 {
-            store.add("word\(i)")
-        }
-        #expect(store.entries.count == 500)
-    }
 }
