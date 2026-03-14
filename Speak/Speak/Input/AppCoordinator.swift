@@ -51,6 +51,9 @@ final class AppCoordinator {
     private var suggestionAcceptedObserver: Any?
     private var suggestionTimer: DispatchWorkItem?
     private var editDetectionTask: Task<Void, Never>?
+    private var preloadTasksByLocale: [String: Task<Void, Never>] = [:]
+    @ObservationIgnored private var isPreparing = false
+    private let modelManager = ModelManager()
 
     /// Set up the coordinator with the shared app state. Call once at app launch.
     func setUp(appState: AppState, historyStore: HistoryStore, dictionaryStore: DictionaryStore? = nil) {
@@ -140,17 +143,46 @@ final class AppCoordinator {
     /// Pre-download the speech model for the user's selected locale so it's
     /// ready when they start recording.
     func preloadModel() {
-        Task {
-            let modelManager = ModelManager()
-            let locale = UserDefaults.standard.string(forKey: "locale")
-                .flatMap { Locale(identifier: $0) } ?? Locale.current
-            try? await modelManager.ensureModelAvailable(for: locale)
+        let locale = UserDefaults.standard.string(forKey: "locale")
+            .flatMap { Locale(identifier: $0) } ?? Locale.current
+        let localeID = locale.identifier(.bcp47)
+
+        // Reuse an existing task if one is already preloading this locale
+        if let existing = preloadTasksByLocale[localeID], !existing.isCancelled {
+            return
         }
+
+        // Cancel any in-flight preloads for other locales — they are no longer needed
+        for (_, task) in preloadTasksByLocale {
+            task.cancel()
+        }
+        preloadTasksByLocale.removeAll()
+
+        let task = Task { [weak self, modelManager] in
+            do {
+                try await modelManager.ensureModelAvailable(for: locale)
+            } catch is CancellationError {
+                return
+            } catch {}
+
+            guard let self else { return }
+            // Only clear if this is still the active task for this locale
+            if self.preloadTasksByLocale[localeID] != nil {
+                self.preloadTasksByLocale.removeValue(forKey: localeID)
+            }
+        }
+        preloadTasksByLocale[localeID] = task
     }
 
     /// Start a dictation session.
     func start() async {
-        guard let appState, !appState.isRecording else { return }
+        guard let appState, !appState.isRecording, !isPreparing else { return }
+        isPreparing = true
+        defer { isPreparing = false }
+
+        let locale = UserDefaults.standard.string(forKey: "locale")
+            .flatMap { Locale(identifier: $0) } ?? Locale.current
+        let localeID = locale.identifier(.bcp47)
 
         // Cancel any pending edit detection from a prior session
         editDetectionTask?.cancel()
@@ -174,21 +206,44 @@ final class AppCoordinator {
             return
         }
 
-        // Reset state
+        // Reset state and show overlay immediately so the user gets feedback
         appState.reset()
-
-        // Show the overlay
         overlayManager.show(appState: appState)
+
+        // Wait for the matching preload to finish before starting audio to avoid duplicate downloads.
+        // We race the preload against a 10-second timeout: two tasks are added to the group,
+        // and the first one to complete wins — we then cancel the remaining task and proceed.
+        if let matchingTask = preloadTasksByLocale[localeID] {
+            await withTaskGroup(of: Void.self) { group in
+                group.addTask {
+                    await withTaskCancellationHandler {
+                        await matchingTask.value
+                    } onCancel: {
+                        matchingTask.cancel()
+                    }
+                }
+                group.addTask {
+                    try? await Task.sleep(nanoseconds: 10 * 1_000_000_000) // 10s grace period
+                }
+                _ = await group.next()
+                group.cancelAll()
+            }
+        }
+
+        // Re-check after the suspension window — another start() may have run while we were waiting
+        guard !appState.isRecording else { return }
+
+        // Cancel all preloads so they don't consume bandwidth during recording
+        for (_, task) in preloadTasksByLocale {
+            task.cancel()
+        }
+        preloadTasksByLocale.removeAll()
 
         // Set up audio level monitor for waveform visualization
         let monitor = AudioLevelMonitor()
         audioLevelMonitor = monitor
         transcriptionEngine.levelMonitor = monitor
         appState.audioLevel = monitor
-
-        // Start transcription
-        let locale = UserDefaults.standard.string(forKey: "locale")
-            .flatMap { Locale(identifier: $0) } ?? Locale.current
 
         do {
             try await transcriptionEngine.startSession(appState: appState, locale: locale)

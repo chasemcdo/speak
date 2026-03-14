@@ -66,11 +66,13 @@ struct SpeakApp: App {
             SettingsView(updater: updaterController?.updater)
                 .environment(appState)
                 .environment(dictionaryStore)
+                .environment(coordinator)
         }
 
         Window("Welcome to Speak", id: "onboarding") {
             OnboardingView()
                 .environment(appState)
+                .environment(coordinator)
         }
         .windowResizability(.contentSize)
         .defaultPosition(.center)

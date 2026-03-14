@@ -1,4 +1,7 @@
+import os
 import Speech
+
+private let logger = Logger(subsystem: "com.speak.app", category: "ModelManager")
 
 @MainActor
 final class ModelManager {
@@ -34,6 +37,31 @@ final class ModelManager {
             attributeOptions: [.audioTimeRange]
         )
         try await ensureModelAvailable(for: transcriber)
+        do {
+            try await reserveLocale(locale)
+        } catch {
+            let id = locale.identifier(.bcp47)
+            logger
+                .warning(
+                    "Failed to reserve model for \(id, privacy: .public): \(error.localizedDescription, privacy: .public)"
+                )
+        }
+    }
+
+    /// Pin the locale's model so macOS won't evict it.
+    private func reserveLocale(_ locale: Locale) async throws {
+        let reserved = await AssetInventory.reservedLocales
+        if reserved.contains(where: { $0.identifier(.bcp47) == locale.identifier(.bcp47) }) {
+            return
+        }
+        let max = AssetInventory.maximumReservedLocales
+        if reserved.count >= max, let oldest = reserved.first {
+            // Release first so we never exceed maximumReservedLocales
+            await AssetInventory.release(reservedLocale: oldest)
+            _ = try await AssetInventory.reserve(locale: locale)
+            return
+        }
+        _ = try await AssetInventory.reserve(locale: locale)
     }
 
     /// Request speech recognition authorization.

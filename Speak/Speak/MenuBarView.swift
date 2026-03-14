@@ -77,6 +77,7 @@ struct MenuBarView: View {
             }
             .keyboardShortcut("q")
         }
+        .task { coordinator.preloadModel() }
     }
 }
 
