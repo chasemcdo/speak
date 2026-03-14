@@ -56,9 +56,9 @@ final class ModelManager {
         }
         let max = AssetInventory.maximumReservedLocales
         if reserved.count >= max, let oldest = reserved.first {
-            // Reserve first so we never drop below a valid reservation
-            _ = try await AssetInventory.reserve(locale: locale)
+            // Release first so we never exceed maximumReservedLocales
             await AssetInventory.release(reservedLocale: oldest)
+            _ = try await AssetInventory.reserve(locale: locale)
             return
         }
         _ = try await AssetInventory.reserve(locale: locale)

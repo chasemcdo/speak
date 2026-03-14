@@ -49,6 +49,7 @@ final class AppCoordinator {
     private var confirmObserver: Any?
     private var preloadTasksByLocale: [String: Task<Void, Never>] = [:]
     @ObservationIgnored private var isPreparing = false
+    private let modelManager = ModelManager()
 
     /// Set up the coordinator with the shared app state. Call once at app launch.
     func setUp(appState: AppState, historyStore: HistoryStore) {
@@ -140,20 +141,17 @@ final class AppCoordinator {
         }
         preloadTasksByLocale.removeAll()
 
-        let task = Task { [weak self] in
-            let modelManager = ModelManager()
+        let task = Task { [weak self, modelManager] in
             do {
                 try await modelManager.ensureModelAvailable(for: locale)
             } catch is CancellationError {
                 return
             } catch {}
 
-            await MainActor.run { [weak self] in
-                guard let self else { return }
-                // Only clear if this is still the active task for this locale
-                if self.preloadTasksByLocale[localeID] != nil {
-                    self.preloadTasksByLocale.removeValue(forKey: localeID)
-                }
+            guard let self else { return }
+            // Only clear if this is still the active task for this locale
+            if self.preloadTasksByLocale[localeID] != nil {
+                self.preloadTasksByLocale.removeValue(forKey: localeID)
             }
         }
         preloadTasksByLocale[localeID] = task
@@ -189,7 +187,8 @@ final class AppCoordinator {
         overlayManager.show(appState: appState)
 
         // Wait for the matching preload to finish before starting audio to avoid duplicate downloads.
-        // We do this while the overlay is showing (potentially in a 'Preparing...' state).
+        // We race the preload against a 10-second timeout: two tasks are added to the group,
+        // and the first one to complete wins — we then cancel the remaining task and proceed.
         if let matchingTask = preloadTasksByLocale[localeID] {
             await withTaskGroup(of: Void.self) { group in
                 group.addTask {
@@ -222,12 +221,8 @@ final class AppCoordinator {
         transcriptionEngine.levelMonitor = monitor
         appState.audioLevel = monitor
 
-        // Re-read locale in case the user changed it during the 10s wait window
-        let finalLocale = UserDefaults.standard.string(forKey: "locale")
-            .flatMap { Locale(identifier: $0) } ?? Locale.current
-
         do {
-            try await transcriptionEngine.startSession(appState: appState, locale: finalLocale)
+            try await transcriptionEngine.startSession(appState: appState, locale: locale)
         } catch {
             appState.error = error.localizedDescription
             appState.isRecording = false
