@@ -28,6 +28,7 @@ private final class MockTranscriber: Transcribing {
 private final class MockOverlay: OverlayPresenting {
     var showCalled = false
     var hideCalled = false
+    var onAction: ((OverlayAction) -> Void)?
 
     func show(appState: AppState) {
         showCalled = true
@@ -424,8 +425,8 @@ struct PipelineIntegrationTests {
         await coordinator.start()
         appState.appendFinalizedText("Stop button text.")
 
-        NotificationCenter.default.post(name: .overlayConfirmRequested, object: nil)
-        // Yield until the notification handler's async Task completes
+        overlay.onAction?(.confirm)
+        // Yield until the action handler's async Task completes
         for _ in 0 ..< 100 {
             await Task.yield()
             if paster.pasteCalled { break }
@@ -452,8 +453,8 @@ struct PipelineIntegrationTests {
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
-        // Don't start recording — post confirm notification
-        NotificationCenter.default.post(name: .overlayConfirmRequested, object: nil)
+        // Don't start recording — fire confirm action
+        overlay.onAction?(.confirm)
         await Task.yield()
 
         #expect(!paster.pasteCalled)
@@ -573,7 +574,7 @@ struct PipelineIntegrationTests {
     }
 
     @Test @MainActor
-    func dismissSuggestionViaCancelNotification() async {
+    func dismissSuggestionViaCancelAction() async {
         configureDefaults()
 
         let transcriber = MockTranscriber()
@@ -593,9 +594,8 @@ struct PipelineIntegrationTests {
         #expect(appState.suggestedWord != nil)
 
         overlay.hideCalled = false
-        // Post cancel notification
-        NotificationCenter.default.post(name: .overlayCancelRequested, object: nil)
-        // Allow notification delivery
+        // Fire cancel action
+        overlay.onAction?(.cancel)
         await Task.yield()
 
         #expect(appState.suggestedWord == nil)
@@ -624,8 +624,8 @@ struct PipelineIntegrationTests {
         #expect(appState.suggestedWord != nil)
 
         overlay.hideCalled = false
-        // Post accept notification
-        NotificationCenter.default.post(name: .overlaySuggestionAccepted, object: nil)
+        // Fire accept action
+        overlay.onAction?(.acceptSuggestion)
         await Task.yield()
 
         #expect(appState.suggestedWord == nil)

@@ -29,6 +29,7 @@ private final class MockOverlay: OverlayPresenting {
     var showCalled = false
     var hideCalled = false
     var hideCallCount = 0
+    var onAction: ((OverlayAction) -> Void)?
 
     func show(appState: AppState) {
         showCalled = true

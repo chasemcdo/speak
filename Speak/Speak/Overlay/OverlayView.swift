@@ -1,17 +1,32 @@
 import SwiftUI
 
+// MARK: - Environment key for overlay actions
+
+private struct OverlayActionKey: EnvironmentKey {
+    nonisolated(unsafe) static let defaultValue: ((OverlayAction) -> Void)? = nil
+}
+
+extension EnvironmentValues {
+    var overlayAction: ((OverlayAction) -> Void)? {
+        get { self[OverlayActionKey.self] }
+        set { self[OverlayActionKey.self] = newValue }
+    }
+}
+
 struct OverlayView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.overlayAction) private var onAction
 
     var body: some View {
         Group {
-            if let suggestion = appState.suggestedWord {
+            switch appState.overlayMode {
+            case .suggestion(let suggestion):
                 suggestionContent(suggestion)
-            } else if appState.pasteFailedHint {
+            case .pasteFailed:
                 pasteFailedHintContent
-            } else if appState.isPreviewing {
+            case .preview:
                 previewContent
-            } else {
+            case .recording, .idle:
                 recordingContent
             }
         }
@@ -36,7 +51,8 @@ struct OverlayView: View {
                 RecordingIndicator(
                     audioLevel: appState.audioLevel,
                     recordingMode: appState.recordingMode,
-                    isRecording: appState.isRecording
+                    isRecording: appState.isRecording,
+                    onAction: onAction
                 )
                 .padding(.top, 2)
             }
@@ -81,7 +97,7 @@ struct OverlayView: View {
 
             HStack(spacing: 8) {
                 Button {
-                    NotificationCenter.default.post(name: .overlayConfirmRequested, object: nil)
+                    onAction?(.confirm)
                 } label: {
                     Text("Paste")
                 }
@@ -90,7 +106,7 @@ struct OverlayView: View {
                 .disabled(appState.previewText.isEmpty)
 
                 Button {
-                    NotificationCenter.default.post(name: .overlayCancelRequested, object: nil)
+                    onAction?(.cancel)
                 } label: {
                     Text("Dismiss")
                 }
@@ -123,7 +139,7 @@ struct OverlayView: View {
 
             HStack(spacing: 8) {
                 Button {
-                    NotificationCenter.default.post(name: .overlaySuggestionAccepted, object: nil)
+                    onAction?(.acceptSuggestion)
                 } label: {
                     Text("Add")
                 }
@@ -131,7 +147,7 @@ struct OverlayView: View {
                 .controlSize(.small)
 
                 Button {
-                    NotificationCenter.default.post(name: .overlayCancelRequested, object: nil)
+                    onAction?(.cancel)
                 } label: {
                     Text("Dismiss")
                 }
@@ -174,6 +190,7 @@ struct RecordingIndicator: View {
     var audioLevel: AudioLevelMonitor?
     var recordingMode: RecordingMode
     var isRecording: Bool
+    var onAction: ((OverlayAction) -> Void)?
 
     private var showButtons: Bool {
         recordingMode == .toggle && isRecording
@@ -183,7 +200,7 @@ struct RecordingIndicator: View {
         HStack(spacing: 6) {
             if showButtons {
                 Button {
-                    NotificationCenter.default.post(name: .overlayCancelRequested, object: nil)
+                    onAction?(.cancel)
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 8, weight: .bold))
@@ -204,7 +221,7 @@ struct RecordingIndicator: View {
 
             if showButtons {
                 Button {
-                    NotificationCenter.default.post(name: .overlayConfirmRequested, object: nil)
+                    onAction?(.confirm)
                 } label: {
                     RoundedRectangle(cornerRadius: 2)
                         .fill(.red)

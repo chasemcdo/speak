@@ -1,5 +1,13 @@
 import AppKit
 
+// MARK: - OverlayAction
+
+enum OverlayAction {
+    case cancel
+    case confirm
+    case acceptSuggestion
+}
+
 // MARK: - Transcribing
 
 @MainActor
@@ -15,6 +23,7 @@ extension TranscriptionEngine: Transcribing {}
 
 @MainActor
 protocol OverlayPresenting {
+    var onAction: ((OverlayAction) -> Void)? { get set }
     func show(appState: AppState)
     func hide()
 }

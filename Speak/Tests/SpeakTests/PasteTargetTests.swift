@@ -30,6 +30,7 @@ private final class MockOverlay: OverlayPresenting {
     var showCallCount = 0
     var hideCalled = false
     var hideCallCount = 0
+    var onAction: ((OverlayAction) -> Void)?
 
     func show(appState: AppState) {
         showCalled = true
@@ -363,8 +364,7 @@ struct PasteTargetTests {
 
         #expect(appState.pasteFailedHint)
 
-        NotificationCenter.default.post(name: .overlayCancelRequested, object: nil)
-        // Allow the notification to be processed on the main queue
+        overlay.onAction?(.cancel)
         await Task.yield()
 
         #expect(!appState.pasteFailedHint, "Cancel should dismiss the paste-failed hint")

@@ -37,7 +37,7 @@ struct DictionaryReplacementFilter: TextFilter {
         for phrase in phrases {
             if word.lowercased() == phrase.lowercased() { return nil }
             let sim = StringSimilarity.similarity(word, phrase)
-            if sim >= 0.5, sim > (best?.similarity ?? 0) {
+            if sim >= Constants.similarityThreshold, sim > (best?.similarity ?? 0) {
                 best = (phrase, sim)
             }
         }

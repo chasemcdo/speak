@@ -6,6 +6,14 @@ enum RecordingMode {
     case toggle
 }
 
+enum OverlayMode {
+    case recording
+    case preview(String)
+    case pasteFailed
+    case suggestion(DictionarySuggestion)
+    case idle
+}
+
 @MainActor
 @Observable
 final class AppState {
@@ -22,6 +30,20 @@ final class AppState {
     var pasteFailedHint = false
     var suggestedWord: DictionarySuggestion?
     var audioLevel: AudioLevelMonitor?
+
+    var overlayMode: OverlayMode {
+        if let suggestion = suggestedWord {
+            return .suggestion(suggestion)
+        } else if pasteFailedHint {
+            return .pasteFailed
+        } else if isPreviewing {
+            return .preview(previewText)
+        } else if isRecording {
+            return .recording
+        } else {
+            return .idle
+        }
+    }
 
     var displayText: String {
         finalizedText + volatileText
