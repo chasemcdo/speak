@@ -47,12 +47,22 @@ private final class MockPaster: Pasting {
     var pasteCalled = false
     var pastedText: String?
     var pasteResult = true
+    var pasteAndSubmitCalled = false
+    var pasteAndSubmitText: String?
+    var pasteAndSubmitResult = true
 
     @discardableResult
     func paste(_ text: String, into app: NSRunningApplication?) async -> Bool {
         pasteCalled = true
         pastedText = text
         return pasteResult
+    }
+
+    @discardableResult
+    func pasteAndSubmit(_ text: String, into app: NSRunningApplication?) async -> Bool {
+        pasteAndSubmitCalled = true
+        pasteAndSubmitText = text
+        return pasteAndSubmitResult
     }
 }
 
@@ -81,7 +91,8 @@ private final class MockHotkey: HotkeyManaging {
     func register(
         onStart: @escaping () -> Void,
         onStop: @escaping () -> Void,
-        onModeChange: @escaping (RecordingMode) -> Void
+        onModeChange: @escaping (RecordingMode) -> Void,
+        onConversationToggle: @escaping () -> Void
     ) {}
     func resetState() {}
 }

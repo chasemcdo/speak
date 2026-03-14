@@ -52,7 +52,7 @@ final class AppCoordinator {
     private let modelManager = ModelManager()
 
     /// Set up the coordinator with the shared app state. Call once at app launch.
-    func setUp(appState: AppState, historyStore: HistoryStore) {
+    func setUp(appState: AppState, historyStore: HistoryStore, onConversationToggle: @escaping () -> Void = {}) {
         self.appState = appState
         self.historyStore = historyStore
 
@@ -72,7 +72,8 @@ final class AppCoordinator {
                 Task { @MainActor in
                     self?.appState?.recordingMode = mode
                 }
-            }
+            },
+            onConversationToggle: onConversationToggle
         )
 
         // Listen for overlay cancel/confirm from keyboard events in the panel

@@ -5,6 +5,7 @@ import SwiftUI
 struct SpeakApp: App {
     @State private var appState = AppState()
     @State private var coordinator = AppCoordinator()
+    @State private var conversationCoordinator = ConversationCoordinator()
     @State private var historyStore = HistoryStore()
     @AppStorage("onboardingComplete") private var onboardingComplete = false
     @Environment(\.openWindow) private var openWindow
@@ -35,7 +36,16 @@ struct SpeakApp: App {
         } label: {
             Image("MenuBarIcon", bundle: .appModule)
                 .task {
-                    coordinator.setUp(appState: appState, historyStore: historyStore)
+                    conversationCoordinator.setUp(appState: appState)
+                    coordinator.setUp(
+                        appState: appState,
+                        historyStore: historyStore,
+                        onConversationToggle: { [conversationCoordinator] in
+                            Task { @MainActor in
+                                await conversationCoordinator.toggle()
+                            }
+                        }
+                    )
 
                     // Let scene registration complete before opening windows
                     try? await Task.sleep(for: .milliseconds(200))

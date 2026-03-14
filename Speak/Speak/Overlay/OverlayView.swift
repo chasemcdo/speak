@@ -5,7 +5,9 @@ struct OverlayView: View {
 
     var body: some View {
         Group {
-            if appState.pasteFailedHint {
+            if appState.isConversationMode {
+                ConversationOverlayContent()
+            } else if appState.pasteFailedHint {
                 pasteFailedHintContent
             } else if appState.isPreviewing {
                 previewContent

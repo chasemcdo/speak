@@ -61,6 +61,34 @@ enum PasteService {
         return true
     }
 
+    /// Paste the given text and simulate pressing Return to submit.
+    /// Used in conversation mode to submit text to Claude Code.
+    @discardableResult
+    static func pasteAndSubmit(_ text: String, into app: NSRunningApplication?) async -> Bool {
+        let success = await paste(text, into: app)
+        guard success else { return false }
+
+        // Wait for the paste to settle before pressing Return
+        try? await Task.sleep(for: .milliseconds(100))
+
+        simulateReturn()
+        return true
+    }
+
+    /// Simulate a Return keystroke using CGEvent.
+    private static func simulateReturn() {
+        let source = CGEventSource(stateID: .combinedSessionState)
+
+        // Virtual key code 0x24 = Return
+        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 0x24, keyDown: true),
+              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 0x24, keyDown: false) else {
+            return
+        }
+
+        keyDown.post(tap: CGEventTapLocation.cghidEventTap)
+        keyUp.post(tap: CGEventTapLocation.cghidEventTap)
+    }
+
     /// Simulate a Cmd+V keystroke using CGEvent.
     private static func simulatePaste() {
         let source = CGEventSource(stateID: .combinedSessionState)

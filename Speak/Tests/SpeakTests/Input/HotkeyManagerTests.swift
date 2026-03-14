@@ -50,7 +50,8 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: { startCalled = true },
             onStop: { stopCalled = true },
-            onModeChange: { _ in }
+            onModeChange: { _ in },
+            onConversationToggle: { }
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function) else {
@@ -86,7 +87,8 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: { startCalled = true },
             onStop: { stopCalled = true },
-            onModeChange: { _ in }
+            onModeChange: { _ in },
+            onConversationToggle: { }
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
@@ -127,7 +129,7 @@ struct HotkeyManagerTests {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()
-        manager.register(onStart: {}, onStop: {}, onModeChange: { _ in })
+        manager.register(onStart: {}, onStop: {}, onModeChange: { _ in }, onConversationToggle: {})
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function) else {
             Issue.record("Failed to create event")
@@ -154,7 +156,7 @@ struct HotkeyManagerTests {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()
-        manager.register(onStart: {}, onStop: {}, onModeChange: { _ in })
+        manager.register(onStart: {}, onStop: {}, onModeChange: { _ in }, onConversationToggle: {})
 
         guard let spaceEvent = keyDownEvent(keyCode: 0x31, characters: " ") else {
             Issue.record("Failed to create keyDown event")
@@ -171,7 +173,7 @@ struct HotkeyManagerTests {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()
-        manager.register(onStart: {}, onStop: {}, onModeChange: { _ in })
+        manager.register(onStart: {}, onStop: {}, onModeChange: { _ in }, onConversationToggle: {})
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
               let upEvent = flagsChangedEvent(modifierFlags: []) else {
@@ -209,7 +211,8 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: { startCalled = true },
             onStop: { stopCalled = true },
-            onModeChange: { _ in }
+            onModeChange: { _ in },
+            onConversationToggle: { }
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
@@ -246,7 +249,7 @@ struct HotkeyManagerTests {
 
         let manager = HotkeyManager()
         var stopCalled = false
-        manager.register(onStart: {}, onStop: { stopCalled = true }, onModeChange: { _ in })
+        manager.register(onStart: {}, onStop: { stopCalled = true }, onModeChange: { _ in }, onConversationToggle: {})
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
               let upEvent = flagsChangedEvent(modifierFlags: []) else {
@@ -276,7 +279,7 @@ struct HotkeyManagerTests {
 
         let manager = HotkeyManager()
         var stopCalled = false
-        manager.register(onStart: {}, onStop: { stopCalled = true }, onModeChange: { _ in })
+        manager.register(onStart: {}, onStop: { stopCalled = true }, onModeChange: { _ in }, onConversationToggle: {})
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function) else {
             Issue.record("Failed to create event")
@@ -310,7 +313,8 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: {},
             onStop: {},
-            onModeChange: { modeChanges.append($0) }
+            onModeChange: { modeChanges.append($0) },
+            onConversationToggle: {}
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function) else {
@@ -337,7 +341,8 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: {},
             onStop: {},
-            onModeChange: { modeChanges.append($0) }
+            onModeChange: { modeChanges.append($0) },
+            onConversationToggle: {}
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
@@ -371,7 +376,8 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: {},
             onStop: {},
-            onModeChange: { modeChanges.append($0) }
+            onModeChange: { modeChanges.append($0) },
+            onConversationToggle: {}
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function) else {
@@ -405,7 +411,8 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: {},
             onStop: {},
-            onModeChange: { modeChanges.append($0) }
+            onModeChange: { modeChanges.append($0) },
+            onConversationToggle: {}
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
@@ -436,7 +443,8 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: {},
             onStop: {},
-            onModeChange: { modeChanges.append($0) }
+            onModeChange: { modeChanges.append($0) },
+            onConversationToggle: {}
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
@@ -470,7 +478,8 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: {},
             onStop: {},
-            onModeChange: { modeChanges.append($0) }
+            onModeChange: { modeChanges.append($0) },
+            onConversationToggle: {}
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function) else {
@@ -496,6 +505,116 @@ struct HotkeyManagerTests {
         let consumed = manager.handleKeyDown(spaceEvent)
         #expect(!consumed)
         #expect(modeChanges == [.hold, .toggle])
+
+        manager.unregister()
+    }
+
+    // MARK: - Triple-tap conversation toggle
+
+    @Test @MainActor
+    func `triple tap triggers conversation toggle`() {
+        UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
+
+        let manager = HotkeyManager()
+        var conversationToggled = false
+        var stopCalled = false
+
+        manager.register(
+            onStart: {},
+            onStop: { stopCalled = true },
+            onModeChange: { _ in },
+            onConversationToggle: { conversationToggled = true }
+        )
+
+        guard let downEvent = flagsChangedEvent(modifierFlags: .function),
+              let upEvent = flagsChangedEvent(modifierFlags: []) else {
+            Issue.record("Failed to create events")
+            return
+        }
+
+        // Double-tap to start toggle recording
+        manager.handleFlagsChanged(downEvent)  // firstDown
+        manager.handleFlagsChanged(upEvent)    // awaitingSecondTap
+        manager.handleFlagsChanged(downEvent)  // doubleTapDown (onStart fires)
+        manager.handleFlagsChanged(upEvent)    // toggleRecording (sets toggleEnteredTime)
+
+        // Third tap immediately — within doubleTapWindow
+        manager.handleFlagsChanged(downEvent)  // tripleTapDown (onStop fires)
+        #expect(stopCalled)
+
+        manager.handleFlagsChanged(upEvent)    // idle (onConversationToggle fires)
+        #expect(conversationToggled)
+
+        manager.unregister()
+    }
+
+    @Test @MainActor
+    func `triple tap after window expires does normal stop`() async throws {
+        UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
+
+        let manager = HotkeyManager()
+        var conversationToggled = false
+        var stopCalled = false
+
+        manager.register(
+            onStart: {},
+            onStop: { stopCalled = true },
+            onModeChange: { _ in },
+            onConversationToggle: { conversationToggled = true }
+        )
+
+        guard let downEvent = flagsChangedEvent(modifierFlags: .function),
+              let upEvent = flagsChangedEvent(modifierFlags: []) else {
+            Issue.record("Failed to create events")
+            return
+        }
+
+        // Double-tap to start toggle recording
+        manager.handleFlagsChanged(downEvent)
+        manager.handleFlagsChanged(upEvent)
+        manager.handleFlagsChanged(downEvent)
+        manager.handleFlagsChanged(upEvent) // toggleRecording
+
+        // Wait past the double-tap window
+        try await Task.sleep(for: .milliseconds(400))
+
+        // Tap to stop — should be normal stop, not conversation toggle
+        manager.handleFlagsChanged(downEvent)  // toggleTapDown (not tripleTapDown)
+        manager.handleFlagsChanged(upEvent)    // idle + onStop
+        #expect(stopCalled)
+        #expect(!conversationToggled)
+
+        manager.unregister()
+    }
+
+    @Test @MainActor
+    func `triple tap during hold does not trigger conversation`() async throws {
+        UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
+
+        let manager = HotkeyManager()
+        var conversationToggled = false
+
+        manager.register(
+            onStart: {},
+            onStop: {},
+            onModeChange: { _ in },
+            onConversationToggle: { conversationToggled = true }
+        )
+
+        guard let downEvent = flagsChangedEvent(modifierFlags: .function),
+              let upEvent = flagsChangedEvent(modifierFlags: []) else {
+            Issue.record("Failed to create events")
+            return
+        }
+
+        // Hold mode
+        manager.handleFlagsChanged(downEvent)
+        try await Task.sleep(for: .milliseconds(400))
+
+        // Release hold
+        manager.handleFlagsChanged(upEvent)
+
+        #expect(!conversationToggled)
 
         manager.unregister()
     }

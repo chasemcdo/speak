@@ -39,5 +39,9 @@ let package = Package(
             dependencies: ["Speak"],
             path: "Tests/SpeakTests"
         ),
+        .executableTarget(
+            name: "SpeakMCP",
+            path: "SpeakMCP"
+        ),
     ]
 )
