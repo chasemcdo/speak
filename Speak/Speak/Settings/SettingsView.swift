@@ -7,6 +7,7 @@ import SwiftUI
 struct SettingsView: View {
     let updater: SPUUpdater?
     @Environment(AppState.self) private var appState
+    @Environment(AppCoordinator.self) private var coordinator
     @AppStorage("locale") private var localeIdentifier = Locale.current.identifier
     @AppStorage("autoPaste") private var autoPaste = true
     @AppStorage("hotkeyModifier") private var hotkey: TranscriptionHotkey = .fn
@@ -146,6 +147,10 @@ struct SettingsView: View {
                 speechGranted = ModelManager.authorizationGranted
                 try? await Task.sleep(for: .seconds(2))
             }
+        }
+        .onChange(of: localeIdentifier) {
+            guard !appState.isRecording else { return }
+            coordinator.preloadModel()
         }
     }
 

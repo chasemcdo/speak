@@ -42,8 +42,11 @@ final class TranscriptionEngine {
         )
         self.transcriber = transcriber
 
-        // 2. Ensure model is downloaded
-        appState.isModelDownloading = true
+        // 2. Ensure model is downloaded (skip UI flash if already installed)
+        let alreadyInstalled = await modelManager.isInstalled(locale: locale)
+        if !alreadyInstalled {
+            appState.isModelDownloading = true
+        }
         do {
             try await modelManager.ensureModelAvailable(for: transcriber)
         } catch {
