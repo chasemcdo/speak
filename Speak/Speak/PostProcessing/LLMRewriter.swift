@@ -148,8 +148,7 @@ struct LLMRewriter: TextFilter {
         // Strip surrounding quotes (e.g. "Hello world" → Hello world).
         if result.count >= 2,
            (result.hasPrefix("\"") && result.hasSuffix("\""))
-            || (result.hasPrefix("\u{201C}") && result.hasSuffix("\u{201D}"))
-        {
+           || (result.hasPrefix("\u{201C}") && result.hasSuffix("\u{201D}")) {
             result = String(result.dropFirst().dropLast())
                 .trimmingCharacters(in: .whitespacesAndNewlines)
         }
