@@ -17,6 +17,7 @@ final class ConversationCoordinator {
     private var previousApp: NSRunningApplication?
     private var audioLevelMonitor: AudioLevelMonitor?
     @ObservationIgnored private var isTransitioning = false
+    private let registrationChecker: () -> Bool
 
     /// Called when conversation mode is toggled but MCP setup hasn't been completed.
     var onSetupRequired: (() -> Void)?
@@ -34,12 +35,14 @@ final class ConversationCoordinator {
         transcriptionEngine: any Transcribing = TranscriptionEngine(),
         overlayManager: any OverlayPresenting = OverlayManager(),
         pasteService: any Pasting = PasteServiceAdapter(),
-        speechSynthesizer: any SpeechSynthesizing = SpeechSynthesizerAdapter()
+        speechSynthesizer: any SpeechSynthesizing = SpeechSynthesizerAdapter(),
+        registrationChecker: @escaping () -> Bool = { ClaudeCodeMCPRegistration.isRegistered() }
     ) {
         self.transcriptionEngine = transcriptionEngine
         self.overlayManager = overlayManager
         self.pasteService = pasteService
         self.speechSynthesizer = speechSynthesizer
+        self.registrationChecker = registrationChecker
     }
 
     func setUp(appState: AppState) {
@@ -68,7 +71,7 @@ final class ConversationCoordinator {
     func start() async {
         guard let appState, !appState.isConversationMode else { return }
 
-        guard ClaudeCodeMCPRegistration.isRegistered() else {
+        guard registrationChecker() else {
             onSetupRequired?()
             return
         }

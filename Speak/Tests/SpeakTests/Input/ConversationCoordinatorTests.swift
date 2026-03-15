@@ -97,13 +97,15 @@ private func makeCoordinator(
     transcriber: any Transcribing = MockTranscriber(),
     overlay: any OverlayPresenting = MockOverlay(),
     paster: any Pasting = MockPaster(),
-    speechSynthesizer: any SpeechSynthesizing = MockSpeechSynthesizer()
+    speechSynthesizer: any SpeechSynthesizing = MockSpeechSynthesizer(),
+    registrationChecker: @escaping () -> Bool = { true }
 ) -> ConversationCoordinator {
     ConversationCoordinator(
         transcriptionEngine: transcriber,
         overlayManager: overlay,
         pasteService: paster,
-        speechSynthesizer: speechSynthesizer
+        speechSynthesizer: speechSynthesizer,
+        registrationChecker: registrationChecker
     )
 }
 
@@ -280,6 +282,25 @@ struct ConversationCoordinatorTests {
         #expect(appState.claudeResponseText.isEmpty)
         #expect(!appState.isConversationMode)
         #expect(appState.conversationPhase == .idle)
+    }
+
+    // MARK: - Setup guard
+
+    @Test @MainActor
+    func `start fires onSetupRequired when not registered`() async {
+        configureDefaults()
+
+        let appState = AppState()
+        var setupRequiredFired = false
+
+        let coordinator = makeCoordinator(registrationChecker: { false })
+        coordinator.setUp(appState: appState)
+        coordinator.onSetupRequired = { setupRequiredFired = true }
+
+        await coordinator.start()
+
+        #expect(setupRequiredFired)
+        #expect(!appState.isConversationMode)
     }
 
     // MARK: - Exit phrase detection
