@@ -130,12 +130,12 @@ struct LLMRewriter: TextFilter {
     static func stripPreamble(_ text: String) -> String {
         var result = text
 
-        // Remove common preamble patterns (case-insensitive).
-        // These match lines like "Sure! Here is the formatted transcript:"
-        // or "Here's the formatted text:" followed by the actual content.
+        // Remove known LLM preamble patterns (case-insensitive).
+        // Only match specific phrases the model produces, not arbitrary "here is the X:" text,
+        // to avoid stripping legitimate dictation like "Here is the plan: we ship Friday".
         let preamblePatterns: [NSRegularExpression] = (try? [
             NSRegularExpression(
-                pattern: #"^(?:sure[!.]?\s*)?here(?:'s| is) the .+?:\s*"#,
+                pattern: #"^(?:sure[!.]?\s*)?here(?:'s| is) the (?:formatted|corrected|cleaned|rewritten) (?:text|transcript|version):\s*"#,
                 options: [.caseInsensitive]
             ),
         ]) ?? []

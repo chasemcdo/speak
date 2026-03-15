@@ -61,6 +61,16 @@ struct StripPreambleTests {
         let input = "The meeting is at 3:00 PM tomorrow."
         #expect(LLMRewriter.stripPreamble(input) == "The meeting is at 3:00 PM tomorrow.")
     }
+
+    @Test func `does not strip legitimate here is the dictation`() {
+        let input = "Here is the plan: we ship on Friday."
+        #expect(LLMRewriter.stripPreamble(input) == "Here is the plan: we ship on Friday.")
+    }
+
+    @Test func `does not strip heres the thing`() {
+        let input = "Here's the thing: it doesn't work."
+        #expect(LLMRewriter.stripPreamble(input) == "Here's the thing: it doesn't work.")
+    }
 }
 
 // MARK: - Hallucination guard
