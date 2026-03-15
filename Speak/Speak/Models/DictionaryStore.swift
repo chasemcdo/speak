@@ -2,7 +2,15 @@ import Foundation
 import Observation
 
 struct DictionaryEntry: Codable, Identifiable {
-    var id = UUID()
+    let id: UUID
+    // swiftformat:disable redundantInit
+    init(id: UUID = UUID(), phrase: String, addedAt: Date = Date(), source: Source = .manual) {
+        self.id = id
+        self.phrase = phrase
+        self.addedAt = addedAt
+        self.source = source
+    }
+    // swiftformat:enable redundantInit
     var phrase: String
     var addedAt = Date()
     var source: Source = .manual
@@ -14,10 +22,19 @@ struct DictionaryEntry: Codable, Identifiable {
 }
 
 struct DictionarySuggestion: Codable, Identifiable {
-    var id = UUID()
+    let id: UUID
     var phrase: String
     var original: String
     var detectedAt = Date()
+
+    // swiftformat:disable redundantInit
+    init(id: UUID = UUID(), phrase: String, original: String, detectedAt: Date = Date()) {
+        self.id = id
+        self.phrase = phrase
+        self.original = original
+        self.detectedAt = detectedAt
+    }
+    // swiftformat:enable redundantInit
 }
 
 @MainActor
