@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+# Install git hooks
+make hooks
+
+# Source .env into current shell
+[ -f .env ] && source .env
