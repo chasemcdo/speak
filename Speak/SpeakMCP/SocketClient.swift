@@ -5,21 +5,21 @@ final class SocketClient {
     private let socketPath: String
 
     init() {
-        let appSupport = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/Speak")
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            .appendingPathComponent("Speak")
         socketPath = appSupport.appendingPathComponent("conversation.sock").path
     }
 
     /// Send text to the Speak app and wait for acknowledgement.
     /// Returns `true` if the Speak app confirmed TTS completion.
     func sendAndWait(text: String, timeout: TimeInterval = 60) -> Bool {
-        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
-        guard fd >= 0 else { return false }
-        defer { close(fd) }
+        let sock = socket(AF_UNIX, SOCK_STREAM, 0)
+        guard sock >= 0 else { return false }
+        defer { close(sock) }
 
         // Prevent SIGPIPE on broken connections
         var noSigPipe: Int32 = 1
-        setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, socklen_t(MemoryLayout<Int32>.size))
+        setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, socklen_t(MemoryLayout<Int32>.size))
 
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)
@@ -37,7 +37,7 @@ final class SocketClient {
 
         let connectResult = withUnsafePointer(to: &addr) { ptr in
             ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockPtr in
-                connect(fd, sockPtr, socklen_t(MemoryLayout<sockaddr_un>.size))
+                connect(sock, sockPtr, socklen_t(MemoryLayout<sockaddr_un>.size))
             }
         }
         guard connectResult == 0 else { return false }
@@ -49,14 +49,14 @@ final class SocketClient {
         message += "\n"
 
         // Send all bytes, handling partial writes
-        guard sendAll(fd: fd, message: message) else { return false }
+        guard sendAll(socketFD: sock, message: message) else { return false }
 
         // Set receive timeout
-        var tv = timeval(tv_sec: Int(timeout), tv_usec: 0)
-        setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
+        var recvTimeout = timeval(tv_sec: Int(timeout), tv_usec: 0)
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &recvTimeout, socklen_t(MemoryLayout<timeval>.size))
 
         // Read until newline delimiter (matching server's framing)
-        guard let responseData = recvUntilNewline(fd: fd) else { return false }
+        guard let responseData = recvUntilNewline(socketFD: sock) else { return false }
 
         guard let response = try? JSONSerialization.jsonObject(with: responseData) as? [String: Any],
               let status = response["status"] as? String else { return false }
@@ -67,14 +67,14 @@ final class SocketClient {
     // MARK: - Helpers
 
     /// Send all bytes from a message, retrying on partial writes.
-    private func sendAll(fd: Int32, message: String) -> Bool {
+    private func sendAll(socketFD: Int32, message: String) -> Bool {
         let messageData = Array(message.utf8)
         var totalSent = 0
 
         while totalSent < messageData.count {
             let remaining = messageData.count - totalSent
             let sent = messageData.withUnsafeBufferPointer { buf in
-                send(fd, buf.baseAddress! + totalSent, remaining, 0)
+                send(socketFD, buf.baseAddress! + totalSent, remaining, 0)
             }
 
             if sent > 0 {
@@ -90,12 +90,12 @@ final class SocketClient {
     }
 
     /// Read from the socket until a newline is found, returning the data before the newline.
-    private func recvUntilNewline(fd: Int32) -> Data? {
+    private func recvUntilNewline(socketFD: Int32) -> Data? {
         var accumulated = Data()
         var byte: UInt8 = 0
 
         while true {
-            let result = recv(fd, &byte, 1, 0)
+            let result = recv(socketFD, &byte, 1, 0)
             if result == 1 {
                 if byte == UInt8(ascii: "\n") {
                     return accumulated

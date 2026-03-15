@@ -1,6 +1,15 @@
 import Foundation
 import Network
 
+/// Shared socket path used by both the Speak app (server) and SpeakMCP (client).
+enum ConversationSocket {
+    static var url: URL {
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            .appendingPathComponent("Speak")
+        return appSupport.appendingPathComponent("conversation.sock")
+    }
+}
+
 /// Unix domain socket server for receiving MCP speak requests from the SpeakMCP process.
 @MainActor
 final class ConversationSocketServer {
@@ -19,10 +28,9 @@ final class ConversationSocketServer {
     /// Per-connection buffer for accumulating partial frames.
     private var receiveBuffer = Data()
 
+    // swiftlint:disable:next modifier_order
     private nonisolated static var socketURL: URL {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-            .appendingPathComponent("Speak")
-        return appSupport.appendingPathComponent("conversation.sock")
+        ConversationSocket.url
     }
 
     func start() {

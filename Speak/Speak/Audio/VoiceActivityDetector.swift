@@ -63,23 +63,27 @@ final class VoiceActivityDetector {
             belowThresholdStart = nil
 
             if !isSpeechDetected {
-                if aboveThresholdStart == nil {
+                if let start = aboveThresholdStart {
+                    if now.timeIntervalSince(start) >= speechStartDelay {
+                        isSpeechDetected = true
+                        onEvent?(.speechStarted)
+                    }
+                } else {
                     aboveThresholdStart = now
-                } else if now.timeIntervalSince(aboveThresholdStart!) >= speechStartDelay {
-                    isSpeechDetected = true
-                    onEvent?(.speechStarted)
                 }
             }
         } else {
             aboveThresholdStart = nil
 
             if isSpeechDetected {
-                if belowThresholdStart == nil {
+                if let start = belowThresholdStart {
+                    if now.timeIntervalSince(start) >= silenceTimeout {
+                        isSpeechDetected = false
+                        onEvent?(.speechEnded)
+                        belowThresholdStart = nil
+                    }
+                } else {
                     belowThresholdStart = now
-                } else if now.timeIntervalSince(belowThresholdStart!) >= silenceTimeout {
-                    isSpeechDetected = false
-                    onEvent?(.speechEnded)
-                    belowThresholdStart = nil
                 }
             }
         }

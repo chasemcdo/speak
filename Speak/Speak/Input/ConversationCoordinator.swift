@@ -17,12 +17,15 @@ final class ConversationCoordinator {
     private var previousApp: NSRunningApplication?
     private var audioLevelMonitor: AudioLevelMonitor?
     @ObservationIgnored private var isTransitioning = false
+    @ObservationIgnored private var waitingTimeoutTask: Task<Void, Never>?
     private let registrationChecker: () -> Bool
 
     /// Called when conversation mode is toggled but MCP setup hasn't been completed.
     var onSetupRequired: (() -> Void)?
 
     private static let defaultSilenceTimeout: TimeInterval = 1.5
+    /// How long to wait for Claude to call the speak tool before falling back to listening.
+    private static let waitingTimeout: TimeInterval = 120
 
     /// Phrases that exit conversation mode (checked after post-processing).
     private static let exitPhrases: Set<String> = [
@@ -91,6 +94,8 @@ final class ConversationCoordinator {
     func stop() async {
         guard let appState else { return }
 
+        waitingTimeoutTask?.cancel()
+        waitingTimeoutTask = nil
         speechSynthesizer.stop()
         voiceActivityDetector.stop()
         await transcriptionEngine.stopSession()
@@ -203,12 +208,28 @@ final class ConversationCoordinator {
         _ = await pasteService.pasteAndSubmit(text, into: previousApp)
 
         appState.conversationPhase = .waitingForClaude
+        startWaitingTimeout()
+    }
+
+    private func startWaitingTimeout() {
+        waitingTimeoutTask?.cancel()
+        waitingTimeoutTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(Self.waitingTimeout))
+            guard let self, !Task.isCancelled,
+                  let appState = self.appState,
+                  appState.isConversationMode,
+                  appState.conversationPhase == .waitingForClaude else { return }
+            // Claude didn't respond in time — loop back to listening
+            await self.startListening()
+        }
     }
 
     // MARK: - Speak response from Claude
 
     private func handleSpeakMessage(_ text: String) async {
         guard let appState, appState.isConversationMode else { return }
+        waitingTimeoutTask?.cancel()
+        waitingTimeoutTask = nil
 
         appState.conversationPhase = .speaking
         appState.claudeResponseText = text
