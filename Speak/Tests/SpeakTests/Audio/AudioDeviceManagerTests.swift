@@ -390,20 +390,31 @@ private final class MockTranscriberWithDeviceID: Transcribing {
 @MainActor
 private final class MockOverlayForDevice: OverlayPresenting {
     func show(appState: AppState) {}
+
     func hide() {}
 }
 
 @MainActor
 private final class MockPasterForDevice: Pasting {
     @discardableResult
-    func paste(_ text: String, into app: NSRunningApplication?) async -> Bool { true }
+    func paste(_ text: String, into app: NSRunningApplication?) async -> Bool {
+        true
+    }
 }
 
 @MainActor
 private final class MockContextForDevice: ContextReading {
-    func readContext(from app: NSRunningApplication?) -> String? { nil }
-    func readScreenVocabulary(from app: NSRunningApplication?) -> ScreenVocabulary? { nil }
-    func hasFocusedTextField(in app: NSRunningApplication?) -> Bool { true }
+    func readContext(from app: NSRunningApplication?) -> String? {
+        nil
+    }
+
+    func readScreenVocabulary(from app: NSRunningApplication?) -> ScreenVocabulary? {
+        nil
+    }
+
+    func hasFocusedTextField(in app: NSRunningApplication?) -> Bool {
+        true
+    }
 }
 
 private final class MockHotkeyForDevice: HotkeyManaging {
@@ -412,6 +423,7 @@ private final class MockHotkeyForDevice: HotkeyManaging {
         onStop: @escaping () -> Void,
         onModeChange: @escaping (RecordingMode) -> Void
     ) {}
+
     func resetState() {}
 }
 
