@@ -88,14 +88,19 @@ final class DictionaryStore {
 
     // MARK: - Suggestions
 
-    func addSuggestion(_ suggestion: DictionarySuggestion) {
+    @discardableResult
+    func addSuggestion(_ suggestion: DictionarySuggestion) -> Bool {
+        let phrase = suggestion.phrase.lowercased()
+        // Skip if the phrase is already in the dictionary
+        guard !entries.contains(where: { $0.phrase.lowercased() == phrase }) else { return false }
         // Avoid duplicate suggestions for the same phrase
-        guard !suggestions.contains(where: { $0.phrase.lowercased() == suggestion.phrase.lowercased() }) else { return }
+        guard !suggestions.contains(where: { $0.phrase.lowercased() == phrase }) else { return false }
         suggestions.insert(suggestion, at: 0)
         if suggestions.count > Self.maxSuggestions {
             suggestions = Array(suggestions.prefix(Self.maxSuggestions))
         }
         saveSuggestions()
+        return true
     }
 
     func acceptSuggestion(_ suggestion: DictionarySuggestion) {

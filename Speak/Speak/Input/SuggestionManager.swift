@@ -37,7 +37,7 @@ final class SuggestionManager {
                     phrase: candidate.replacement,
                     original: candidate.original
                 )
-                store?.addSuggestion(suggestion)
+                guard store?.addSuggestion(suggestion) == true else { return }
                 self?.show(suggestion)
             }
         }
@@ -64,7 +64,8 @@ final class SuggestionManager {
 
     /// Dismiss the suggestion overlay without accepting.
     func dismiss() {
-        guard appState.suggestedWord != nil else { return }
+        guard let suggestion = appState.suggestedWord else { return }
+        dictionaryStore?.dismissSuggestion(suggestion)
         suggestionDismissTask?.cancel()
         suggestionDismissTask = nil
         overlayManager.hide()
