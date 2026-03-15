@@ -55,8 +55,7 @@ final class AudioDeviceManager {
 
         // If the selected device is no longer connected, fall back to System Default
         if let uid = selectedDeviceUID,
-           !inputDevices.contains(where: { $0.uid == uid })
-        {
+           !inputDevices.contains(where: { $0.uid == uid }) {
             selectedDeviceUID = nil
         }
     }
