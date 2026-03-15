@@ -27,9 +27,9 @@ final class ContextReader {
     /// Maximum number of AX children to inspect when gathering vocabulary.
     private static let maxChildrenToInspect = 40
 
-    /// Read the text content from the focused text field in the given app.
-    /// Returns nil if the app doesn't expose text via Accessibility, or no text field is focused.
-    func readContext(from app: NSRunningApplication?) -> String? {
+    /// Read the text content from the focused text field in the given app (off main thread).
+    /// Uses only C AX APIs and static constants, so it needs no main-actor isolation.
+    nonisolated static func readContextFromApp(_ app: NSRunningApplication?) -> String? {
         guard let app else { return nil }
 
         let appElement = AXUIElementCreateApplication(app.processIdentifier)
@@ -56,12 +56,18 @@ final class ContextReader {
             return nil
         }
 
-        // Trim to keep within token budget
-        if text.count > Self.maxContextLength {
-            return String(text.suffix(Self.maxContextLength))
+        // Trim to keep within token budget (500 matches Self.maxContextLength)
+        if text.count > 500 {
+            return String(text.suffix(500))
         }
 
         return text
+    }
+
+    /// Read the text content from the focused text field in the given app.
+    /// Returns nil if the app doesn't expose text via Accessibility, or no text field is focused.
+    func readContext(from app: NSRunningApplication?) -> String? {
+        Self.readContextFromApp(app)
     }
 
     /// Read screen vocabulary from the frontmost window of the given app.

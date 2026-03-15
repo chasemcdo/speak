@@ -6,6 +6,7 @@ import SwiftUI
 @Observable
 final class OverlayManager {
     private var panel: OverlayPanel?
+    var onAction: ((OverlayAction) -> Void)?
 
     var isVisible: Bool {
         panel?.isVisible ?? false
@@ -19,8 +20,9 @@ final class OverlayManager {
 
         let overlayView = OverlayView()
             .environment(appState)
+            .environment(\.overlayAction, onAction)
 
-        let panel = OverlayPanel(contentView: overlayView)
+        let panel = OverlayPanel(contentView: overlayView, appState: appState, onAction: onAction)
         panel.orderFront(nil)
         self.panel = panel
     }

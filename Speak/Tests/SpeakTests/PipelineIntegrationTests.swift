@@ -28,6 +28,7 @@ private final class MockTranscriber: Transcribing {
 private final class MockOverlay: OverlayPresenting {
     var showCalled = false
     var hideCalled = false
+    var onAction: ((OverlayAction) -> Void)?
 
     func show(appState: AppState) {
         showCalled = true
@@ -54,8 +55,14 @@ private final class MockPaster: Pasting {
 
 @MainActor
 private final class MockContext: ContextReading {
+    var readContextResults: [String?] = []
+    private var readContextCallCount = 0
+
     func readContext(from app: NSRunningApplication?) -> String? {
-        nil
+        guard !readContextResults.isEmpty else { return nil }
+        let result = readContextResults[min(readContextCallCount, readContextResults.count - 1)]
+        readContextCallCount += 1
+        return result
     }
 
     func readScreenVocabulary(from app: NSRunningApplication?) -> ScreenVocabulary? {
@@ -119,6 +126,13 @@ struct PipelineIntegrationTests {
             checkMicPermission: { micPermission },
             checkSpeechAuth: { speechAuth }
         )
+    }
+
+    @MainActor
+    private func freshDictionaryStore() -> DictionaryStore {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("SpeakTests-\(UUID().uuidString)", isDirectory: true)
+        return DictionaryStore(storageDirectory: dir)
     }
 
     @Test @MainActor
@@ -265,6 +279,34 @@ struct PipelineIntegrationTests {
         #expect(!appState.isRecording)
     }
 
+    // MARK: - Dictionary replacement
+
+    @Test @MainActor
+    func dictionaryReplacementAppliedDuringPipeline() async {
+        configureDefaults()
+
+        let transcriber = MockTranscriber()
+        let overlay = MockOverlay()
+        let paster = MockPaster()
+        let appState = AppState()
+        let historyStore = HistoryStore()
+        let dictionaryStore = freshDictionaryStore()
+        dictionaryStore.add("Decoda")
+
+        let coordinator = makeCoordinator(
+            transcriber: transcriber, overlay: overlay, paster: paster
+        )
+        coordinator.setUp(appState: appState, historyStore: historyStore, dictionaryStore: dictionaryStore)
+
+        await coordinator.start()
+        appState.appendFinalizedText("I talked to Dakota about it.")
+
+        await coordinator.confirm()
+
+        #expect(paster.pastedText?.contains("Decoda") == true)
+        #expect(paster.pastedText?.contains("Dakota") != true)
+    }
+
     // MARK: - Audio level monitor wiring
 
     @Test @MainActor
@@ -383,8 +425,8 @@ struct PipelineIntegrationTests {
         await coordinator.start()
         appState.appendFinalizedText("Stop button text.")
 
-        NotificationCenter.default.post(name: .overlayConfirmRequested, object: nil)
-        // Yield until the notification handler's async Task completes
+        overlay.onAction?(.confirm)
+        // Yield until the action handler's async Task completes
         for _ in 0 ..< 100 {
             await Task.yield()
             if paster.pasteCalled { break }
@@ -411,8 +453,8 @@ struct PipelineIntegrationTests {
         )
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
-        // Don't start recording — post confirm notification
-        NotificationCenter.default.post(name: .overlayConfirmRequested, object: nil)
+        // Don't start recording — fire confirm action
+        overlay.onAction?(.confirm)
         await Task.yield()
 
         #expect(!paster.pasteCalled)
@@ -490,5 +532,130 @@ struct PipelineIntegrationTests {
         // Monitor should be cleaned up after transcription error
         #expect(appState.audioLevel == nil)
         #expect(transcriber.levelMonitor == nil)
+    }
+
+    // MARK: - Suggestion overlay
+
+    @Test @MainActor
+    func suggestionShownAfterEditDetection() {
+        configureDefaults()
+        UserDefaults.standard.set(true, forKey: "autoLearnDictionary")
+        defer { UserDefaults.standard.set(false, forKey: "autoLearnDictionary") }
+
+        let transcriber = MockTranscriber()
+        let overlay = MockOverlay()
+        let paster = MockPaster()
+        let appState = AppState()
+        let historyStore = HistoryStore()
+        let dictionaryStore = freshDictionaryStore()
+
+        let coordinator = makeCoordinator(
+            transcriber: transcriber, overlay: overlay, paster: paster
+        )
+        coordinator.setUp(appState: appState, historyStore: historyStore, dictionaryStore: dictionaryStore)
+
+        // Simulate edit detection directly (bypasses 3s timer)
+        // Use "meting" → "meeting" which passes EditDiffer's similarity filter
+        let candidates = EditDiffer.findReplacements(
+            original: "the meting is at three",
+            edited: "the meeting is at three"
+        )
+        #expect(!candidates.isEmpty)
+
+        let suggestion = DictionarySuggestion(
+            phrase: candidates[0].replacement,
+            original: candidates[0].original
+        )
+        coordinator.handleSuggestion(suggestion)
+
+        #expect(appState.suggestedWord != nil)
+        #expect(appState.suggestedWord?.phrase == "meeting")
+        #expect(overlay.showCalled)
+    }
+
+    @Test @MainActor
+    func dismissSuggestionViaCancelAction() async {
+        configureDefaults()
+
+        let transcriber = MockTranscriber()
+        let overlay = MockOverlay()
+        let paster = MockPaster()
+        let appState = AppState()
+        let historyStore = HistoryStore()
+
+        let coordinator = makeCoordinator(
+            transcriber: transcriber, overlay: overlay, paster: paster
+        )
+        coordinator.setUp(appState: appState, historyStore: historyStore)
+
+        // Put coordinator into suggestion state directly
+        let suggestion = DictionarySuggestion(phrase: "gRPC", original: "grpc")
+        coordinator.handleSuggestion(suggestion)
+        #expect(appState.suggestedWord != nil)
+
+        overlay.hideCalled = false
+        // Fire cancel action
+        overlay.onAction?(.cancel)
+        await Task.yield()
+
+        #expect(appState.suggestedWord == nil)
+        #expect(overlay.hideCalled)
+    }
+
+    @Test @MainActor
+    func acceptSuggestionAddsToDictionary() async {
+        configureDefaults()
+
+        let transcriber = MockTranscriber()
+        let overlay = MockOverlay()
+        let paster = MockPaster()
+        let appState = AppState()
+        let historyStore = HistoryStore()
+        let dictionaryStore = freshDictionaryStore()
+
+        let coordinator = makeCoordinator(
+            transcriber: transcriber, overlay: overlay, paster: paster
+        )
+        coordinator.setUp(appState: appState, historyStore: historyStore, dictionaryStore: dictionaryStore)
+
+        // Put coordinator into suggestion state
+        let suggestion = DictionarySuggestion(phrase: "gRPC", original: "grpc")
+        coordinator.handleSuggestion(suggestion)
+        #expect(appState.suggestedWord != nil)
+
+        overlay.hideCalled = false
+        // Fire accept action
+        overlay.onAction?(.acceptSuggestion)
+        await Task.yield()
+
+        #expect(appState.suggestedWord == nil)
+        #expect(overlay.hideCalled)
+        #expect(dictionaryStore.entries.contains(where: { $0.phrase == "gRPC" }))
+    }
+
+    @Test @MainActor
+    func startDismissesActiveSuggestion() async {
+        configureDefaults()
+
+        let transcriber = MockTranscriber()
+        let overlay = MockOverlay()
+        let paster = MockPaster()
+        let appState = AppState()
+        let historyStore = HistoryStore()
+
+        let coordinator = makeCoordinator(
+            transcriber: transcriber, overlay: overlay, paster: paster
+        )
+        coordinator.setUp(appState: appState, historyStore: historyStore)
+
+        // Put coordinator into suggestion state
+        let suggestion = DictionarySuggestion(phrase: "gRPC", original: "grpc")
+        coordinator.handleSuggestion(suggestion)
+        #expect(appState.suggestedWord != nil)
+
+        // Starting a new recording should clear the suggestion
+        await coordinator.start()
+        #expect(appState.suggestedWord == nil)
+        #expect(appState.isRecording)
     }
 }

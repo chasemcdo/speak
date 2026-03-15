@@ -2,7 +2,12 @@ import AppKit
 import SwiftUI
 
 final class OverlayPanel: NSPanel {
-    init(contentView: some View) {
+    weak var appState: AppState?
+    var onAction: ((OverlayAction) -> Void)?
+
+    init(contentView: some View, appState: AppState? = nil, onAction: ((OverlayAction) -> Void)? = nil) {
+        self.appState = appState
+        self.onAction = onAction
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: 420, height: 120),
             styleMask: [.nonactivatingPanel, .fullSizeContentView, .borderless],
@@ -38,13 +43,17 @@ final class OverlayPanel: NSPanel {
 
     /// Allow Escape key to cancel
     override func cancelOperation(_ sender: Any?) {
-        NotificationCenter.default.post(name: .overlayCancelRequested, object: nil)
+        onAction?(.cancel)
     }
 
-    /// Allow Return key to confirm
+    /// Allow Return key to confirm or accept suggestion
     override func keyDown(with event: NSEvent) {
         if event.keyCode == 36 { // Return
-            NotificationCenter.default.post(name: .overlayConfirmRequested, object: nil)
+            if case .suggestion = appState?.overlayMode {
+                onAction?(.acceptSuggestion)
+            } else {
+                onAction?(.confirm)
+            }
         } else {
             super.keyDown(with: event)
         }
@@ -57,9 +66,4 @@ final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
         true
     }
-}
-
-extension Notification.Name {
-    static let overlayCancelRequested = Notification.Name("overlayCancelRequested")
-    static let overlayConfirmRequested = Notification.Name("overlayConfirmRequested")
 }
