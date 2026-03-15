@@ -14,13 +14,13 @@ struct AudioDeviceTests {
 
     @Test
     func `hashable equality by all fields`() {
-        let a = AudioDevice(id: 1, uid: "uid-a", name: "Mic A", transportType: .usb)
-        let b = AudioDevice(id: 1, uid: "uid-a", name: "Mic A", transportType: .usb)
-        let c = AudioDevice(id: 2, uid: "uid-b", name: "Mic B", transportType: .bluetooth)
+        let deviceA = AudioDevice(id: 1, uid: "uid-a", name: "Mic A", transportType: .usb)
+        let deviceB = AudioDevice(id: 1, uid: "uid-a", name: "Mic A", transportType: .usb)
+        let deviceC = AudioDevice(id: 2, uid: "uid-b", name: "Mic B", transportType: .bluetooth)
 
-        #expect(a == b)
-        #expect(a != c)
-        #expect(a.hashValue == b.hashValue)
+        #expect(deviceA == deviceB)
+        #expect(deviceA != deviceC)
+        #expect(deviceA.hashValue == deviceB.hashValue)
     }
 
     @Test
