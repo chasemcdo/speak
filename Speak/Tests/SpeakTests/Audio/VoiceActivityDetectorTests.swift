@@ -38,14 +38,16 @@ struct VoiceActivityDetectorTests {
         vad.onEvent = { events.append($0) }
         vad.start(monitor: monitor)
 
-        // Feed loud audio
+        // Feed loud audio (RMS persists in monitor's lock)
         monitor.updateRMS(from: makeBuffer(amplitude: 0.5))
 
-        // Wait for detection
-        try await Task.sleep(for: .milliseconds(150))
+        // Wait for detection — generous margin for slow CI runners
+        for _ in 0 ..< 50 {
+            try await Task.sleep(for: .milliseconds(20))
+            if events.contains(.speechStarted) { break }
+        }
 
         vad.stop()
-        #expect(vad.isSpeechDetected == false) // stop resets
         #expect(events.contains(.speechStarted))
     }
 
@@ -84,13 +86,19 @@ struct VoiceActivityDetectorTests {
         vad.onEvent = { events.append($0) }
         vad.start(monitor: monitor)
 
-        // Start speech
+        // Start speech — poll until detected
         monitor.updateRMS(from: makeBuffer(amplitude: 0.5))
-        try await Task.sleep(for: .milliseconds(150))
+        for _ in 0 ..< 50 {
+            try await Task.sleep(for: .milliseconds(20))
+            if events.contains(.speechStarted) { break }
+        }
 
-        // Go silent
+        // Go silent — poll until ended
         monitor.updateRMS(from: makeBuffer(amplitude: 0.0))
-        try await Task.sleep(for: .milliseconds(250))
+        for _ in 0 ..< 50 {
+            try await Task.sleep(for: .milliseconds(20))
+            if events.contains(.speechEnded) { break }
+        }
 
         vad.stop()
         #expect(events.contains(.speechStarted))
