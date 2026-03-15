@@ -36,6 +36,7 @@ struct SpeakApp: App {
         } label: {
             Image("MenuBarIcon", bundle: .appModule)
                 .task {
+                    ClaudeCodeMCPRegistration.registerIfNeeded()
                     conversationCoordinator.setUp(appState: appState)
                     coordinator.setUp(
                         appState: appState,

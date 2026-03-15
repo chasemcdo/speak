@@ -12,6 +12,7 @@ BUILD_DIR=".build/debug"
 APP_DIR="$BUILD_DIR/Speak Dev.app/Contents"
 mkdir -p "$APP_DIR/MacOS"
 cp "$BUILD_DIR/Speak" "$APP_DIR/MacOS/Speak"
+cp "$BUILD_DIR/SpeakMCP" "$APP_DIR/MacOS/SpeakMCP"
 cp Speak/Info.plist "$APP_DIR/Info.plist"
 
 # Override bundle ID and display name so dev builds get independent TCC permissions
