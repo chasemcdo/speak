@@ -133,5 +133,4 @@ struct DictionaryStoreTests {
         #expect(store.entries.count == 1)
         #expect(store.suggestions.isEmpty)
     }
-
 }

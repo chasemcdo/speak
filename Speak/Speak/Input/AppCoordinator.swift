@@ -63,7 +63,7 @@ final class AppCoordinator {
             appState: appState
         )
         suggestion.onAccepted = { [weak self] in self?.configureFilters() }
-        self.suggestionManager = suggestion
+        suggestionManager = suggestion
 
         // Set up text delivery service
         let delivery = TextDeliveryService(
@@ -77,7 +77,7 @@ final class AppCoordinator {
                   self.dictionaryStore != nil else { return }
             self.suggestionManager?.scheduleEditDetection(pastedText: text, into: app)
         }
-        self.textDelivery = delivery
+        textDelivery = delivery
 
         // Register the global hotkey (double-tap to toggle on, hold to transcribe)
         hotkeyManager.register(

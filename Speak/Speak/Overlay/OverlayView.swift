@@ -20,7 +20,7 @@ struct OverlayView: View {
     var body: some View {
         Group {
             switch appState.overlayMode {
-            case .suggestion(let suggestion):
+            case let .suggestion(suggestion):
                 suggestionContent(suggestion)
             case .pasteFailed:
                 pasteFailedHintContent
