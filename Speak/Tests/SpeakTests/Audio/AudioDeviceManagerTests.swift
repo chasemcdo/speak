@@ -275,6 +275,11 @@ struct AudioDeviceCoordinatorTests {
         configureDefaults()
 
         let transcriber = MockTranscriberWithDeviceID()
+        let deviceManager = AudioDeviceManager()
+        try #require(!deviceManager.inputDevices.isEmpty, "No audio input devices available")
+        let firstDevice = try #require(deviceManager.inputDevices.first)
+        deviceManager.selectedDeviceUID = firstDevice.uid
+
         let coordinator = AppCoordinator(
             transcriptionEngine: transcriber,
             overlayManager: MockOverlayForDevice(),
@@ -283,19 +288,13 @@ struct AudioDeviceCoordinatorTests {
             contextReader: MockContextForDevice(),
             pasteService: MockPasterForDevice(),
             checkMicPermission: { true },
-            checkSpeechAuth: { true }
+            checkSpeechAuth: { true },
+            audioDeviceManager: deviceManager
         )
 
         let appState = AppState()
         let historyStore = HistoryStore()
         coordinator.setUp(appState: appState, historyStore: historyStore)
-
-        // Set up an AudioDeviceManager with a known device
-        let deviceManager = AudioDeviceManager()
-        try #require(!deviceManager.inputDevices.isEmpty, "No audio input devices available")
-        let firstDevice = try #require(deviceManager.inputDevices.first)
-        deviceManager.selectedDeviceUID = firstDevice.uid
-        coordinator.audioDeviceManager = deviceManager
 
         await coordinator.start()
 
@@ -318,15 +317,13 @@ struct AudioDeviceCoordinatorTests {
             contextReader: MockContextForDevice(),
             pasteService: MockPasterForDevice(),
             checkMicPermission: { true },
-            checkSpeechAuth: { true }
+            checkSpeechAuth: { true },
+            audioDeviceManager: AudioDeviceManager()
         )
 
         let appState = AppState()
         let historyStore = HistoryStore()
         coordinator.setUp(appState: appState, historyStore: historyStore)
-
-        // No device manager or system default
-        coordinator.audioDeviceManager = AudioDeviceManager()
 
         await coordinator.start()
 
@@ -353,36 +350,8 @@ struct AudioDeviceCoordinatorTests {
         let historyStore = HistoryStore()
         coordinator.setUp(appState: appState, historyStore: historyStore)
 
-        // audioDeviceManager is nil
-        coordinator.audioDeviceManager = nil
-
         await coordinator.start()
 
-        #expect(transcriber.selectedDeviceID == nil)
-    }
-}
-
-// MARK: - Transcribing protocol default tests
-
-struct TranscribingProtocolTests {
-    @MainActor
-    private final class MinimalTranscriber: Transcribing {
-        var levelMonitor: AudioLevelMonitor?
-        func startSession(appState: AppState, locale: Locale) async throws {}
-        func stopSession() async {}
-    }
-
-    @Test @MainActor
-    func `default selectedDeviceID is nil`() {
-        let transcriber = MinimalTranscriber()
-        #expect(transcriber.selectedDeviceID == nil)
-    }
-
-    @Test @MainActor
-    func `default selectedDeviceID setter is no op`() {
-        var transcriber = MinimalTranscriber()
-        transcriber.selectedDeviceID = 42
-        // The default extension is a no-op setter, so value stays nil
         #expect(transcriber.selectedDeviceID == nil)
     }
 }

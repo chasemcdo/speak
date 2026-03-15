@@ -158,7 +158,7 @@ final class AudioDeviceManager {
 private final class ListenerState: @unchecked Sendable {
     private let lock = NSLock()
     private var onChange: (() -> Void)?
-    private var installed = false
+    private var retainedSelf: Unmanaged<ListenerState>?
 
     func install(onChange: @escaping () -> Void) {
         lock.withLock { self.onChange = onChange }
@@ -168,38 +168,40 @@ private final class ListenerState: @unchecked Sendable {
             mScope: kAudioObjectPropertyScopeGlobal,
             mElement: kAudioObjectPropertyElementMain
         )
-        let selfPtr = Unmanaged.passRetained(self).toOpaque()
+        let ref = Unmanaged.passRetained(self)
         let status = AudioObjectAddPropertyListener(
             AudioObjectID(kAudioObjectSystemObject),
             &addr,
             listenerProc,
-            selfPtr
+            ref.toOpaque()
         )
         if status == noErr {
-            lock.withLock { installed = true }
+            lock.withLock { retainedSelf = ref }
+        } else {
+            ref.release()
         }
     }
 
     func remove() {
-        guard lock.withLock({ installed }) else { return }
+        let ref: Unmanaged<ListenerState>? = lock.withLock {
+            guard let ref = retainedSelf else { return nil }
+            retainedSelf = nil
+            onChange = nil
+            return ref
+        }
+        guard ref != nil else { return }
         var addr = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyDevices,
             mScope: kAudioObjectPropertyScopeGlobal,
             mElement: kAudioObjectPropertyElementMain
         )
-        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
         AudioObjectRemovePropertyListener(
             AudioObjectID(kAudioObjectSystemObject),
             &addr,
             listenerProc,
-            selfPtr
+            ref!.toOpaque()
         )
-        // Balance the retain from install() — CoreAudio no longer references self
-        Unmanaged.passUnretained(self).release()
-        lock.withLock {
-            installed = false
-            onChange = nil
-        }
+        ref!.release()
     }
 
     fileprivate func fireOnChange() {

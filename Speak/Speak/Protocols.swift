@@ -11,13 +11,6 @@ protocol Transcribing {
     func stopSession() async
 }
 
-extension Transcribing {
-    var selectedDeviceID: AudioDeviceID? {
-        get { nil }
-        set {}
-    }
-}
-
 extension TranscriptionEngine: Transcribing {}
 
 // MARK: - OverlayPresenting
