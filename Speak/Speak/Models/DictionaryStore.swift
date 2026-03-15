@@ -10,6 +10,7 @@ struct DictionaryEntry: Codable, Identifiable {
         self.addedAt = addedAt
         self.source = source
     }
+
     // swiftformat:enable redundantInit
     var phrase: String
     var addedAt = Date()
