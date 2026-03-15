@@ -74,9 +74,7 @@ final class HotkeyManager {
         case toggleRecording
         /// In toggle-recording mode, hotkey pressed to stop.
         case toggleTapDown
-        /// In toggle-recording state, third tap pressed within window — about to trigger conversation mode.
-        case awaitingThirdTap
-        /// Third tap confirmed, waiting for release.
+        /// Third tap confirmed, waiting for release to fire conversation toggle.
         case tripleTapDown
     }
 

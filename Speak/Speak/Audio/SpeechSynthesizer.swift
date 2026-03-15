@@ -39,14 +39,18 @@ final class SpeechSynthesizerService: NSObject {
 
 extension SpeechSynthesizerService: @preconcurrency AVSpeechSynthesizerDelegate {
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        isSpeaking = false
-        continuation?.resume()
-        continuation = nil
+        Task { @MainActor in
+            isSpeaking = false
+            continuation?.resume()
+            continuation = nil
+        }
     }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
-        isSpeaking = false
-        continuation?.resume()
-        continuation = nil
+        Task { @MainActor in
+            isSpeaking = false
+            continuation?.resume()
+            continuation = nil
+        }
     }
 }

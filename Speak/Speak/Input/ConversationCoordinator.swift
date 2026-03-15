@@ -18,6 +18,8 @@ final class ConversationCoordinator {
     private var audioLevelMonitor: AudioLevelMonitor?
     @ObservationIgnored private var isTransitioning = false
 
+    private static let defaultSilenceTimeout: TimeInterval = 1.5
+
     /// Phrases that exit conversation mode (checked after post-processing).
     private static let exitPhrases: Set<String> = [
         "stop conversation",
@@ -81,10 +83,7 @@ final class ConversationCoordinator {
         speechSynthesizer.stop()
         voiceActivityDetector.stop()
         await transcriptionEngine.stopSession()
-
-        audioLevelMonitor = nil
-        appState.audioLevel = nil
-        transcriptionEngine.levelMonitor = nil
+        clearAudioLevelMonitor()
 
         socketServer.stop()
         overlayManager.hide()
@@ -111,7 +110,7 @@ final class ConversationCoordinator {
         appState.audioLevel = monitor
 
         // Set up VAD
-        voiceActivityDetector.silenceTimeout = 1.5
+        voiceActivityDetector.silenceTimeout = Self.defaultSilenceTimeout
         voiceActivityDetector.onEvent = { [weak self] event in
             guard let self else { return }
             if event == .speechEnded {
@@ -152,9 +151,7 @@ final class ConversationCoordinator {
         voiceActivityDetector.stop()
         await transcriptionEngine.stopSession()
         appState.isRecording = false
-        audioLevelMonitor = nil
-        appState.audioLevel = nil
-        transcriptionEngine.levelMonitor = nil
+        clearAudioLevelMonitor()
 
         await submitText()
     }
@@ -190,11 +187,9 @@ final class ConversationCoordinator {
 
         appState.conversationPhase = .submitting
 
-        // Paste and submit into the terminal (auto-submit regardless of user setting)
-        let success = await pasteService.pasteAndSubmit(text, into: previousApp)
-        if !success {
-            // If paste fails, still transition to waiting — user might manually submit
-        }
+        // Paste and submit into the terminal (auto-submit regardless of user setting).
+        // If paste fails, still transition to waiting — user might manually submit.
+        _ = await pasteService.pasteAndSubmit(text, into: previousApp)
 
         appState.conversationPhase = .waitingForClaude
     }
@@ -218,6 +213,12 @@ final class ConversationCoordinator {
     }
 
     // MARK: - Helpers
+
+    private func clearAudioLevelMonitor() {
+        audioLevelMonitor = nil
+        appState?.audioLevel = nil
+        transcriptionEngine.levelMonitor = nil
+    }
 
     private func configureFilters() {
         textProcessor.removeAllFilters()

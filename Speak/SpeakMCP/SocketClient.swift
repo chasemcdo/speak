@@ -17,6 +17,10 @@ final class SocketClient {
         guard fd >= 0 else { return false }
         defer { close(fd) }
 
+        // Prevent SIGPIPE on broken connections
+        var noSigPipe: Int32 = 1
+        setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, socklen_t(MemoryLayout<Int32>.size))
+
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)
 
@@ -44,26 +48,69 @@ final class SocketClient {
               var message = String(data: data, encoding: .utf8) else { return false }
         message += "\n"
 
-        let sent = message.withCString { ptr in
-            send(fd, ptr, strlen(ptr), 0)
-        }
-        guard sent > 0 else { return false }
+        // Send all bytes, handling partial writes
+        guard sendAll(fd: fd, message: message) else { return false }
 
         // Set receive timeout
         var tv = timeval(tv_sec: Int(timeout), tv_usec: 0)
         setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
 
-        // Wait for response
-        var buffer = [CChar](repeating: 0, count: 4096)
-        let received = recv(fd, &buffer, buffer.count - 1, 0)
-        guard received > 0 else { return false }
+        // Read until newline delimiter (matching server's framing)
+        guard let responseData = recvUntilNewline(fd: fd) else { return false }
 
-        buffer[received] = 0
-        guard let responseString = String(cString: buffer, encoding: .utf8),
-              let responseData = responseString.data(using: .utf8),
-              let response = try? JSONSerialization.jsonObject(with: responseData) as? [String: Any],
+        guard let response = try? JSONSerialization.jsonObject(with: responseData) as? [String: Any],
               let status = response["status"] as? String else { return false }
 
         return status == "done"
+    }
+
+    // MARK: - Helpers
+
+    /// Send all bytes from a message, retrying on partial writes.
+    private func sendAll(fd: Int32, message: String) -> Bool {
+        let messageData = Array(message.utf8)
+        var totalSent = 0
+
+        while totalSent < messageData.count {
+            let remaining = messageData.count - totalSent
+            let sent = messageData.withUnsafeBufferPointer { buf in
+                send(fd, buf.baseAddress! + totalSent, remaining, 0)
+            }
+
+            if sent > 0 {
+                totalSent += sent
+            } else if sent == 0 {
+                return false // Connection closed
+            } else {
+                if errno == EINTR { continue }
+                return false // Fatal error
+            }
+        }
+        return true
+    }
+
+    /// Read from the socket until a newline is found, returning the data before the newline.
+    private func recvUntilNewline(fd: Int32) -> Data? {
+        var accumulated = Data()
+        var byte: UInt8 = 0
+
+        while true {
+            let result = recv(fd, &byte, 1, 0)
+            if result == 1 {
+                if byte == UInt8(ascii: "\n") {
+                    return accumulated
+                }
+                accumulated.append(byte)
+
+                // Safety limit — prevent unbounded reads
+                if accumulated.count > 65536 { return nil }
+            } else if result == 0 {
+                // Connection closed — return what we have if non-empty
+                return accumulated.isEmpty ? nil : accumulated
+            } else {
+                if errno == EINTR { continue }
+                return nil
+            }
+        }
     }
 }

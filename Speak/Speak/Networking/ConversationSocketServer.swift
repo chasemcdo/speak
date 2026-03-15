@@ -16,6 +16,8 @@ final class ConversationSocketServer {
 
     private var listener: NWListener?
     private var activeConnection: NWConnection?
+    /// Per-connection buffer for accumulating partial frames.
+    private var receiveBuffer = Data()
 
     private nonisolated static var socketURL: URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
@@ -24,6 +26,9 @@ final class ConversationSocketServer {
     }
 
     func start() {
+        // Clean up any existing listener before rebinding
+        stop()
+
         let socketPath = Self.socketURL.path
 
         // Ensure directory exists
@@ -49,7 +54,13 @@ final class ConversationSocketServer {
             }
         }
 
-        listener?.stateUpdateHandler = { _ in }
+        listener?.stateUpdateHandler = { state in
+            if case .failed = state {
+                MainActor.assumeIsolated { [weak self] in
+                    self?.stop()
+                }
+            }
+        }
 
         listener?.start(queue: .main)
     }
@@ -57,6 +68,7 @@ final class ConversationSocketServer {
     func stop() {
         activeConnection?.cancel()
         activeConnection = nil
+        receiveBuffer.removeAll()
         listener?.cancel()
         listener = nil
         unlink(Self.socketURL.path)
@@ -67,6 +79,7 @@ final class ConversationSocketServer {
     private func handleConnection(_ connection: NWConnection) {
         activeConnection?.cancel()
         activeConnection = connection
+        receiveBuffer.removeAll()
 
         connection.start(queue: .main)
         receiveData(on: connection)
@@ -78,13 +91,15 @@ final class ConversationSocketServer {
                 guard let self else { return }
 
                 if let data = content, !data.isEmpty {
-                    self.processData(data, on: connection)
+                    self.receiveBuffer.append(data)
+                    self.processBufferedFrames(on: connection)
                 }
 
                 if isComplete || error != nil {
                     connection.cancel()
                     if self.activeConnection === connection {
                         self.activeConnection = nil
+                        self.receiveBuffer.removeAll()
                     }
                 } else {
                     self.receiveData(on: connection)
@@ -93,13 +108,15 @@ final class ConversationSocketServer {
         }
     }
 
-    private func processData(_ data: Data, on connection: NWConnection) {
-        guard let string = String(data: data, encoding: .utf8) else { return }
+    /// Extract and process complete newline-delimited frames from the buffer.
+    private func processBufferedFrames(on connection: NWConnection) {
+        let newline = UInt8(ascii: "\n")
 
-        // Parse newline-delimited JSON
-        for line in string.split(separator: "\n") {
-            guard let lineData = line.data(using: .utf8),
-                  let json = try? JSONSerialization.jsonObject(with: lineData) as? [String: Any],
+        while let newlineIndex = receiveBuffer.firstIndex(of: newline) {
+            let frameData = receiveBuffer[receiveBuffer.startIndex ..< newlineIndex]
+            receiveBuffer = receiveBuffer[(newlineIndex + 1)...]
+
+            guard let json = try? JSONSerialization.jsonObject(with: frameData) as? [String: Any],
                   let action = json["action"] as? String,
                   let text = json["text"] as? String else {
                 continue
@@ -110,10 +127,12 @@ final class ConversationSocketServer {
             Task { @MainActor [weak self] in
                 await self?.onMessage?(message)
 
-                // Send acknowledgement
+                // Send newline-terminated acknowledgement
                 let ack: [String: Any] = ["status": "done"]
                 if let ackData = try? JSONSerialization.data(withJSONObject: ack) {
-                    connection.send(content: ackData, completion: .contentProcessed { _ in })
+                    var payload = ackData
+                    payload.append(newline)
+                    connection.send(content: payload, completion: .contentProcessed { _ in })
                 }
             }
         }

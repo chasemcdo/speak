@@ -73,7 +73,11 @@ final class AppCoordinator {
                     self?.appState?.recordingMode = mode
                 }
             },
-            onConversationToggle: onConversationToggle
+            onConversationToggle: {
+                Task { @MainActor in
+                    onConversationToggle()
+                }
+            }
         )
 
         // Listen for overlay cancel/confirm from keyboard events in the panel
