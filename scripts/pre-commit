@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Get staged .swift files (excluding deleted files)
+STAGED=$(git diff --cached --name-only --diff-filter=d -- '*.swift')
+[ -z "$STAGED" ] && exit 0
+
+# Auto-format staged files and re-stage them
+echo "$STAGED" | xargs swiftformat
+echo "$STAGED" | xargs git add
+
+# Lint staged files
+echo "$STAGED" | xargs swiftlint lint --strict

@@ -98,6 +98,8 @@ tidy: format lint
 # --- Git hooks ---
 
 hooks:
+	ln -sf ../../scripts/pre-commit .git/hooks/pre-commit
+	chmod +x scripts/pre-commit
 	ln -sf ../../scripts/post-checkout .git/hooks/post-checkout
 	chmod +x scripts/post-checkout
 
