@@ -195,7 +195,7 @@ private final class ListenerState: @unchecked Sendable {
             selfPtr
         )
         // Balance the retain from install() — CoreAudio no longer references self
-        Unmanaged.passRetained(self).release()
+        Unmanaged.passUnretained(self).release()
         lock.withLock {
             installed = false
             onChange = nil

@@ -79,7 +79,7 @@ final class AudioCaptureManager: @unchecked Sendable {
         callbackState.continuation = continuation
         callbackState.converter = nil
 
-        let deviceID = try deviceID.map { $0 } ?? Self.preferredInputDeviceID()
+        let deviceID = try deviceID ?? Self.preferredInputDeviceID()
 
         // Use a HAL Output audio unit for raw hardware access.
         // Unlike AVAudioEngine (VoiceProcessingIO) or AVCaptureSession, the HAL
