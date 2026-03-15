@@ -14,6 +14,7 @@ final class AppCoordinator {
     private let pasteService: any Pasting
     private let checkMicPermission: @MainActor () -> Bool
     private let checkSpeechAuth: @MainActor () -> Bool
+    var audioDeviceManager: AudioDeviceManager?
 
     init(
         transcriptionEngine: any Transcribing = TranscriptionEngine(),
@@ -220,6 +221,8 @@ final class AppCoordinator {
         audioLevelMonitor = monitor
         transcriptionEngine.levelMonitor = monitor
         appState.audioLevel = monitor
+
+        transcriptionEngine.selectedDeviceID = audioDeviceManager?.resolvedDeviceID
 
         do {
             try await transcriptionEngine.startSession(appState: appState, locale: locale)

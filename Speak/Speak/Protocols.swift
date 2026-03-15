@@ -1,12 +1,21 @@
 import AppKit
+import CoreAudio
 
 // MARK: - Transcribing
 
 @MainActor
 protocol Transcribing {
     var levelMonitor: AudioLevelMonitor? { get set }
+    var selectedDeviceID: AudioDeviceID? { get set }
     func startSession(appState: AppState, locale: Locale) async throws
     func stopSession() async
+}
+
+extension Transcribing {
+    var selectedDeviceID: AudioDeviceID? {
+        get { nil }
+        set {}
+    }
 }
 
 extension TranscriptionEngine: Transcribing {}

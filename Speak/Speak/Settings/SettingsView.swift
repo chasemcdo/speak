@@ -8,6 +8,7 @@ struct SettingsView: View {
     let updater: SPUUpdater?
     @Environment(AppState.self) private var appState
     @Environment(AppCoordinator.self) private var coordinator
+    @Environment(AudioDeviceManager.self) private var audioDeviceManager
     @AppStorage("locale") private var localeIdentifier = Locale.current.identifier
     @AppStorage("autoPaste") private var autoPaste = true
     @AppStorage("hotkeyModifier") private var hotkey: TranscriptionHotkey = .fn
@@ -47,6 +48,16 @@ struct SettingsView: View {
                     .help(
                         "When enabled, text is automatically pasted into the focused app. When disabled, text is copied to the clipboard."
                     )
+            }
+
+            Section("Audio") {
+                @Bindable var deviceManager = audioDeviceManager
+                Picker("Input device", selection: $deviceManager.selectedDeviceUID) {
+                    Text("System Default").tag(nil as String?)
+                    ForEach(audioDeviceManager.inputDevices) { device in
+                        Text(device.name).tag(device.uid as String?)
+                    }
+                }
             }
 
             Section("Post-Processing") {
@@ -129,7 +140,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 420, height: 520)
+        .frame(width: 420, height: 580)
         .onAppear {
             if let updater {
                 automaticallyChecksForUpdates = updater.automaticallyChecksForUpdates

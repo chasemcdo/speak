@@ -1,4 +1,5 @@
 @preconcurrency import AVFoundation
+import CoreAudio
 import Speech
 
 @MainActor
@@ -16,6 +17,7 @@ final class TranscriptionEngine {
     private var isSettingUp = false
 
     var levelMonitor: AudioLevelMonitor?
+    var selectedDeviceID: AudioDeviceID?
 
     // MARK: - Session lifecycle
 
@@ -64,7 +66,7 @@ final class TranscriptionEngine {
 
         // 5. Wire level monitor and start audio capture
         audioCapture.levelMonitor = levelMonitor
-        let audioStream = try audioCapture.startCapture()
+        let audioStream = try audioCapture.startCapture(deviceID: selectedDeviceID)
         levelMonitor?.startMonitoring()
 
         // Steps 6-8 depend on audio capture being active. If any fail,

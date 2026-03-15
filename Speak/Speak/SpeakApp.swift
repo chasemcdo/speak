@@ -4,6 +4,7 @@ import SwiftUI
 @main
 struct SpeakApp: App {
     @State private var appState = AppState()
+    @State private var audioDeviceManager = AudioDeviceManager()
     @State private var coordinator = AppCoordinator()
     @State private var historyStore = HistoryStore()
     @AppStorage("onboardingComplete") private var onboardingComplete = false
@@ -35,6 +36,7 @@ struct SpeakApp: App {
         } label: {
             Image("MenuBarIcon", bundle: .appModule)
                 .task {
+                    coordinator.audioDeviceManager = audioDeviceManager
                     coordinator.setUp(appState: appState, historyStore: historyStore)
 
                     // Let scene registration complete before opening windows
@@ -64,6 +66,7 @@ struct SpeakApp: App {
             SettingsView(updater: updaterController?.updater)
                 .environment(appState)
                 .environment(coordinator)
+                .environment(audioDeviceManager)
         }
 
         Window("Welcome to Speak", id: "onboarding") {
