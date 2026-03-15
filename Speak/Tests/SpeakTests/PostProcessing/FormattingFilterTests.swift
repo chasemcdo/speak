@@ -54,7 +54,7 @@ struct FormattingFilterTests {
     // -- Edge cases --
 
     @Test func `empty string passes through`() async throws {
-        #expect(try await formatted("") == "")
+        #expect(try await formatted("").isEmpty)
     }
 
     @Test func `single character`() async throws {

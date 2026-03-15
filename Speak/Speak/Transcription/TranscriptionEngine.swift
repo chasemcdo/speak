@@ -42,18 +42,8 @@ final class TranscriptionEngine {
         )
         self.transcriber = transcriber
 
-        // 2. Ensure model is downloaded (skip UI flash if already installed)
-        let alreadyInstalled = await modelManager.isInstalled(locale: locale)
-        if !alreadyInstalled {
-            appState.isModelDownloading = true
-        }
-        do {
-            try await modelManager.ensureModelAvailable(for: transcriber)
-        } catch {
-            appState.isModelDownloading = false
-            throw TranscriptionError.modelUnavailable(locale: locale)
-        }
-        appState.isModelDownloading = false
+        // 2. Ensure model is downloaded
+        try await ensureModel(for: transcriber, locale: locale, appState: appState)
 
         // 3. Prepare audio format
         try await audioCapture.prepareFormat(compatibleWith: transcriber)
@@ -86,20 +76,7 @@ final class TranscriptionEngine {
             try await analyzer.start(inputSequence: inputSequence)
 
             // 8. Consume results
-            resultsTask = Task {
-                do {
-                    for try await result in transcriber.results {
-                        let text = String(result.text.characters)
-                        if result.isFinal {
-                            appState.appendFinalizedText(text)
-                        } else {
-                            appState.updateVolatileText(text)
-                        }
-                    }
-                } catch {
-                    appState.error = "Transcription error: \(error.localizedDescription)"
-                }
-            }
+            consumeResults(from: transcriber, into: appState)
         } catch {
             // Clean up the monitor and audio capture that were started in step 5
             levelMonitor?.stopMonitoring()
@@ -133,6 +110,43 @@ final class TranscriptionEngine {
         inputContinuation = nil
         isRunning = false
     }
+
+    // MARK: - Private
+
+    private func ensureModel(
+        for transcriber: SpeechTranscriber,
+        locale: Locale,
+        appState: AppState
+    ) async throws {
+        let alreadyInstalled = await modelManager.isInstalled(locale: locale)
+        if !alreadyInstalled {
+            appState.isModelDownloading = true
+        }
+        do {
+            try await modelManager.ensureModelAvailable(for: transcriber)
+        } catch {
+            appState.isModelDownloading = false
+            throw TranscriptionError.modelUnavailable(locale: locale)
+        }
+        appState.isModelDownloading = false
+    }
+
+    private func consumeResults(from transcriber: SpeechTranscriber, into appState: AppState) {
+        resultsTask = Task {
+            do {
+                for try await result in transcriber.results {
+                    let text = String(result.text.characters)
+                    if result.isFinal {
+                        appState.appendFinalizedText(text)
+                    } else {
+                        appState.updateVolatileText(text)
+                    }
+                }
+            } catch {
+                appState.error = "Transcription error: \(error.localizedDescription)"
+            }
+        }
+    }
 }
 
 enum TranscriptionError: LocalizedError {
@@ -142,9 +156,12 @@ enum TranscriptionError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case let .modelUnavailable(locale):
-            "Speech model for \(locale.localizedString(forIdentifier: locale.identifier) ?? locale.identifier) is not available."
+            let name = locale.localizedString(
+                forIdentifier: locale.identifier
+            ) ?? locale.identifier
+            return "Speech model for \(name) is not available."
         case .notAuthorized:
-            "Speech recognition is not authorized."
+            return "Speech recognition is not authorized."
         }
     }
 }
