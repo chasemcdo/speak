@@ -46,11 +46,10 @@ struct AudioDeviceManagerTests {
     // MARK: - Enumeration
 
     @Test @MainActor
-    func `enumeration returns valid devices`() {
+    func `enumeration returns valid devices`() throws {
         cleanDefaults()
         let manager = AudioDeviceManager()
-        // On any Mac there should be at least one input device (built-in mic)
-        #expect(!manager.inputDevices.isEmpty)
+        try #require(!manager.inputDevices.isEmpty, "No audio input devices available — skipping on headless/CI")
 
         for device in manager.inputDevices {
             #expect(!device.uid.isEmpty)
@@ -81,9 +80,10 @@ struct AudioDeviceManagerTests {
     }
 
     @Test @MainActor
-    func `at least one built in device on Mac`() {
+    func `at least one built in device on Mac`() throws {
         cleanDefaults()
         let manager = AudioDeviceManager()
+        try #require(!manager.inputDevices.isEmpty, "No audio input devices available — skipping on headless/CI")
         let hasBuiltIn = manager.inputDevices.contains { $0.transportType == .builtIn }
         #expect(hasBuiltIn)
     }
@@ -91,13 +91,14 @@ struct AudioDeviceManagerTests {
     // MARK: - Persistence
 
     @Test @MainActor
-    func `selected device UID persists through UserDefaults`() {
+    func `selected device UID persists through UserDefaults`() throws {
         cleanDefaults()
 
         let manager = AudioDeviceManager()
         #expect(manager.selectedDeviceUID == nil)
 
-        guard let firstDevice = manager.inputDevices.first else { return }
+        try #require(!manager.inputDevices.isEmpty, "No audio input devices available")
+        let firstDevice = try #require(manager.inputDevices.first)
 
         manager.selectedDeviceUID = firstDevice.uid
         #expect(UserDefaults.standard.string(forKey: defaultsKey) == firstDevice.uid)
@@ -110,11 +111,12 @@ struct AudioDeviceManagerTests {
     }
 
     @Test @MainActor
-    func `setting nil clears UserDefaults`() {
+    func `setting nil clears UserDefaults`() throws {
         cleanDefaults()
 
         let manager = AudioDeviceManager()
-        guard let firstDevice = manager.inputDevices.first else { return }
+        try #require(!manager.inputDevices.isEmpty, "No audio input devices available")
+        let firstDevice = try #require(manager.inputDevices.first)
 
         manager.selectedDeviceUID = firstDevice.uid
         #expect(UserDefaults.standard.string(forKey: defaultsKey) != nil)
@@ -139,11 +141,12 @@ struct AudioDeviceManagerTests {
     }
 
     @Test @MainActor
-    func `disconnected device UID is cleared on refreshDevices`() {
+    func `disconnected device UID is cleared on refreshDevices`() throws {
         cleanDefaults()
 
         let manager = AudioDeviceManager()
-        guard let firstDevice = manager.inputDevices.first else { return }
+        try #require(!manager.inputDevices.isEmpty, "No audio input devices available")
+        let firstDevice = try #require(manager.inputDevices.first)
 
         // Select a valid device, then corrupt the UID to simulate disconnection
         manager.selectedDeviceUID = firstDevice.uid
@@ -172,11 +175,12 @@ struct AudioDeviceManagerTests {
     }
 
     @Test @MainActor
-    func `valid device UID resolves to correct device ID`() {
+    func `valid device UID resolves to correct device ID`() throws {
         cleanDefaults()
 
         let manager = AudioDeviceManager()
-        guard let firstDevice = manager.inputDevices.first else { return }
+        try #require(!manager.inputDevices.isEmpty, "No audio input devices available")
+        let firstDevice = try #require(manager.inputDevices.first)
 
         manager.selectedDeviceUID = firstDevice.uid
         #expect(manager.resolvedDeviceID == firstDevice.id)
@@ -226,11 +230,12 @@ struct AudioDeviceManagerTests {
     }
 
     @Test @MainActor
-    func `refreshDevices preserves valid UID`() {
+    func `refreshDevices preserves valid UID`() throws {
         cleanDefaults()
 
         let manager = AudioDeviceManager()
-        guard let firstDevice = manager.inputDevices.first else { return }
+        try #require(!manager.inputDevices.isEmpty, "No audio input devices available")
+        let firstDevice = try #require(manager.inputDevices.first)
 
         manager.selectedDeviceUID = firstDevice.uid
         manager.refreshDevices()
@@ -255,8 +260,18 @@ struct AudioDeviceCoordinatorTests {
         defaults.removeObject(forKey: "selectedInputDeviceUID")
     }
 
+    private func cleanDefaults() {
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: "removeFillerWords")
+        defaults.removeObject(forKey: "autoFormat")
+        defaults.removeObject(forKey: "llmRewrite")
+        defaults.removeObject(forKey: "autoPaste")
+        defaults.removeObject(forKey: "screenContext")
+        defaults.removeObject(forKey: "selectedInputDeviceUID")
+    }
+
     @Test @MainActor
-    func `start passes resolved device ID to transcriber`() async {
+    func `start passes resolved device ID to transcriber`() async throws {
         configureDefaults()
 
         let transcriber = MockTranscriberWithDeviceID()
@@ -277,7 +292,8 @@ struct AudioDeviceCoordinatorTests {
 
         // Set up an AudioDeviceManager with a known device
         let deviceManager = AudioDeviceManager()
-        guard let firstDevice = deviceManager.inputDevices.first else { return }
+        try #require(!deviceManager.inputDevices.isEmpty, "No audio input devices available")
+        let firstDevice = try #require(deviceManager.inputDevices.first)
         deviceManager.selectedDeviceUID = firstDevice.uid
         coordinator.audioDeviceManager = deviceManager
 
@@ -286,7 +302,7 @@ struct AudioDeviceCoordinatorTests {
         #expect(transcriber.selectedDeviceID == firstDevice.id)
 
         // Clean up
-        UserDefaults.standard.removeObject(forKey: "selectedInputDeviceUID")
+        cleanDefaults()
     }
 
     @Test @MainActor
@@ -377,10 +393,7 @@ struct TranscribingProtocolTests {
 private final class MockTranscriberWithDeviceID: Transcribing {
     var levelMonitor: AudioLevelMonitor?
     var selectedDeviceID: AudioDeviceID?
-    var startSessionCalled = false
-
     func startSession(appState: AppState, locale: Locale) async throws {
-        startSessionCalled = true
         appState.isRecording = true
     }
 
