@@ -36,7 +36,7 @@ final class AudioDeviceManager {
         return inputDevices.first(where: { $0.uid == uid })?.id
     }
 
-    private nonisolated let listenerState = ListenerState()
+    nonisolated private let listenerState = ListenerState()
 
     init() {
         selectedDeviceUID = UserDefaults.standard.string(forKey: "selectedInputDeviceUID")
@@ -114,7 +114,7 @@ final class AudioDeviceManager {
         var value: Unmanaged<CFString>?
         var size = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
         guard AudioObjectGetPropertyData(deviceID, &addr, 0, nil, &size, &value) == noErr,
-              let cfString = value?.takeUnretainedValue()
+              let cfString = value?.takeRetainedValue()
         else { return nil }
         return cfString as String
     }
@@ -168,7 +168,7 @@ private final class ListenerState: @unchecked Sendable {
             mScope: kAudioObjectPropertyScopeGlobal,
             mElement: kAudioObjectPropertyElementMain
         )
-        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
+        let selfPtr = Unmanaged.passRetained(self).toOpaque()
         let status = AudioObjectAddPropertyListener(
             AudioObjectID(kAudioObjectSystemObject),
             &addr,
@@ -194,6 +194,8 @@ private final class ListenerState: @unchecked Sendable {
             listenerProc,
             selfPtr
         )
+        // Balance the retain from install() — CoreAudio no longer references self
+        Unmanaged.passRetained(self).release()
         lock.withLock {
             installed = false
             onChange = nil

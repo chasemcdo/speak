@@ -34,3 +34,4 @@
 # Disabled rules — avoid fights with Xcode auto-indent and SwiftLint
 --disable wrapMultilineStatementBraces
 --disable blankLineAfterImports
+--disable modifierOrder
