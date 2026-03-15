@@ -51,7 +51,7 @@ struct HotkeyManagerTests {
             onStart: { startCalled = true },
             onStop: { stopCalled = true },
             onModeChange: { _ in },
-            onConversationToggle: { }
+            onConversationToggle: {}
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function) else {
@@ -88,7 +88,7 @@ struct HotkeyManagerTests {
             onStart: { startCalled = true },
             onStop: { stopCalled = true },
             onModeChange: { _ in },
-            onConversationToggle: { }
+            onConversationToggle: {}
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
@@ -212,7 +212,7 @@ struct HotkeyManagerTests {
             onStart: { startCalled = true },
             onStop: { stopCalled = true },
             onModeChange: { _ in },
-            onConversationToggle: { }
+            onConversationToggle: {}
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
@@ -533,16 +533,16 @@ struct HotkeyManagerTests {
         }
 
         // Double-tap to start toggle recording
-        manager.handleFlagsChanged(downEvent)  // firstDown
-        manager.handleFlagsChanged(upEvent)    // awaitingSecondTap
-        manager.handleFlagsChanged(downEvent)  // doubleTapDown (onStart fires)
-        manager.handleFlagsChanged(upEvent)    // toggleRecording (sets toggleEnteredTime)
+        manager.handleFlagsChanged(downEvent) // firstDown
+        manager.handleFlagsChanged(upEvent) // awaitingSecondTap
+        manager.handleFlagsChanged(downEvent) // doubleTapDown (onStart fires)
+        manager.handleFlagsChanged(upEvent) // toggleRecording (sets toggleEnteredTime)
 
         // Third tap immediately — within doubleTapWindow
-        manager.handleFlagsChanged(downEvent)  // tripleTapDown (onStop fires)
+        manager.handleFlagsChanged(downEvent) // tripleTapDown (onStop fires)
         #expect(stopCalled)
 
-        manager.handleFlagsChanged(upEvent)    // idle (onConversationToggle fires)
+        manager.handleFlagsChanged(upEvent) // idle (onConversationToggle fires)
         #expect(conversationToggled)
 
         manager.unregister()
@@ -579,8 +579,8 @@ struct HotkeyManagerTests {
         try await Task.sleep(for: .milliseconds(400))
 
         // Tap to stop — should be normal stop, not conversation toggle
-        manager.handleFlagsChanged(downEvent)  // toggleTapDown (not tripleTapDown)
-        manager.handleFlagsChanged(upEvent)    // idle + onStop
+        manager.handleFlagsChanged(downEvent) // toggleTapDown (not tripleTapDown)
+        manager.handleFlagsChanged(upEvent) // idle + onStop
         #expect(stopCalled)
         #expect(!conversationToggled)
 

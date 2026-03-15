@@ -86,26 +86,27 @@ final class ConversationSocketServer {
     }
 
     private func receiveData(on connection: NWConnection) {
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] content, _, isComplete, error in
-            MainActor.assumeIsolated {
-                guard let self else { return }
+        connection
+            .receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] content, _, isComplete, error in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
 
-                if let data = content, !data.isEmpty {
-                    self.receiveBuffer.append(data)
-                    self.processBufferedFrames(on: connection)
-                }
-
-                if isComplete || error != nil {
-                    connection.cancel()
-                    if self.activeConnection === connection {
-                        self.activeConnection = nil
-                        self.receiveBuffer.removeAll()
+                    if let data = content, !data.isEmpty {
+                        self.receiveBuffer.append(data)
+                        self.processBufferedFrames(on: connection)
                     }
-                } else {
-                    self.receiveData(on: connection)
+
+                    if isComplete || error != nil {
+                        connection.cancel()
+                        if self.activeConnection === connection {
+                            self.activeConnection = nil
+                            self.receiveBuffer.removeAll()
+                        }
+                    } else {
+                        self.receiveData(on: connection)
+                    }
                 }
             }
-        }
     }
 
     /// Extract and process complete newline-delimited frames from the buffer.

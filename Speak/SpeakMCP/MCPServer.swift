@@ -86,7 +86,11 @@ final class MCPServer {
               name == "speak",
               let arguments = params["arguments"] as? [String: Any],
               let text = arguments["text"] as? String else {
-            writeError(id: id, code: -32602, message: "Invalid params: expected {name: 'speak', arguments: {text: string}}")
+            writeError(
+                id: id,
+                code: -32602,
+                message: "Invalid params: expected {name: 'speak', arguments: {text: string}}"
+            )
             return
         }
 
