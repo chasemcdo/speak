@@ -13,6 +13,11 @@ const pages = [
     description: "Understand why microphone, speech recognition, and accessibility are needed.",
   },
   {
+    href: "/docs/conversation-mode",
+    title: "Conversation Mode",
+    description: "Have a hands-free voice conversation with Claude Code (experimental).",
+  },
+  {
     href: "/docs/troubleshooting",
     title: "Troubleshooting",
     description: "Fix common setup and workflow issues quickly.",

@@ -145,4 +145,81 @@ struct ClaudeCodeMCPRegistrationTests {
             .appendingPathComponent("Contents/MacOS/SpeakMCP").path
         #expect(bundlePath.hasSuffix("Contents/MacOS/SpeakMCP"))
     }
+
+    // MARK: - isRegistered
+
+    @Test
+    func `isRegistered returns true when correctly registered`() throws {
+        let mock = MockSettingsFileAccess()
+        let existing: [String: Any] = [
+            "mcpServers": [
+                "speak": ["command": testBinaryPath],
+            ],
+        ]
+        mock.fileContents = try JSONSerialization.data(withJSONObject: existing)
+
+        #expect(ClaudeCodeMCPRegistration.isRegistered(fileAccess: mock, binaryPath: testBinaryPath))
+    }
+
+    @Test
+    func `isRegistered returns false when not registered`() {
+        let mock = MockSettingsFileAccess()
+
+        #expect(!ClaudeCodeMCPRegistration.isRegistered(fileAccess: mock, binaryPath: testBinaryPath))
+    }
+
+    @Test
+    func `isRegistered returns false when path is stale`() throws {
+        let mock = MockSettingsFileAccess()
+        let existing: [String: Any] = [
+            "mcpServers": [
+                "speak": ["command": "/old/path/SpeakMCP"],
+            ],
+        ]
+        mock.fileContents = try JSONSerialization.data(withJSONObject: existing)
+
+        #expect(!ClaudeCodeMCPRegistration.isRegistered(fileAccess: mock, binaryPath: testBinaryPath))
+    }
+
+    // MARK: - unregister
+
+    @Test
+    func `unregister removes speak entry and preserves others`() throws {
+        let mock = MockSettingsFileAccess()
+        let existing: [String: Any] = [
+            "mcpServers": [
+                "speak": ["command": testBinaryPath],
+                "firebase": ["command": "/usr/local/bin/firebase-mcp"],
+            ],
+            "permissions": ["allow": true],
+        ]
+        mock.fileContents = try JSONSerialization.data(withJSONObject: existing)
+
+        ClaudeCodeMCPRegistration.unregister(fileAccess: mock)
+
+        #expect(mock.writeCalled)
+        let settings = try parsedSettings(mock)
+        // Permissions preserved
+        #expect(settings["permissions"] != nil)
+        let mcpServers = try #require(settings["mcpServers"] as? [String: Any])
+        // Firebase preserved
+        #expect(mcpServers["firebase"] != nil)
+        // Speak removed
+        #expect(mcpServers["speak"] == nil)
+    }
+
+    @Test
+    func `unregister no-ops when not registered`() throws {
+        let mock = MockSettingsFileAccess()
+        let existing: [String: Any] = [
+            "mcpServers": [
+                "firebase": ["command": "/usr/local/bin/firebase-mcp"],
+            ],
+        ]
+        mock.fileContents = try JSONSerialization.data(withJSONObject: existing)
+
+        ClaudeCodeMCPRegistration.unregister(fileAccess: mock)
+
+        #expect(!mock.writeCalled)
+    }
 }

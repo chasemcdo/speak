@@ -42,19 +42,7 @@ enum ClaudeCodeMCPRegistration {
             .appendingPathComponent("Contents/MacOS/SpeakMCP").path
 
         do {
-            var settings: [String: Any]
-
-            if fileAccess.exists() {
-                let data = try fileAccess.read()
-                if let parsed = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] {
-                    settings = parsed
-                } else {
-                    // Malformed or non-dictionary JSON — start fresh
-                    settings = [:]
-                }
-            } else {
-                settings = [:]
-            }
+            var settings = readSettings(fileAccess: fileAccess)
 
             // Get or create mcpServers dictionary
             var mcpServers = settings["mcpServers"] as? [String: Any] ?? [:]
@@ -80,5 +68,55 @@ enum ClaudeCodeMCPRegistration {
             // Log but don't crash — MCP registration is best-effort
             print("ClaudeCodeMCPRegistration: failed to register — \(error)")
         }
+    }
+
+    /// Returns `true` if the speak MCP server is registered with the current binary path.
+    static func isRegistered(
+        fileAccess: SettingsFileAccessing = RealSettingsFileAccess(),
+        binaryPath: String? = nil
+    ) -> Bool {
+        let resolvedPath = binaryPath ?? Bundle.main.bundleURL
+            .appendingPathComponent("Contents/MacOS/SpeakMCP").path
+
+        let settings = readSettings(fileAccess: fileAccess)
+        guard let mcpServers = settings["mcpServers"] as? [String: Any],
+              let speak = mcpServers["speak"] as? [String: Any],
+              speak["command"] as? String == resolvedPath else {
+            return false
+        }
+        return true
+    }
+
+    /// Removes the speak MCP server entry from `~/.claude/settings.json`, preserving all other keys.
+    static func unregister(fileAccess: SettingsFileAccessing = RealSettingsFileAccess()) {
+        do {
+            var settings = readSettings(fileAccess: fileAccess)
+            guard var mcpServers = settings["mcpServers"] as? [String: Any],
+                  mcpServers["speak"] != nil else {
+                return // Not registered — no-op
+            }
+
+            mcpServers.removeValue(forKey: "speak")
+            settings["mcpServers"] = mcpServers
+
+            let data = try JSONSerialization.data(
+                withJSONObject: settings,
+                options: [.prettyPrinted, .sortedKeys]
+            )
+            try fileAccess.write(data)
+        } catch {
+            print("ClaudeCodeMCPRegistration: failed to unregister — \(error)")
+        }
+    }
+
+    // MARK: - Private
+
+    private static func readSettings(fileAccess: SettingsFileAccessing) -> [String: Any] {
+        guard fileAccess.exists(),
+              let data = try? fileAccess.read(),
+              let parsed = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
+            return [:]
+        }
+        return parsed
     }
 }

@@ -10,6 +10,7 @@ type DocsShellProps = {
 const docsLinks = [
   { href: "/docs/quickstart", label: "Quick Start" },
   { href: "/docs/permissions", label: "Permissions" },
+  { href: "/docs/conversation-mode", label: "Conversation Mode" },
   { href: "/docs/troubleshooting", label: "Troubleshooting" },
 ];
 

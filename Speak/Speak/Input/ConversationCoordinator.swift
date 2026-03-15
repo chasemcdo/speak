@@ -18,6 +18,9 @@ final class ConversationCoordinator {
     private var audioLevelMonitor: AudioLevelMonitor?
     @ObservationIgnored private var isTransitioning = false
 
+    /// Called when conversation mode is toggled but MCP setup hasn't been completed.
+    var onSetupRequired: (() -> Void)?
+
     private static let defaultSilenceTimeout: TimeInterval = 1.5
 
     /// Phrases that exit conversation mode (checked after post-processing).
@@ -64,6 +67,11 @@ final class ConversationCoordinator {
     /// Start conversation mode.
     func start() async {
         guard let appState, !appState.isConversationMode else { return }
+
+        guard ClaudeCodeMCPRegistration.isRegistered() else {
+            onSetupRequired?()
+            return
+        }
 
         // Capture the terminal app (Claude Code) as our paste target
         previousApp = NSWorkspace.shared.frontmostApplication

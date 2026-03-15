@@ -21,6 +21,7 @@ struct SettingsView: View {
     @State private var automaticallyDownloadsUpdates = false
 
     @State private var supportedLocales: [Locale] = []
+    @State private var mcpRegistered = false
     @State private var micGranted = AudioCaptureManager.permissionGranted
     @State private var accessibilityGranted = PasteService.accessibilityGranted
     @State private var speechGranted = ModelManager.authorizationGranted
@@ -45,7 +46,8 @@ struct SettingsView: View {
 
                 Toggle("Auto-paste into active app", isOn: $autoPaste)
                     .help(
-                        "When enabled, text is automatically pasted into the focused app. When disabled, text is copied to the clipboard."
+                        "When enabled, text is automatically pasted into the focused app. "
+                            + "When disabled, text is copied to the clipboard."
                     )
             }
 
@@ -58,7 +60,8 @@ struct SettingsView: View {
 
                 Toggle("AI-powered formatting", isOn: $llmRewrite)
                     .help(
-                        "Use Apple Intelligence to clean up grammar, format lists, add paragraphs, and match your writing style."
+                        "Use Apple Intelligence to clean up grammar, format lists, "
+                            + "add paragraphs, and match your writing style."
                     )
                     .disabled(!llmAvailable)
 
@@ -77,6 +80,38 @@ struct SettingsView: View {
                 Picker("Toggle dictation", selection: $hotkey) {
                     ForEach(TranscriptionHotkey.allCases, id: \.self) { key in
                         Text(key.label).tag(key)
+                    }
+                }
+            }
+
+            Section("Conversation Mode") {
+                Text(
+                    "Have a hands-free voice conversation with Claude Code. Triple-tap your hotkey to start."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+                HStack {
+                    if mcpRegistered {
+                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                        Text("Connected to Claude Code")
+                        Spacer()
+                        Button("Remove") {
+                            ClaudeCodeMCPRegistration.unregister()
+                            mcpRegistered = ClaudeCodeMCPRegistration.isRegistered()
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    } else {
+                        Image(systemName: "circle").foregroundStyle(.secondary)
+                        Text("Not connected")
+                        Spacer()
+                        Button("Set Up") {
+                            ClaudeCodeMCPRegistration.registerIfNeeded()
+                            mcpRegistered = ClaudeCodeMCPRegistration.isRegistered()
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
                     }
                 }
             }
@@ -129,8 +164,9 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 420, height: 520)
+        .frame(width: 420, height: 620)
         .onAppear {
+            mcpRegistered = ClaudeCodeMCPRegistration.isRegistered()
             if let updater {
                 automaticallyChecksForUpdates = updater.automaticallyChecksForUpdates
                 automaticallyDownloadsUpdates = updater.automaticallyDownloadsUpdates
