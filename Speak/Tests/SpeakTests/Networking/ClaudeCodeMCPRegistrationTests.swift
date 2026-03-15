@@ -1,5 +1,5 @@
-@testable import Speak
 import Foundation
+@testable import Speak
 import Testing
 
 private final class MockSettingsFileAccess: SettingsFileAccessing {
@@ -19,7 +19,10 @@ private final class MockSettingsFileAccess: SettingsFileAccessing {
         writtenData = data
     }
 
-    func exists() -> Bool { fileContents != nil }
+    func exists() -> Bool {
+        fileContents != nil
+    }
+
     func ensureDirectoryExists() throws {}
 }
 

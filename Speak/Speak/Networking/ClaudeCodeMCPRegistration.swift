@@ -61,8 +61,7 @@ enum ClaudeCodeMCPRegistration {
 
             // Check if already correctly registered
             if let speak = mcpServers["speak"] as? [String: Any],
-               speak["command"] as? String == resolvedPath
-            {
+               speak["command"] as? String == resolvedPath {
                 return // Already correct — no-op
             }
 
