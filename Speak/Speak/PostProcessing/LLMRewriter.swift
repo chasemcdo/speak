@@ -32,6 +32,19 @@ struct LLMRewriter: TextFilter {
     - When in doubt between a list and prose, choose prose
     - Match any existing formatting style if surrounding context is provided
 
+    Voice command rules:
+    - The speaker may use inline editing commands during dictation. Interpret these \
+    as instructions applied to the surrounding dictated text and do NOT include the \
+    command phrase itself in the output
+    - "delete that" or "scratch that" = remove the preceding sentence or phrase the \
+    speaker is referring to
+    - "new paragraph" = start a new paragraph at that point
+    - "new line" = insert a single line break at that point
+    - "capitalize that" or "cap that" = capitalize the preceding word or phrase
+    - "undo last sentence" = remove the last sentence
+    - If the speaker says "literally" before a command phrase (e.g. "literally delete \
+    that"), treat it as dictated text and keep the words after "literally" in the output
+
     Screen vocabulary rules:
     - When a vocabulary list from the user's screen is provided, use those exact \
     spellings for any names, filenames, identifiers, or terms that sound similar
@@ -41,10 +54,12 @@ struct LLMRewriter: TextFilter {
     rather than "generate changelog" or "generate_changelog"
     - Only apply vocabulary corrections when the spoken word is a plausible match
 
-    Important:
+    CRITICAL output rules:
     - Do NOT add information, opinions, or change the intent
     - Do NOT over-format — short simple dictations should stay as plain sentences
-    - Return ONLY the formatted text, nothing else
+    - Do NOT include any preamble, explanation, or commentary
+    - Do NOT wrap the output in quotes
+    - Respond with ONLY the formatted text — nothing before it, nothing after it
     """
 
     func apply(to text: String, context: ProcessingContext) async throws -> String {
@@ -84,17 +99,62 @@ struct LLMRewriter: TextFilter {
             }
 
             let response = try await session.respond(to: prompt)
-            let cleaned = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+            let cleaned = Self.stripPreamble(
+                response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
 
             // Hallucination guard: reject drastically different output.
             // Use a generous upper bound since list formatting adds newlines and markers.
+            // The lower bound is relaxed to 0.1 because voice commands like "delete that"
+            // can legitimately reduce output significantly.
+            if cleaned.isEmpty {
+                return text
+            }
             let ratio = Double(cleaned.count) / Double(text.count)
-            if ratio < 0.3 || ratio > 3.0 || cleaned.isEmpty {
+            if ratio < 0.1 || ratio > 3.0 {
                 return text
             }
 
             return cleaned
         }
+    }
+
+    // MARK: - Preamble stripping
+
+    /// Strip conversational preamble and surrounding quotes that small models sometimes add
+    /// despite being told to return only the formatted text.
+    private static func stripPreamble(_ text: String) -> String {
+        var result = text
+
+        // Remove common preamble patterns (case-insensitive).
+        // These match lines like "Sure! Here is the formatted transcript:"
+        // or "Here's the formatted text:" followed by the actual content.
+        let preamblePatterns: [NSRegularExpression] = (try? [
+            NSRegularExpression(
+                pattern: #"^(?:sure[!.]?\s*)?here(?:'s| is) the .+?:\s*"#,
+                options: [.caseInsensitive]
+            ),
+        ]) ?? []
+
+        for pattern in preamblePatterns {
+            let range = NSRange(result.startIndex..., in: result)
+            if let match = pattern.firstMatch(in: result, range: range) {
+                let matchRange = Range(match.range, in: result)!
+                result = String(result[matchRange.upperBound...])
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        }
+
+        // Strip surrounding quotes (e.g. "Hello world" → Hello world).
+        if result.count >= 2,
+           (result.hasPrefix("\"") && result.hasSuffix("\""))
+            || (result.hasPrefix("\u{201C}") && result.hasSuffix("\u{201D}"))
+        {
+            result = String(result.dropFirst().dropLast())
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        return result
     }
 
     // MARK: - Screen vocabulary
