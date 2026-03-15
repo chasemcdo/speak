@@ -103,27 +103,31 @@ struct LLMRewriter: TextFilter {
                 response.content.trimmingCharacters(in: .whitespacesAndNewlines)
             )
 
-            // Hallucination guard: reject drastically different output.
-            // Use a generous upper bound since list formatting adds newlines and markers.
-            // The lower bound is relaxed to 0.1 because voice commands like "delete that"
-            // can legitimately reduce output significantly.
-            if cleaned.isEmpty {
-                return text
-            }
-            let ratio = Double(cleaned.count) / Double(text.count)
-            if ratio < 0.1 || ratio > 3.0 {
-                return text
-            }
-
-            return cleaned
+            return Self.applyHallucinationGuard(cleaned: cleaned, original: text)
         }
+    }
+
+    // MARK: - Hallucination guard
+
+    /// Reject LLM output that is drastically different in length from the input.
+    /// The lower bound is relaxed to 0.1 because voice commands like "delete that"
+    /// can legitimately reduce output significantly.
+    static func applyHallucinationGuard(cleaned: String, original: String) -> String {
+        if cleaned.isEmpty {
+            return original
+        }
+        let ratio = Double(cleaned.count) / Double(original.count)
+        if ratio < 0.1 || ratio > 3.0 {
+            return original
+        }
+        return cleaned
     }
 
     // MARK: - Preamble stripping
 
     /// Strip conversational preamble and surrounding quotes that small models sometimes add
     /// despite being told to return only the formatted text.
-    private static func stripPreamble(_ text: String) -> String {
+    static func stripPreamble(_ text: String) -> String {
         var result = text
 
         // Remove common preamble patterns (case-insensitive).
