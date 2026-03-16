@@ -28,8 +28,7 @@ final class ConversationSocketServer {
     /// Per-connection buffer for accumulating partial frames.
     private var receiveBuffer = Data()
 
-    // swiftlint:disable:next modifier_order
-    private nonisolated static var socketURL: URL {
+    nonisolated private static var socketURL: URL {
         ConversationSocket.url
     }
 
