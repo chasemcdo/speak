@@ -95,23 +95,19 @@ struct SettingsView: View {
                     if mcpRegistered {
                         Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
                         Text("Connected to Claude Code")
-                        Spacer()
-                        Button("Remove") {
-                            ClaudeCodeMCPRegistration.unregister()
-                            mcpRegistered = ClaudeCodeMCPRegistration.isRegistered()
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
                     } else {
                         Image(systemName: "circle").foregroundStyle(.secondary)
                         Text("Not connected")
                         Spacer()
-                        Button("Set Up") {
-                            ClaudeCodeMCPRegistration.registerIfNeeded()
-                            mcpRegistered = ClaudeCodeMCPRegistration.isRegistered()
+                        Button("Copy Setup Command") {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(
+                                ClaudeCodeMCPRegistration.setupCommand(), forType: .string
+                            )
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
+                        .help("Copies `claude mcp add` command to clipboard — paste it in your terminal.")
                     }
                 }
             }
