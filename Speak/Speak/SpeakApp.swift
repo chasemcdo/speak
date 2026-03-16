@@ -4,7 +4,8 @@ import SwiftUI
 @main
 struct SpeakApp: App {
     @State private var appState = AppState()
-    @State private var coordinator = AppCoordinator()
+    @State private var audioDeviceManager: AudioDeviceManager
+    @State private var coordinator: AppCoordinator
     @State private var conversationCoordinator = ConversationCoordinator()
     @State private var historyStore = HistoryStore()
     @AppStorage("onboardingComplete") private var onboardingComplete = false
@@ -27,6 +28,9 @@ struct SpeakApp: App {
             "autoFormat": true,
             "llmRewrite": false,
         ])
+        let deviceManager = AudioDeviceManager()
+        _audioDeviceManager = State(initialValue: deviceManager)
+        _coordinator = State(initialValue: AppCoordinator(audioDeviceManager: deviceManager))
     }
 
     var body: some Scene {
@@ -90,6 +94,7 @@ struct SpeakApp: App {
             SettingsView(updater: updaterController?.updater)
                 .environment(appState)
                 .environment(coordinator)
+                .environment(audioDeviceManager)
         }
 
         Window("Welcome to Speak", id: "onboarding") {

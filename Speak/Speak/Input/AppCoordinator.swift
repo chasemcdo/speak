@@ -14,6 +14,7 @@ final class AppCoordinator {
     private let pasteService: any Pasting
     private let checkMicPermission: @MainActor () -> Bool
     private let checkSpeechAuth: @MainActor () -> Bool
+    private(set) var audioDeviceManager: AudioDeviceManager?
 
     init(
         transcriptionEngine: any Transcribing = TranscriptionEngine(),
@@ -23,7 +24,8 @@ final class AppCoordinator {
         contextReader: any ContextReading = ContextReader(),
         pasteService: any Pasting = PasteServiceAdapter(),
         checkMicPermission: @escaping @MainActor () -> Bool = { AudioCaptureManager.permissionGranted },
-        checkSpeechAuth: @escaping @MainActor () -> Bool = { ModelManager.authorizationGranted }
+        checkSpeechAuth: @escaping @MainActor () -> Bool = { ModelManager.authorizationGranted },
+        audioDeviceManager: AudioDeviceManager? = nil
     ) {
         self.transcriptionEngine = transcriptionEngine
         self.overlayManager = overlayManager
@@ -33,6 +35,7 @@ final class AppCoordinator {
         self.pasteService = pasteService
         self.checkMicPermission = checkMicPermission
         self.checkSpeechAuth = checkSpeechAuth
+        self.audioDeviceManager = audioDeviceManager
     }
 
     private var previousApp: NSRunningApplication?
@@ -205,6 +208,8 @@ final class AppCoordinator {
         audioLevelMonitor = monitor
         transcriptionEngine.levelMonitor = monitor
         appState.audioLevel = monitor
+
+        transcriptionEngine.selectedDeviceID = audioDeviceManager?.resolvedDeviceID
 
         do {
             try await transcriptionEngine.startSession(appState: appState, locale: locale)
