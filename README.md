@@ -69,6 +69,25 @@ cd site
 pnpm build
 ```
 
+### Conversation Mode (Experimental)
+
+Have a hands-free voice conversation with Claude Code. Speak transcribes your
+voice and sends it to Claude, then reads Claude's response aloud.
+
+**Setup:**
+1. Install [Claude Code](https://claude.com/claude-code)
+2. Open Speak → Settings → Conversation Mode → click **Set Up**
+3. Triple-tap your hotkey to start a conversation
+
+**How it works:**
+- Triple-tap your hotkey to enter/exit conversation mode
+- Speak transcribes and submits to Claude Code automatically
+- Claude responds and Speak reads it back
+- Say "stop conversation" to exit
+
+> This is an experimental feature for fun. The primary interface is the
+> hotkey → dictate → paste workflow.
+
 ## Status
 
 Active development. See [ARCHITECTURE.md](ARCHITECTURE.md) and [ROADMAP.md](ROADMAP.md) for details.

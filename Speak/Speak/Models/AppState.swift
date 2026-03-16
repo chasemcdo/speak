@@ -6,6 +6,15 @@ enum RecordingMode {
     case toggle
 }
 
+enum ConversationPhase {
+    case idle
+    case listening
+    case transcribing
+    case submitting
+    case waitingForClaude
+    case speaking
+}
+
 @MainActor
 @Observable
 final class AppState {
@@ -21,6 +30,12 @@ final class AppState {
     var previewText = ""
     var pasteFailedHint = false
     var audioLevel: AudioLevelMonitor?
+
+    // MARK: - Conversation mode
+
+    var isConversationMode = false
+    var conversationPhase: ConversationPhase = .idle
+    var claudeResponseText = ""
 
     var displayText: String {
         finalizedText + volatileText

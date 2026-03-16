@@ -57,6 +57,7 @@ final class HotkeyManager {
     private var onStart: (() -> Void)?
     private var onStop: (() -> Void)?
     private var onModeChange: ((RecordingMode) -> Void)?
+    private var onConversationToggle: (() -> Void)?
 
     /// Internal state machine for gesture recognition.
     private enum State {
@@ -73,10 +74,16 @@ final class HotkeyManager {
         case toggleRecording
         /// In toggle-recording mode, hotkey pressed to stop.
         case toggleTapDown
+        /// Third tap confirmed, waiting for release to fire conversation toggle.
+        case tripleTapDown
     }
 
     private var state: State = .idle
     private var hotkeyDown = false
+
+    /// When true, a single hotkey press while idle fires `onConversationToggle`
+    /// to exit conversation mode (instead of starting the normal dictation flow).
+    var isConversationMode = false
 
     // MARK: - Timers
 
@@ -88,16 +95,21 @@ final class HotkeyManager {
     /// Maximum gap between two taps to register as a double-tap (seconds).
     private let doubleTapWindow: TimeInterval = 0.3
 
+    /// Timestamp when toggle recording was entered (for triple-tap detection).
+    private var toggleEnteredTime: Date?
+
     // MARK: - Public API
 
     func register(
         onStart: @escaping () -> Void,
         onStop: @escaping () -> Void,
-        onModeChange: @escaping (RecordingMode) -> Void
+        onModeChange: @escaping (RecordingMode) -> Void,
+        onConversationToggle: @escaping () -> Void
     ) {
         self.onStart = onStart
         self.onStop = onStop
         self.onModeChange = onModeChange
+        self.onConversationToggle = onConversationToggle
 
         // Monitor flagsChanged for the configured modifier key (works system-wide)
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
@@ -122,6 +134,8 @@ final class HotkeyManager {
         onStart = nil
         onStop = nil
         onModeChange = nil
+        onConversationToggle = nil
+        toggleEnteredTime = nil
         cancelTimers()
         removeKeyDownMonitor()
         state = .idle
@@ -254,6 +268,12 @@ final class HotkeyManager {
     private func handleHotkeyPressed() {
         switch state {
         case .idle:
+            if isConversationMode {
+                // Single press to exit conversation mode
+                state = .toggleTapDown
+                return
+            }
+
             // Start the hold timer — if key stays down long enough, enter hold mode
             let work = DispatchWorkItem { [weak self] in
                 guard let self, state == .firstDown else { return }
@@ -274,8 +294,15 @@ final class HotkeyManager {
             onStart?()
 
         case .toggleRecording:
-            // User is tapping hotkey to stop toggle-mode recording
-            state = .toggleTapDown
+            if let entered = toggleEnteredTime,
+               Date().timeIntervalSince(entered) < doubleTapWindow {
+                // Third tap within window — conversation mode
+                onStop?()
+                state = .tripleTapDown
+            } else {
+                // Normal tap to stop toggle-mode recording
+                state = .toggleTapDown
+            }
 
         default:
             break
@@ -308,6 +335,7 @@ final class HotkeyManager {
             // Release after the second tap of a double-tap — ignore this release,
             // recording continues in toggle mode.
             state = .toggleRecording
+            toggleEnteredTime = Date()
             onModeChange?(.toggle)
 
         case .toggleRecording:
@@ -317,9 +345,19 @@ final class HotkeyManager {
             removeKeyDownMonitor()
 
         case .toggleTapDown:
-            // Release after tapping to stop toggle-mode recording
             state = .idle
-            onStop?()
+            if isConversationMode {
+                isConversationMode = false // prevent re-triggering during async stop()
+                onConversationToggle?()
+            } else {
+                // Release after tapping to stop toggle-mode recording
+                onStop?()
+            }
+
+        case .tripleTapDown:
+            state = .idle
+            toggleEnteredTime = nil
+            onConversationToggle?()
 
         default:
             break

@@ -7,7 +7,7 @@ import Observation
 final class AppCoordinator {
     private var transcriptionEngine: any Transcribing
     private let overlayManager: any OverlayPresenting
-    private let hotkeyManager: any HotkeyManaging
+    private var hotkeyManager: any HotkeyManaging
     private let historyHotkeyManager: any HistoryHotkeyManaging
     private let textProcessor = TextProcessor()
     private let contextReader: any ContextReading
@@ -38,6 +38,12 @@ final class AppCoordinator {
         self.audioDeviceManager = audioDeviceManager
     }
 
+    /// Sync conversation mode state to the hotkey manager so it can handle
+    /// single-press exit from conversation mode.
+    func setConversationMode(_ active: Bool) {
+        hotkeyManager.isConversationMode = active
+    }
+
     private var previousApp: NSRunningApplication?
     private var capturedContext: String?
     private var capturedVocabulary: ScreenVocabulary?
@@ -55,7 +61,7 @@ final class AppCoordinator {
     private let modelManager = ModelManager()
 
     /// Set up the coordinator with the shared app state. Call once at app launch.
-    func setUp(appState: AppState, historyStore: HistoryStore) {
+    func setUp(appState: AppState, historyStore: HistoryStore, onConversationToggle: @escaping () -> Void = {}) {
         self.appState = appState
         self.historyStore = historyStore
 
@@ -75,10 +81,26 @@ final class AppCoordinator {
                 Task { @MainActor in
                     self?.appState?.recordingMode = mode
                 }
+            },
+            onConversationToggle: {
+                Task { @MainActor in
+                    onConversationToggle()
+                }
             }
         )
 
-        // Listen for overlay cancel/confirm from keyboard events in the panel
+        installOverlayObservers()
+        prewarmLLMIfEnabled()
+
+        // Register Cmd+Ctrl+V to paste the last history entry
+        historyHotkeyManager.register { [weak self] in
+            Task { @MainActor in
+                await self?.pasteLastFromHistory()
+            }
+        }
+    }
+
+    private func installOverlayObservers() {
         cancelObserver = NotificationCenter.default.addObserver(
             forName: .overlayCancelRequested,
             object: nil,
@@ -108,20 +130,6 @@ final class AppCoordinator {
                 } else if appState.isPreviewing {
                     await self.pasteFromPreview()
                 }
-            }
-        }
-
-        // Prewarm the LLM if the user has it enabled
-        if UserDefaults.standard.bool(forKey: "llmRewrite") {
-            Task {
-                await LLMRewriter.prewarm()
-            }
-        }
-
-        // Register Cmd+Ctrl+V to paste the last history entry
-        historyHotkeyManager.register { [weak self] in
-            Task { @MainActor in
-                await self?.pasteLastFromHistory()
             }
         }
     }

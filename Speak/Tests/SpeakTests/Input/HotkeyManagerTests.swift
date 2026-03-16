@@ -50,7 +50,8 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: { startCalled = true },
             onStop: { stopCalled = true },
-            onModeChange: { _ in }
+            onModeChange: { _ in },
+            onConversationToggle: {}
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function) else {
@@ -86,7 +87,8 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: { startCalled = true },
             onStop: { stopCalled = true },
-            onModeChange: { _ in }
+            onModeChange: { _ in },
+            onConversationToggle: {}
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
@@ -127,7 +129,7 @@ struct HotkeyManagerTests {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()
-        manager.register(onStart: {}, onStop: {}, onModeChange: { _ in })
+        manager.register(onStart: {}, onStop: {}, onModeChange: { _ in }, onConversationToggle: {})
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function) else {
             Issue.record("Failed to create event")
@@ -154,7 +156,7 @@ struct HotkeyManagerTests {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()
-        manager.register(onStart: {}, onStop: {}, onModeChange: { _ in })
+        manager.register(onStart: {}, onStop: {}, onModeChange: { _ in }, onConversationToggle: {})
 
         guard let spaceEvent = keyDownEvent(keyCode: 0x31, characters: " ") else {
             Issue.record("Failed to create keyDown event")
@@ -171,7 +173,7 @@ struct HotkeyManagerTests {
         UserDefaults.standard.set("fn", forKey: "hotkeyModifier")
 
         let manager = HotkeyManager()
-        manager.register(onStart: {}, onStop: {}, onModeChange: { _ in })
+        manager.register(onStart: {}, onStop: {}, onModeChange: { _ in }, onConversationToggle: {})
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
               let upEvent = flagsChangedEvent(modifierFlags: []) else {
@@ -209,7 +211,8 @@ struct HotkeyManagerTests {
         manager.register(
             onStart: { startCalled = true },
             onStop: { stopCalled = true },
-            onModeChange: { _ in }
+            onModeChange: { _ in },
+            onConversationToggle: {}
         )
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
@@ -246,7 +249,7 @@ struct HotkeyManagerTests {
 
         let manager = HotkeyManager()
         var stopCalled = false
-        manager.register(onStart: {}, onStop: { stopCalled = true }, onModeChange: { _ in })
+        manager.register(onStart: {}, onStop: { stopCalled = true }, onModeChange: { _ in }, onConversationToggle: {})
 
         guard let downEvent = flagsChangedEvent(modifierFlags: .function),
               let upEvent = flagsChangedEvent(modifierFlags: []) else {

@@ -61,6 +61,7 @@ jobs:
           fi
 
           test -f "$EXEC" || { echo "FAIL: Speak binary not found"; exit 1; }
+          test -f "$BIN_PATH/SpeakMCP" || { echo "FAIL: SpeakMCP binary not found"; exit 1; }
           echo "── Binary: $EXEC"
           file "$EXEC"
 

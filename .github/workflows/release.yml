@@ -67,8 +67,9 @@ jobs:
           mkdir -p "$APP/Contents/Resources"
           mkdir -p "$APP/Contents/Frameworks"
 
-          # Binary
+          # Binaries
           cp "$BIN_PATH/Speak" "$APP/Contents/MacOS/Speak"
+          cp "$BIN_PATH/SpeakMCP" "$APP/Contents/MacOS/SpeakMCP"
 
           # Info.plist — inject version from git tag
           cp Speak/Speak/Info.plist "$APP/Contents/Info.plist"
@@ -144,7 +145,10 @@ jobs:
           codesign --force --sign "$SIGNING_IDENTITY" \
             "$APP/Contents/Frameworks/Sparkle.framework"
 
-          # 5. Sign the main app with entitlements + designated requirement
+          # 5. Sign the SpeakMCP helper binary
+          codesign --force --sign "$SIGNING_IDENTITY" "$APP/Contents/MacOS/SpeakMCP"
+
+          # 6. Sign the main app with entitlements + designated requirement
           #    The designated requirement preserves TCC permissions (microphone,
           #    accessibility) across updates by tying them to the bundle ID
           #    rather than the per-build cdhash.

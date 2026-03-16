@@ -45,6 +45,11 @@ final class AudioLevelMonitor {
         rawLevel.withLock { $0 = 0 }
     }
 
+    /// Thread-safe read of the current raw RMS value.
+    nonisolated var currentRMS: Float {
+        rawLevel.withLock { $0 }
+    }
+
     func tick() {
         let raw = rawLevel.withLock { $0 }
 

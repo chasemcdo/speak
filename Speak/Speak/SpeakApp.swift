@@ -6,9 +6,12 @@ struct SpeakApp: App {
     @State private var appState = AppState()
     @State private var audioDeviceManager: AudioDeviceManager
     @State private var coordinator: AppCoordinator
+    @State private var conversationCoordinator = ConversationCoordinator()
     @State private var historyStore = HistoryStore()
     @AppStorage("onboardingComplete") private var onboardingComplete = false
+    @State private var showMCPSetupAlert = false
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
 
     let updaterController: SPUStandardUpdaterController? = {
         #if DEBUG
@@ -38,8 +41,34 @@ struct SpeakApp: App {
                 .environment(historyStore)
         } label: {
             Image("MenuBarIcon", bundle: .appModule)
+                .alert(
+                    "Conversation Mode Requires Setup",
+                    isPresented: $showMCPSetupAlert
+                ) {
+                    Button("Open Settings") { openSettings() }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text(
+                        "Connect Speak to Claude Code in Settings → Conversation Mode to use this feature."
+                    )
+                }
                 .task {
-                    coordinator.setUp(appState: appState, historyStore: historyStore)
+                    conversationCoordinator.setUp(appState: appState)
+                    conversationCoordinator.onSetupRequired = {
+                        showMCPSetupAlert = true
+                    }
+                    conversationCoordinator.onConversationModeChanged = { [coordinator] active in
+                        coordinator.setConversationMode(active)
+                    }
+                    coordinator.setUp(
+                        appState: appState,
+                        historyStore: historyStore,
+                        onConversationToggle: { [conversationCoordinator] in
+                            Task { @MainActor in
+                                await conversationCoordinator.toggle()
+                            }
+                        }
+                    )
 
                     // Let scene registration complete before opening windows
                     try? await Task.sleep(for: .milliseconds(200))

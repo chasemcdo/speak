@@ -22,6 +22,7 @@ struct SettingsView: View {
     @State private var automaticallyDownloadsUpdates = false
 
     @State private var supportedLocales: [Locale] = []
+    @State private var mcpRegistered = false
     @State private var micGranted = AudioCaptureManager.permissionGranted
     @State private var accessibilityGranted = PasteService.accessibilityGranted
     @State private var speechGranted = ModelManager.authorizationGranted
@@ -94,6 +95,34 @@ struct SettingsView: View {
                 }
             }
 
+            Section("Conversation Mode") {
+                Text(
+                    "Have a hands-free voice conversation with Claude Code. Triple-tap your hotkey to start."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+                HStack {
+                    if mcpRegistered {
+                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                        Text("Connected to Claude Code")
+                    } else {
+                        Image(systemName: "circle").foregroundStyle(.secondary)
+                        Text("Not connected")
+                        Spacer()
+                        Button("Copy Setup Command") {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(
+                                ClaudeCodeMCPRegistration.setupCommand(), forType: .string
+                            )
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .help("Copies `claude mcp add` command to clipboard — paste it in your terminal.")
+                    }
+                }
+            }
+
             Section("General") {
                 Toggle("Launch at login", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, newValue in
@@ -142,8 +171,9 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(minWidth: 420, idealWidth: 420, maxWidth: 420, minHeight: 520, idealHeight: 580)
+        .frame(minWidth: 420, idealWidth: 420, maxWidth: 420, minHeight: 580, idealHeight: 620)
         .onAppear {
+            mcpRegistered = ClaudeCodeMCPRegistration.isRegistered()
             if let updater {
                 automaticallyChecksForUpdates = updater.automaticallyChecksForUpdates
                 automaticallyDownloadsUpdates = updater.automaticallyDownloadsUpdates

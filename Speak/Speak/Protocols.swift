@@ -29,6 +29,8 @@ extension OverlayManager: OverlayPresenting {}
 protocol Pasting {
     @discardableResult
     func paste(_ text: String, into app: NSRunningApplication?) async -> Bool
+    @discardableResult
+    func pasteAndSubmit(_ text: String, into app: NSRunningApplication?) async -> Bool
 }
 
 @MainActor
@@ -36,6 +38,11 @@ struct PasteServiceAdapter: Pasting {
     @discardableResult
     func paste(_ text: String, into app: NSRunningApplication?) async -> Bool {
         await PasteService.paste(text, into: app)
+    }
+
+    @discardableResult
+    func pasteAndSubmit(_ text: String, into app: NSRunningApplication?) async -> Bool {
+        await PasteService.pasteAndSubmit(text, into: app)
     }
 }
 
@@ -53,10 +60,12 @@ extension ContextReader: ContextReading {}
 // MARK: - HotkeyManaging
 
 protocol HotkeyManaging {
+    var isConversationMode: Bool { get set }
     func register(
         onStart: @escaping () -> Void,
         onStop: @escaping () -> Void,
-        onModeChange: @escaping (RecordingMode) -> Void
+        onModeChange: @escaping (RecordingMode) -> Void,
+        onConversationToggle: @escaping () -> Void
     )
     func resetState()
 }
@@ -70,3 +79,29 @@ protocol HistoryHotkeyManaging {
 }
 
 extension HistoryHotkeyManager: HistoryHotkeyManaging {}
+
+// MARK: - SpeechSynthesizing
+
+@MainActor
+protocol SpeechSynthesizing {
+    func speak(_ text: String) async
+    func stop()
+    var isSpeaking: Bool { get }
+}
+
+@MainActor
+struct SpeechSynthesizerAdapter: SpeechSynthesizing {
+    private let service = SpeechSynthesizerService()
+
+    func speak(_ text: String) async {
+        await service.speak(text)
+    }
+
+    func stop() {
+        service.stop()
+    }
+
+    var isSpeaking: Bool {
+        service.isSpeaking
+    }
+}
