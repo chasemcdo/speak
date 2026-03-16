@@ -212,7 +212,7 @@ struct PreviewFlowTests {
         await coordinator.stopWithoutPaste()
 
         #expect(appState.isPreviewing)
-        #expect(appState.previewText == "")
+        #expect(appState.previewText.isEmpty)
         // Should not save empty text to history
         #expect(historyStore.entries.count == initialCount)
     }
@@ -263,7 +263,7 @@ struct PreviewFlowTests {
         #expect(paster.pastedText == "Hello world")
         #expect(overlay.hideCalled)
         #expect(!appState.isPreviewing)
-        #expect(appState.previewText == "")
+        #expect(appState.previewText.isEmpty)
         #expect(!appState.isRecording)
     }
 
@@ -309,7 +309,7 @@ struct PreviewFlowTests {
 
         #expect(overlay.hideCalled)
         #expect(!appState.isPreviewing)
-        #expect(appState.previewText == "")
+        #expect(appState.previewText.isEmpty)
         #expect(!paster.pasteCalled)
     }
 

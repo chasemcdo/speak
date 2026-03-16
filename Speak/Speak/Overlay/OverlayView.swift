@@ -122,7 +122,10 @@ struct OverlayView: View {
 
     private var transcriptionText: some View {
         Text(
-            "\(Text(appState.finalizedText).foregroundStyle(.primary))\(Text(appState.volatileText).foregroundStyle(.secondary))"
+            """
+            \(Text(appState.finalizedText).foregroundStyle(.primary))\
+            \(Text(appState.volatileText).foregroundStyle(.secondary))
+            """
         )
         .font(.body)
         .lineLimit(8)

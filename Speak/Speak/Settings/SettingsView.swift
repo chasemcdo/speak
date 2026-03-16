@@ -60,8 +60,8 @@ struct SettingsView: View {
 
                 Toggle("AI-powered formatting", isOn: $llmRewrite)
                     .help(
-                        "Use Apple Intelligence to clean up grammar, format lists, "
-                            + "add paragraphs, and match your writing style."
+                        "Use Apple Intelligence to clean up grammar, "
+                            + "format lists, add paragraphs, and match your writing style."
                     )
                     .disabled(!llmAvailable)
 

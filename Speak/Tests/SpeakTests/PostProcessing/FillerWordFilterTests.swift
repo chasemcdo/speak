@@ -119,7 +119,7 @@ struct FillerWordFilterTests {
     // -- Edge cases --
 
     @Test func `empty string passes through`() async throws {
-        #expect(try await filtered("") == "")
+        #expect(try await filtered("").isEmpty)
     }
 
     @Test func `no fillers unchanged`() async throws {

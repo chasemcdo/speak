@@ -41,7 +41,7 @@ struct TextProcessorTests {
         processor.addFilter(UppercaseFilter())
 
         let result = await processor.process("", context: ctx)
-        #expect(result == "")
+        #expect(result.isEmpty)
     }
 
     @Test @MainActor func `no filters returns input`() async {
