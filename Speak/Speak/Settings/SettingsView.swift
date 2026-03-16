@@ -46,7 +46,8 @@ struct SettingsView: View {
 
                 Toggle("Auto-paste into active app", isOn: $autoPaste)
                     .help(
-                        "When enabled, text is automatically pasted into the focused app. When disabled, text is copied to the clipboard."
+                        "When enabled, text is automatically pasted into the focused app. "
+                            + "When disabled, text is copied to the clipboard."
                     )
             }
 
@@ -69,7 +70,8 @@ struct SettingsView: View {
 
                 Toggle("AI-powered formatting", isOn: $llmRewrite)
                     .help(
-                        "Use Apple Intelligence to clean up grammar, format lists, add paragraphs, and match your writing style."
+                        "Use Apple Intelligence to clean up grammar, "
+                            + "format lists, add paragraphs, and match your writing style."
                     )
                     .disabled(!llmAvailable)
 

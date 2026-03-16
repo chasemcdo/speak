@@ -43,7 +43,11 @@ final class ModelManager {
             let id = locale.identifier(.bcp47)
             logger
                 .warning(
-                    "Failed to reserve model for \(id, privacy: .public): \(error.localizedDescription, privacy: .public)"
+                    """
+                    Failed to reserve model for \
+                    \(id, privacy: .public): \
+                    \(error.localizedDescription, privacy: .public)
+                    """
                 )
         }
     }

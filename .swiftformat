@@ -31,6 +31,9 @@
 --lifecycle
 --organizetypes class,struct,enum,extension
 
+# Modifier order — match SwiftLint's expected order (nonisolated before access control)
+--modifierorder nonisolated,override,open,public,internal,fileprivate,private,final,required,convenience,static,class,lazy,weak,unowned,mutating,nonmutating,dynamic,optional
+
 # Disabled rules — avoid fights with Xcode auto-indent and SwiftLint
 --disable wrapMultilineStatementBraces
 --disable blankLineAfterImports

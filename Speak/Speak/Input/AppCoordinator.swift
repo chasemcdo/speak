@@ -190,24 +190,7 @@ final class AppCoordinator {
         overlayManager.show(appState: appState)
 
         // Wait for the matching preload to finish before starting audio to avoid duplicate downloads.
-        // We race the preload against a 10-second timeout: two tasks are added to the group,
-        // and the first one to complete wins — we then cancel the remaining task and proceed.
-        if let matchingTask = preloadTasksByLocale[localeID] {
-            await withTaskGroup(of: Void.self) { group in
-                group.addTask {
-                    await withTaskCancellationHandler {
-                        await matchingTask.value
-                    } onCancel: {
-                        matchingTask.cancel()
-                    }
-                }
-                group.addTask {
-                    try? await Task.sleep(nanoseconds: 10 * 1_000_000_000) // 10s grace period
-                }
-                _ = await group.next()
-                group.cancelAll()
-            }
-        }
+        await awaitPreload(for: localeID)
 
         // Re-check after the suspension window — another start() may have run while we were waiting
         guard !appState.isRecording else { return }
@@ -229,25 +212,13 @@ final class AppCoordinator {
         do {
             try await transcriptionEngine.startSession(appState: appState, locale: locale)
         } catch {
-            appState.error = error.localizedDescription
-            appState.isRecording = false
-            // Dismiss the overlay so the user isn't stuck on a broken session
-            overlayManager.hide()
-            audioLevelMonitor = nil
-            appState.audioLevel = nil
-            transcriptionEngine.levelMonitor = nil
+            handleStartError(error, appState: appState)
             return
         }
 
         SoundFeedback.playStartSound()
         installRecordingKeyMonitor()
-
-        // Prewarm LLM in parallel with recording if enabled
-        if UserDefaults.standard.bool(forKey: "llmRewrite") {
-            Task {
-                await LLMRewriter.prewarm()
-            }
-        }
+        prewarmLLMIfEnabled()
     }
 
     /// Confirm and paste the transcribed text.
@@ -288,7 +259,11 @@ final class AppCoordinator {
         appState.reset()
         overlayManager.hide()
     }
+}
 
+// MARK: - Preview & History
+
+extension AppCoordinator {
     /// Stop recording and show a preview without pasting.
     func stopWithoutPaste() async {
         guard let appState, appState.isRecording else { return }
@@ -360,11 +335,29 @@ final class AppCoordinator {
             showPasteFailedHint(text: entry.processedText)
         }
     }
+}
 
-    // MARK: - Private
+// MARK: - Private Helpers
+
+extension AppCoordinator {
+    private func handleStartError(_ error: Error, appState: AppState) {
+        appState.error = error.localizedDescription
+        appState.isRecording = false
+        overlayManager.hide()
+        audioLevelMonitor = nil
+        appState.audioLevel = nil
+        transcriptionEngine.levelMonitor = nil
+    }
+
+    private func prewarmLLMIfEnabled() {
+        if UserDefaults.standard.bool(forKey: "llmRewrite") {
+            Task {
+                await LLMRewriter.prewarm()
+            }
+        }
+    }
 
     /// Stop transcription, run post-processing, and save to history.
-    /// Returns the processed text.
     private func stopAndProcess() async -> String {
         // Snapshot the paste target immediately so it can't change during async stop.
         previousApp = NSWorkspace.shared.frontmostApplication
@@ -418,6 +411,25 @@ final class AppCoordinator {
         }
 
         return text
+    }
+
+    /// Race the in-flight preload for `localeID` against a 10-second timeout.
+    private func awaitPreload(for localeID: String) async {
+        guard let matchingTask = preloadTasksByLocale[localeID] else { return }
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask {
+                await withTaskCancellationHandler {
+                    await matchingTask.value
+                } onCancel: {
+                    matchingTask.cancel()
+                }
+            }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: 10 * 1_000_000_000) // 10s grace period
+            }
+            _ = await group.next()
+            group.cancelAll()
+        }
     }
 
     /// Install a global key monitor for Escape/Return during recording.

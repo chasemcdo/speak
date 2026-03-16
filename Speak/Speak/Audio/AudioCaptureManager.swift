@@ -101,77 +101,7 @@ final class AudioCaptureManager: @unchecked Sendable {
         guard let unit else { throw AudioCaptureError.noAudioInputDevice }
 
         do {
-            // Enable input on element 1 (mic side).
-            var enableIO: UInt32 = 1
-            try osCheck(AudioUnitSetProperty(
-                unit, kAudioOutputUnitProperty_EnableIO,
-                kAudioUnitScope_Input, 1,
-                &enableIO, UInt32(MemoryLayout<UInt32>.size)
-            ))
-
-            // Disable output on element 0 (speaker side).
-            var disableIO: UInt32 = 0
-            try osCheck(AudioUnitSetProperty(
-                unit, kAudioOutputUnitProperty_EnableIO,
-                kAudioUnitScope_Output, 0,
-                &disableIO, UInt32(MemoryLayout<UInt32>.size)
-            ))
-
-            // Point the unit at the default input device.
-            var devID = deviceID
-            try osCheck(AudioUnitSetProperty(
-                unit, kAudioOutputUnitProperty_CurrentDevice,
-                kAudioUnitScope_Global, 0,
-                &devID, UInt32(MemoryLayout<AudioDeviceID>.size)
-            ))
-
-            // Query the hardware's native format so we can request Float32 at the
-            // same sample rate / channel count.
-            var hwFormat = AudioStreamBasicDescription()
-            var fmtSize = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
-            try osCheck(AudioUnitGetProperty(
-                unit, kAudioUnitProperty_StreamFormat,
-                kAudioUnitScope_Input, 1,
-                &hwFormat, &fmtSize
-            ))
-
-            // Ask the AU's internal converter to deliver Float32 non-interleaved
-            // PCM on element 1's output scope (what our callback receives).
-            var captureASBD = AudioStreamBasicDescription(
-                mSampleRate: hwFormat.mSampleRate,
-                mFormatID: kAudioFormatLinearPCM,
-                mFormatFlags: kAudioFormatFlagIsFloat | kAudioFormatFlagIsNonInterleaved
-                    | kAudioFormatFlagIsPacked,
-                mBytesPerPacket: 4,
-                mFramesPerPacket: 1,
-                mBytesPerFrame: 4,
-                mChannelsPerFrame: hwFormat.mChannelsPerFrame,
-                mBitsPerChannel: 32,
-                mReserved: 0
-            )
-            try osCheck(AudioUnitSetProperty(
-                unit, kAudioUnitProperty_StreamFormat,
-                kAudioUnitScope_Output, 1,
-                &captureASBD, UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
-            ))
-
-            callbackState.captureFormat = AVAudioFormat(streamDescription: &captureASBD)
-            callbackState.audioUnit = unit
-            callbackState.captureQueue = captureQueue
-
-            // Install the render callback on the input scope.
-            var cb = AURenderCallbackStruct(
-                inputProc: halInputCallback,
-                inputProcRefCon: Unmanaged.passUnretained(callbackState).toOpaque()
-            )
-            try osCheck(AudioUnitSetProperty(
-                unit, kAudioOutputUnitProperty_SetInputCallback,
-                kAudioUnitScope_Global, 0,
-                &cb, UInt32(MemoryLayout<AURenderCallbackStruct>.size)
-            ))
-
-            try osCheck(AudioUnitInitialize(unit))
-            try osCheck(AudioOutputUnitStart(unit))
+            try configureAudioUnit(unit, deviceID: deviceID)
         } catch {
             callbackState.audioUnit = nil
             callbackState.captureFormat = nil
@@ -184,6 +114,80 @@ final class AudioCaptureManager: @unchecked Sendable {
 
         audioUnit = unit
         return stream
+    }
+
+    private func configureAudioUnit(_ unit: AudioUnit, deviceID: AudioDeviceID) throws {
+        // Enable input on element 1 (mic side).
+        var enableIO: UInt32 = 1
+        try osCheck(AudioUnitSetProperty(
+            unit, kAudioOutputUnitProperty_EnableIO,
+            kAudioUnitScope_Input, 1,
+            &enableIO, UInt32(MemoryLayout<UInt32>.size)
+        ))
+
+        // Disable output on element 0 (speaker side).
+        var disableIO: UInt32 = 0
+        try osCheck(AudioUnitSetProperty(
+            unit, kAudioOutputUnitProperty_EnableIO,
+            kAudioUnitScope_Output, 0,
+            &disableIO, UInt32(MemoryLayout<UInt32>.size)
+        ))
+
+        // Point the unit at the default input device.
+        var devID = deviceID
+        try osCheck(AudioUnitSetProperty(
+            unit, kAudioOutputUnitProperty_CurrentDevice,
+            kAudioUnitScope_Global, 0,
+            &devID, UInt32(MemoryLayout<AudioDeviceID>.size)
+        ))
+
+        // Query the hardware's native format so we can request Float32 at the
+        // same sample rate / channel count.
+        var hwFormat = AudioStreamBasicDescription()
+        var fmtSize = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
+        try osCheck(AudioUnitGetProperty(
+            unit, kAudioUnitProperty_StreamFormat,
+            kAudioUnitScope_Input, 1,
+            &hwFormat, &fmtSize
+        ))
+
+        // Ask the AU's internal converter to deliver Float32 non-interleaved
+        // PCM on element 1's output scope (what our callback receives).
+        var captureASBD = AudioStreamBasicDescription(
+            mSampleRate: hwFormat.mSampleRate,
+            mFormatID: kAudioFormatLinearPCM,
+            mFormatFlags: kAudioFormatFlagIsFloat | kAudioFormatFlagIsNonInterleaved
+                | kAudioFormatFlagIsPacked,
+            mBytesPerPacket: 4,
+            mFramesPerPacket: 1,
+            mBytesPerFrame: 4,
+            mChannelsPerFrame: hwFormat.mChannelsPerFrame,
+            mBitsPerChannel: 32,
+            mReserved: 0
+        )
+        try osCheck(AudioUnitSetProperty(
+            unit, kAudioUnitProperty_StreamFormat,
+            kAudioUnitScope_Output, 1,
+            &captureASBD, UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
+        ))
+
+        callbackState.captureFormat = AVAudioFormat(streamDescription: &captureASBD)
+        callbackState.audioUnit = unit
+        callbackState.captureQueue = captureQueue
+
+        // Install the render callback on the input scope.
+        var callback = AURenderCallbackStruct(
+            inputProc: halInputCallback,
+            inputProcRefCon: Unmanaged.passUnretained(callbackState).toOpaque()
+        )
+        try osCheck(AudioUnitSetProperty(
+            unit, kAudioOutputUnitProperty_SetInputCallback,
+            kAudioUnitScope_Global, 0,
+            &callback, UInt32(MemoryLayout<AURenderCallbackStruct>.size)
+        ))
+
+        try osCheck(AudioUnitInitialize(unit))
+        try osCheck(AudioOutputUnitStart(unit))
     }
 
     func stopCapture() {
@@ -306,6 +310,8 @@ final class AudioCaptureManager: @unchecked Sendable {
 
 // MARK: - HAL Input Callback
 
+// swiftlint:disable function_parameter_count
+
 /// Free function suitable for use as an `AURenderCallbackStruct.inputProc`.
 /// Renders captured audio into a PCM buffer and dispatches it off the real-time
 /// I/O thread for level monitoring and format conversion.
@@ -339,6 +345,8 @@ private func halInputCallback(
     }
     return noErr
 }
+
+// swiftlint:enable function_parameter_count
 
 // MARK: - InputCallbackState
 

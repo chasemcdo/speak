@@ -87,42 +87,44 @@ private final class MockHistoryHotkey: HistoryHotkeyManaging {
     func register(onPasteLast: @escaping () -> Void) {}
 }
 
+// MARK: - Helpers
+
+private func configureDefaults() {
+    let defaults = UserDefaults.standard
+    defaults.set(true, forKey: "removeFillerWords")
+    defaults.set(true, forKey: "autoFormat")
+    defaults.set(false, forKey: "llmRewrite")
+    defaults.set(true, forKey: "autoPaste")
+    defaults.set(false, forKey: "screenContext")
+}
+
+@MainActor
+private func makeCoordinator(
+    transcriber: any Transcribing,
+    overlay: any OverlayPresenting,
+    paster: any Pasting,
+    contextReader: any ContextReading = MockContext(),
+    hotkeyManager: any HotkeyManaging = MockHotkey(),
+    historyHotkeyManager: any HistoryHotkeyManaging = MockHistoryHotkey(),
+    micPermission: Bool = true,
+    speechAuth: Bool = true
+) -> AppCoordinator {
+    AppCoordinator(
+        transcriptionEngine: transcriber,
+        overlayManager: overlay,
+        hotkeyManager: hotkeyManager,
+        historyHotkeyManager: historyHotkeyManager,
+        contextReader: contextReader,
+        pasteService: paster,
+        checkMicPermission: { micPermission },
+        checkSpeechAuth: { speechAuth }
+    )
+}
+
 // MARK: - Tests
 
 @Suite(.serialized)
 struct PipelineIntegrationTests {
-    private func configureDefaults() {
-        let defaults = UserDefaults.standard
-        defaults.set(true, forKey: "removeFillerWords")
-        defaults.set(true, forKey: "autoFormat")
-        defaults.set(false, forKey: "llmRewrite")
-        defaults.set(true, forKey: "autoPaste")
-        defaults.set(false, forKey: "screenContext")
-    }
-
-    @MainActor
-    private func makeCoordinator(
-        transcriber: any Transcribing,
-        overlay: any OverlayPresenting,
-        paster: any Pasting,
-        contextReader: any ContextReading = MockContext(),
-        hotkeyManager: any HotkeyManaging = MockHotkey(),
-        historyHotkeyManager: any HistoryHotkeyManaging = MockHistoryHotkey(),
-        micPermission: Bool = true,
-        speechAuth: Bool = true
-    ) -> AppCoordinator {
-        AppCoordinator(
-            transcriptionEngine: transcriber,
-            overlayManager: overlay,
-            hotkeyManager: hotkeyManager,
-            historyHotkeyManager: historyHotkeyManager,
-            contextReader: contextReader,
-            pasteService: paster,
-            checkMicPermission: { micPermission },
-            checkSpeechAuth: { speechAuth }
-        )
-    }
-
     @Test @MainActor
     func `full dictation flow`() async {
         configureDefaults()
@@ -266,7 +268,10 @@ struct PipelineIntegrationTests {
         #expect(appState.error != nil)
         #expect(!appState.isRecording)
     }
+}
 
+@Suite(.serialized)
+struct PipelineMonitorTests {
     // MARK: - Audio level monitor wiring
 
     @Test @MainActor
