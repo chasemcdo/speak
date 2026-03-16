@@ -18,9 +18,12 @@ APP_PATH     := $(BUILD_DIR)/$(APP_NAME).app
 DMG_PATH     := $(BUILD_DIR)/$(APP_NAME).dmg
 VERSION      := $(shell /usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" Speak/Speak/Info.plist 2>/dev/null || echo "0.1.0")
 
-.PHONY: build release test app dmg check clean format lint tidy hooks
+.PHONY: build release dev test app dmg check clean format lint tidy hooks
 
 # --- SPM (for development) ---
+
+dev:
+	cd Speak && bash dev-run.sh
 
 build:
 	cd Speak && swift build
