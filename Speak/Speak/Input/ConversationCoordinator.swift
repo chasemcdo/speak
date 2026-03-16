@@ -100,7 +100,11 @@ final class ConversationCoordinator {
 
     /// Stop conversation mode and clean up everything.
     func stop() async {
-        guard let appState else { return }
+        guard let appState, appState.isConversationMode else { return }
+
+        // Clear conversation state immediately to prevent races at suspension points
+        appState.isConversationMode = false
+        onConversationModeChanged?(false)
 
         waitingTimeoutTask?.cancel()
         waitingTimeoutTask = nil
@@ -113,8 +117,6 @@ final class ConversationCoordinator {
         socketServer.stop()
         overlayManager.hide()
 
-        appState.isConversationMode = false
-        onConversationModeChanged?(false)
         appState.conversationPhase = .idle
         appState.claudeResponseText = ""
         appState.reset()

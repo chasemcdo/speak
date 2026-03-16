@@ -347,7 +347,7 @@ final class HotkeyManager {
         case .toggleTapDown:
             state = .idle
             if isConversationMode {
-                // Single press to exit conversation mode
+                isConversationMode = false // prevent re-triggering during async stop()
                 onConversationToggle?()
             } else {
                 // Release after tapping to stop toggle-mode recording
