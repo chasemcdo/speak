@@ -64,7 +64,7 @@ final class AudioCaptureManager: @unchecked Sendable {
 
     // MARK: - Capture
 
-    func startCapture() throws -> AsyncStream<AVAudioPCMBuffer> {
+    func startCapture(deviceID: AudioDeviceID? = nil) throws -> AsyncStream<AVAudioPCMBuffer> {
         guard audioUnit == nil else {
             throw AudioCaptureError.alreadyCapturing
         }
@@ -79,7 +79,7 @@ final class AudioCaptureManager: @unchecked Sendable {
         callbackState.continuation = continuation
         callbackState.converter = nil
 
-        let deviceID = try Self.preferredInputDeviceID()
+        let deviceID = try deviceID ?? Self.preferredInputDeviceID()
 
         // Use a HAL Output audio unit for raw hardware access.
         // Unlike AVAudioEngine (VoiceProcessingIO) or AVCaptureSession, the HAL
