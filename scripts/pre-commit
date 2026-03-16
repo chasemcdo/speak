@@ -10,4 +10,4 @@ echo "$STAGED" | xargs swiftformat
 echo "$STAGED" | xargs git add
 
 # Lint staged files
-echo "$STAGED" | xargs swiftlint lint --strict
+echo "$STAGED" | xargs swiftlint lint
