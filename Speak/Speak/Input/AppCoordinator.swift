@@ -7,7 +7,7 @@ import Observation
 final class AppCoordinator {
     private var transcriptionEngine: any Transcribing
     private let overlayManager: any OverlayPresenting
-    private let hotkeyManager: any HotkeyManaging
+    private var hotkeyManager: any HotkeyManaging
     private let historyHotkeyManager: any HistoryHotkeyManaging
     private let textProcessor = TextProcessor()
     private let contextReader: any ContextReading
@@ -36,6 +36,12 @@ final class AppCoordinator {
         self.checkMicPermission = checkMicPermission
         self.checkSpeechAuth = checkSpeechAuth
         self.audioDeviceManager = audioDeviceManager
+    }
+
+    /// Sync conversation mode state to the hotkey manager so it can handle
+    /// single-press exit from conversation mode.
+    func setConversationMode(_ active: Bool) {
+        hotkeyManager.isConversationMode = active
     }
 
     private var previousApp: NSRunningApplication?

@@ -1,4 +1,5 @@
 import AppKit
+import CoreAudio
 @testable import Speak
 import Testing
 
@@ -7,6 +8,7 @@ import Testing
 @MainActor
 private final class MockTranscriber: Transcribing {
     var levelMonitor: AudioLevelMonitor?
+    var selectedDeviceID: AudioDeviceID?
     var startSessionCalled = false
     var startSessionCallCount = 0
     var stopSessionCalled = false

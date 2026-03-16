@@ -57,6 +57,9 @@ struct SpeakApp: App {
                     conversationCoordinator.onSetupRequired = {
                         showMCPSetupAlert = true
                     }
+                    conversationCoordinator.onConversationModeChanged = { [coordinator] active in
+                        coordinator.setConversationMode(active)
+                    }
                     coordinator.setUp(
                         appState: appState,
                         historyStore: historyStore,

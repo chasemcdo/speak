@@ -60,6 +60,7 @@ extension ContextReader: ContextReading {}
 // MARK: - HotkeyManaging
 
 protocol HotkeyManaging {
+    var isConversationMode: Bool { get set }
     func register(
         onStart: @escaping () -> Void,
         onStop: @escaping () -> Void,

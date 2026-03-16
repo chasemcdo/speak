@@ -382,6 +382,11 @@ private final class MockPasterForDevice: Pasting {
     func paste(_ text: String, into app: NSRunningApplication?) async -> Bool {
         true
     }
+
+    @discardableResult
+    func pasteAndSubmit(_ text: String, into app: NSRunningApplication?) async -> Bool {
+        true
+    }
 }
 
 @MainActor
@@ -400,10 +405,12 @@ private final class MockContextForDevice: ContextReading {
 }
 
 private final class MockHotkeyForDevice: HotkeyManaging {
+    var isConversationMode = false
     func register(
         onStart: @escaping () -> Void,
         onStop: @escaping () -> Void,
-        onModeChange: @escaping (RecordingMode) -> Void
+        onModeChange: @escaping (RecordingMode) -> Void,
+        onConversationToggle: @escaping () -> Void
     ) {}
 
     func resetState() {}

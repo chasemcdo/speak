@@ -90,6 +90,7 @@ private final class MockContext: ContextReading {
 }
 
 private final class MockHotkey: HotkeyManaging {
+    var isConversationMode = false
     func register(
         onStart: @escaping () -> Void,
         onStop: @escaping () -> Void,

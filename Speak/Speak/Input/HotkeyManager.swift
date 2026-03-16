@@ -81,6 +81,10 @@ final class HotkeyManager {
     private var state: State = .idle
     private var hotkeyDown = false
 
+    /// When true, a single hotkey press while idle fires `onConversationToggle`
+    /// to exit conversation mode (instead of starting the normal dictation flow).
+    var isConversationMode = false
+
     // MARK: - Timers
 
     private var holdTimer: DispatchWorkItem?
@@ -264,6 +268,12 @@ final class HotkeyManager {
     private func handleHotkeyPressed() {
         switch state {
         case .idle:
+            if isConversationMode {
+                // Single press to exit conversation mode
+                state = .toggleTapDown
+                return
+            }
+
             // Start the hold timer — if key stays down long enough, enter hold mode
             let work = DispatchWorkItem { [weak self] in
                 guard let self, state == .firstDown else { return }
@@ -335,9 +345,14 @@ final class HotkeyManager {
             removeKeyDownMonitor()
 
         case .toggleTapDown:
-            // Release after tapping to stop toggle-mode recording
             state = .idle
-            onStop?()
+            if isConversationMode {
+                // Single press to exit conversation mode
+                onConversationToggle?()
+            } else {
+                // Release after tapping to stop toggle-mode recording
+                onStop?()
+            }
 
         case .tripleTapDown:
             state = .idle

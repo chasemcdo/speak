@@ -80,6 +80,7 @@ private final class MockContext: ContextReading {
 }
 
 private final class MockHotkey: HotkeyManaging {
+    var isConversationMode = false
     var onModeChange: ((RecordingMode) -> Void)?
 
     func register(

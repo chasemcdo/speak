@@ -23,6 +23,12 @@ final class ConversationCoordinator {
     /// Called when conversation mode is toggled but MCP setup hasn't been completed.
     var onSetupRequired: (() -> Void)?
 
+    /// Called when conversation mode starts or stops, so external components
+    /// (e.g. hotkey manager) can sync state.
+    var onConversationModeChanged: ((Bool) -> Void)?
+
+    private var escapeMonitor: Any?
+
     private static let defaultSilenceTimeout: TimeInterval = 1.5
     /// How long to wait for Claude to call the speak tool before falling back to listening.
     private static let waitingTimeout: TimeInterval = 120
@@ -84,6 +90,8 @@ final class ConversationCoordinator {
 
         appState.isConversationMode = true
         appState.conversationPhase = .listening
+        onConversationModeChanged?(true)
+        installEscapeMonitor()
         overlayManager.show(appState: appState)
         socketServer.start()
 
@@ -101,10 +109,12 @@ final class ConversationCoordinator {
         await transcriptionEngine.stopSession()
         clearAudioLevelMonitor()
 
+        removeEscapeMonitor()
         socketServer.stop()
         overlayManager.hide()
 
         appState.isConversationMode = false
+        onConversationModeChanged?(false)
         appState.conversationPhase = .idle
         appState.claudeResponseText = ""
         appState.reset()
@@ -250,6 +260,25 @@ final class ConversationCoordinator {
         audioLevelMonitor = nil
         appState?.audioLevel = nil
         transcriptionEngine.levelMonitor = nil
+    }
+
+    /// Install a global key monitor for Escape to exit conversation mode.
+    private func installEscapeMonitor() {
+        guard escapeMonitor == nil else { return }
+        escapeMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard event.keyCode == 53 else { return } // Escape
+            Task { @MainActor in
+                await self?.stop()
+            }
+        }
+    }
+
+    /// Remove the Escape key monitor.
+    private func removeEscapeMonitor() {
+        if let escapeMonitor {
+            NSEvent.removeMonitor(escapeMonitor)
+        }
+        escapeMonitor = nil
     }
 
     private func configureFilters() {

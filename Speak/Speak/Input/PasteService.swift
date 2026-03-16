@@ -1,5 +1,8 @@
 import AppKit
 import CoreGraphics
+import os
+
+private let logger = Logger(subsystem: "com.speak.app", category: "PasteService")
 
 /// Handles pasting transcribed text into the previously focused app.
 enum PasteService {
@@ -68,8 +71,9 @@ enum PasteService {
         let success = await paste(text, into: app)
         guard success else { return false }
 
-        // Wait for the paste to settle before pressing Return
-        try? await Task.sleep(for: .milliseconds(100))
+        // Wait for the paste to settle before pressing Return.
+        // 300ms gives the terminal time to fully process the paste.
+        try? await Task.sleep(for: .milliseconds(300))
 
         simulateReturn()
         return true
@@ -82,11 +86,14 @@ enum PasteService {
         // Virtual key code 0x24 = Return
         guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 0x24, keyDown: true),
               let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 0x24, keyDown: false) else {
+            logger.warning("Failed to create CGEvent for Return keystroke")
             return
         }
 
-        keyDown.post(tap: CGEventTapLocation.cghidEventTap)
-        keyUp.post(tap: CGEventTapLocation.cghidEventTap)
+        // Post at session level (like a keyboard) rather than HID level —
+        // terminals handle session-level events more reliably.
+        keyDown.post(tap: CGEventTapLocation.cgAnnotatedSessionEventTap)
+        keyUp.post(tap: CGEventTapLocation.cgAnnotatedSessionEventTap)
     }
 
     /// Simulate a Cmd+V keystroke using CGEvent.

@@ -84,6 +84,7 @@ private final class MockContext: ContextReading {
 }
 
 private final class MockHotkey: HotkeyManaging {
+    var isConversationMode = false
     var resetStateCalled = false
     var resetStateCallCount = 0
     var onModeChange: ((RecordingMode) -> Void)?
