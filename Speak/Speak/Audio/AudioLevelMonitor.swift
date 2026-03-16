@@ -6,7 +6,7 @@ import os
 final class AudioLevelMonitor {
     private(set) var barLevels: [Float] = [0, 0, 0, 0, 0]
 
-    private nonisolated let rawLevel = OSAllocatedUnfairLock(initialState: Float(0))
+    nonisolated private let rawLevel = OSAllocatedUnfairLock(initialState: Float(0))
     private var smoothedLevel: Float = 0
     private var timer: Timer?
 

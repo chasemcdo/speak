@@ -11,7 +11,7 @@ struct AppStateTests {
 
     @Test @MainActor func `display text empty by default`() {
         let state = AppState()
-        #expect(state.displayText == "")
+        #expect(state.displayText.isEmpty)
     }
 
     @Test @MainActor func `has text is false when empty`() {
@@ -45,11 +45,11 @@ struct AppStateTests {
         state.reset()
 
         #expect(state.isRecording == false)
-        #expect(state.finalizedText == "")
-        #expect(state.volatileText == "")
+        #expect(state.finalizedText.isEmpty)
+        #expect(state.volatileText.isEmpty)
         #expect(state.error == nil)
         #expect(state.isPreviewing == false)
-        #expect(state.previewText == "")
+        #expect(state.previewText.isEmpty)
         #expect(state.pasteFailedHint == false)
         #expect(state.recordingMode == .hold)
     }
@@ -59,7 +59,7 @@ struct AppStateTests {
         state.volatileText = "partial"
         state.appendFinalizedText("Hello ")
         #expect(state.finalizedText == "Hello ")
-        #expect(state.volatileText == "")
+        #expect(state.volatileText.isEmpty)
     }
 
     @Test @MainActor func `append finalized text accumulates`() {
@@ -91,7 +91,7 @@ struct AppStateTests {
     @Test @MainActor func `preview state defaults to false`() {
         let state = AppState()
         #expect(state.isPreviewing == false)
-        #expect(state.previewText == "")
+        #expect(state.previewText.isEmpty)
     }
 
     @Test @MainActor func `reset clears preview state`() {
@@ -102,7 +102,7 @@ struct AppStateTests {
         state.reset()
 
         #expect(state.isPreviewing == false)
-        #expect(state.previewText == "")
+        #expect(state.previewText.isEmpty)
     }
 
     // MARK: - Recording mode

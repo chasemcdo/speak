@@ -135,7 +135,9 @@ struct LLMRewriter: TextFilter {
         // to avoid stripping legitimate dictation like "Here is the plan: we ship Friday".
         let preamblePatterns: [NSRegularExpression] = (try? [
             NSRegularExpression(
-                pattern: #"^(?:sure[!.]?\s*)?here(?:'s| is) the (?:formatted|corrected|cleaned|rewritten) (?:text|transcript|version):\s*"#,
+                pattern: #"^(?:sure[!.]?\s*)?here(?:'s| is) the "#
+                    + #"(?:formatted|corrected|cleaned|rewritten) "#
+                    + #"(?:text|transcript|version):\s*"#,
                 options: [.caseInsensitive]
             ),
         ]) ?? []

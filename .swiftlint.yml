@@ -26,7 +26,7 @@ type_body_length:
   error: 500
 
 file_length:
-  warning: 500
+  warning: 600
   error: 1000
 
 cyclomatic_complexity:

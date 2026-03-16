@@ -54,7 +54,7 @@ struct StripPreambleTests {
     }
 
     @Test func `handles empty string`() {
-        #expect(LLMRewriter.stripPreamble("") == "")
+        #expect(LLMRewriter.stripPreamble("").isEmpty)
     }
 
     @Test func `does not strip mid-text colons`() {
@@ -95,10 +95,12 @@ struct HallucinationGuardTests {
     @Test func `rejects output below 0.1 ratio`() {
         let result = LLMRewriter.applyHallucinationGuard(
             cleaned: "Hi",
-            original: "This is a very long sentence that should not shrink to just two characters in any reasonable scenario."
+            original: "This is a very long sentence that should not shrink "
+                + "to just two characters in any reasonable scenario."
         )
         #expect(result ==
-            "This is a very long sentence that should not shrink to just two characters in any reasonable scenario.")
+            "This is a very long sentence that should not shrink "
+            + "to just two characters in any reasonable scenario.")
     }
 
     @Test func `rejects output above 3.0 ratio`() {
