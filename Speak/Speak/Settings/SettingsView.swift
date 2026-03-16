@@ -142,7 +142,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 420, minHeight: 520, idealHeight: 580)
+        .frame(minWidth: 420, idealWidth: 420, maxWidth: 420, minHeight: 520, idealHeight: 580)
         .onAppear {
             if let updater {
                 automaticallyChecksForUpdates = updater.automaticallyChecksForUpdates
